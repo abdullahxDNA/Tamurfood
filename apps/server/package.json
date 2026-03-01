@@ -1,0 +1,15 @@
+{
+  "name": "@tamurfood/server",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --hot src/index.ts"
+  },
+  "dependencies": {
+    "hono": "^4.12.3"
+  },
+  "devDependencies": {
+    "bun-types": "^1.3.10"
+  }
+}

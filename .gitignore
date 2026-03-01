@@ -19,3 +19,9 @@ dist/
 
 # Logs
 *.log
+
+# Supabase
+supabase/.temp/
+
+# Bun
+bun.lock
