@@ -1,15 +1,14 @@
-import { Hono } from "hono";
-import { cors } from "hono/cors";
+import { serveStatic } from "hono/bun";
+import app from "./app";
 
-const app = new Hono();
-
-app.use("/api/*", cors());
-
-app.get("/api/health", (c) => {
-  return c.json({ status: "ok" });
-});
+// In production, serve the built frontend and fall back to index.html for SPA routing
+if (process.env.NODE_ENV === "production") {
+  app.use("/*", serveStatic({ root: "apps/web/dist" }));
+  app.get("/*", (c) => new Response(Bun.file("apps/web/dist/index.html")));
+}
 
 export default {
-  port: 3000,
+  port: parseInt(process.env.PORT ?? "3000"),
   fetch: app.fetch,
+  idleTimeout: 0, // disable timeout — required for SSE long-lived connections
 };

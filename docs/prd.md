@@ -4,9 +4,9 @@
 
 | | |
 |---|---|
-| **Version** | 3.0 |
+| **Version** | 4.0 |
 | **Date** | March 2026 |
-| **Status** | Ready for Engineering |
+| **Status** | Implemented — v1.0 |
 | **Owner** | Product Owner (Bakery Malik) |
 | **Team** | 1–2 Full-Stack Developers |
 | **Timeline** | ~10 weeks to MVP launch |
@@ -133,7 +133,7 @@ No status tracking for the shopkeeper. No delivery person role. The shopkeeper p
 ### Constraints
 
 1. **Team size:** 1–2 full-stack developers. No dedicated QA, designer, or DevOps.
-2. **Budget:** Minimal — hosted on affordable cloud (Railway / Fly.io / VPS).
+2. **Budget:** Minimal — hosted on Railway (Docker deployment with PostgreSQL plugin).
 3. **Internet quality:** Bangladesh mobile internet can be slow and unreliable — app must be lightweight and resilient.
 4. **Devices:** Target low to mid-range Android phones (Samsung Galaxy A series, Xiaomi Redmi) with 5–6 inch screens.
 5. **Timeline:** MVP in ~10 weeks.
@@ -182,10 +182,9 @@ These are things we are **choosing not to build**, either for V1 or possibly eve
 | ID | Requirement | Priority |
 |----|-------------|----------|
 | FR-07 | Admin can add menu items with: name, price (BDT), category, and optional image. | P0 |
-| FR-08 | Categories: Chaa, Biscuit, Singara, Samosa, Roll, Cake, Snacks, Other. | P0 |
+| FR-08 | Categories are managed by the admin (create, rename, delete) via the admin panel and stored in the database (`menu_categories` table). Initial categories include Regular Items and Bekari Items. | P0 |
 | FR-09 | Admin can edit price, name, or category of any item. | P0 |
 | FR-10 | Admin can mark an item as "unavailable" (grayed out for shops) or delete it. | P0 |
-| FR-11 | Admin can create combo items (e.g., "10 Chaa + 10 Singara" at a bundle price). | P2 |
 
 ### 8.3 Ordering (Shop Places)
 
@@ -199,6 +198,7 @@ These are things we are **choosing not to build**, either for V1 or possibly eve
 | FR-17 | After confirming, shop sees a simple "Order placed successfully!" message with order number. | P0 |
 | FR-18 | "Repeat Last Order" button on the home screen — loads previous order into cart, editable before placing. | P0 |
 | FR-19 | Shop can view their own order history — date/time, items with quantities, total, done/pending status. Sorted newest first. Filterable by date (Today, This Week, This Month). | P1 |
+| FR-19b | Shops can cancel a pending order before it is marked as done by the admin. Once the admin marks an order as done, cancellation is not permitted. | P1 |
 
 ### 8.4 Admin Dashboard (Admin Sees & Manages)
 
@@ -235,7 +235,6 @@ These are things we are **choosing not to build**, either for V1 or possibly eve
 |----------|-------|-------------|
 | **P0** | 22 | Must ship. If any P0 is missing, the product doesn't work. |
 | **P1** | 9 | Should ship. Defer only if a sprint is behind schedule. |
-| **P2** | 2 | Nice-to-have. Build if time allows (combos). |
 
 ---
 
@@ -248,7 +247,7 @@ These are things we are **choosing not to build**, either for V1 or possibly eve
 | Real-time order delivery to admin | Under 3 seconds |
 | Uptime | 99.5% during 6 AM – 10 PM |
 | Mobile usability | Works well on 5–6 inch Android phones |
-| Security | HTTPS, hashed passwords, session cookies, input validation (Zod) |
+| Security | HTTPS, hashed passwords, session cookies, input validation (Zod). Row Level Security (RLS) is enabled on all database tables. Storage uploads are proxied through the server using a service role key; no direct client uploads are permitted. |
 | Data safety | Daily database backups |
 | JS bundle size | Under 200KB gzipped |
 
@@ -446,8 +445,7 @@ Low-fidelity descriptions of every screen in the app. These serve as wireframe b
   - Each item row: name, price, category, availability toggle, Edit/Delete buttons.
   - Available/Unavailable toggle is a simple switch.
 - **Add/Edit Item form:**
-  - Name, price, category (dropdown), image upload (optional).
-  - For combos: select component items and their quantities.
+  - Name, price, category (dropdown — populated from DB-backed categories), image upload (optional).
   - Save/Cancel.
 - **Empty state:** "No menu items yet. Add your first item."
 
@@ -685,7 +683,7 @@ If any of these happen, pause rollout and fix:
 | Older shopkeepers struggle with the website | High | Ultra-simple UI; "Repeat Last Order" as the main flow; in-person 10-minute demo per shop; printed instruction card |
 | Unreliable mobile internet | High | Small bundle size (<200KB); menu cached locally; retry failed orders automatically (3 attempts); lightweight SSE with polling fallback |
 | Shops revert to walking/calling | Medium | Make ordering faster than a phone call; bakery prioritizes app orders; encourage via WhatsApp group |
-| Server goes down | Medium | Host on cloud (Railway / Fly.io / VPS); daily DB backups; phone/walk-in ordering is the fallback |
+| Server goes down | Medium | Hosted on Railway (Docker + PostgreSQL plugin); daily DB backups; phone/walk-in ordering is the fallback |
 | Khata disputes despite digital records | Low | Immutable ledger — orders and payments can't be edited or deleted; both sides see the same data |
 | Scope creep during development | Medium | Strict P0/P1/P2 priorities in this PRD; feature freeze after sprint 1; defer all P2 items if behind |
 | Admin not monitoring dashboard | Medium | Audio alert + browser tab notification; consider SMS alert in Phase 2 |
@@ -701,7 +699,7 @@ These are unresolved decisions. The team should decide on each before the releva
 | 1 | Should the "Done" action on an order be reversible (undo within 30 seconds)? | Sprint 4 | No. Keep it immutable for khata integrity. |
 | 2 | Should there be a minimum order amount? | Sprint 3 | No minimum for V1. Revisit after launch if shops abuse with tiny orders. |
 | 3 | When admin changes a price, what happens to orders already placed at the old price? | Sprint 3 | Orders keep the old price (snapshot at order time). New orders use the new price. |
-| 4 | Should shops be able to cancel an order after placing it? | Sprint 3 | No. Once placed, only admin controls it. Shop can call the bakery to cancel verbally. |
+| 4 | Should shops be able to cancel an order after placing it? | Sprint 3 | **Resolved:** Yes. Shops can cancel their own pending orders. Once the admin marks an order as done, it cannot be cancelled. |
 | 5 | How to handle the bakery being closed (e.g., shop places order at midnight)? | Sprint 3 | Allow it. Order queues up. Admin sees it when they open the dashboard in the morning. |
 | 6 | Should the khata ledger be filterable by month? | Sprint 5 | Yes. Show current month by default with option to view previous months. |
 | 7 | What's the admin's initial password? Who creates the first admin account? | Sprint 1 | Developer seeds the first admin account during deployment. Admin changes password on first login. |
@@ -785,19 +783,18 @@ These are **not** in scope for launch. Only consider after the core system is ru
 | price | integer | BDT |
 | category | varchar(50) | |
 | image_url | text | Nullable |
-| is_combo | boolean | Default false |
 | is_available | boolean | Default true |
 | sort_order | integer | Display order |
 | created_at | timestamptz | |
 
-### `combo_items`
+### `menu_categories`
 
 | Column | Type | Notes |
 |--------|------|-------|
 | id | uuid | PK |
-| combo_id | uuid | FK → menu_items |
-| item_id | uuid | FK → menu_items |
-| quantity | integer | |
+| name | varchar(100) | Unique |
+| sort_order | integer | Display order |
+| created_at | timestamptz | |
 
 ### `orders`
 
@@ -978,11 +975,12 @@ These are **not** in scope for launch. Only consider after the core system is ru
 - **Story Points:** 3
 - **Priority:** High
 - **Acceptance Criteria:**
-  - App deployed to Railway / Fly.io / VPS.
-  - HTTPS enabled.
-  - PostgreSQL hosted and connected.
-  - Environment variables configured for production.
-  - Health check endpoint returns 200.
+  - App deployed to Railway using Docker (Dockerfile builds frontend via `bun vite build`, then runs the Hono server).
+  - PostgreSQL provided by the Railway PostgreSQL plugin.
+  - Static frontend files served by the Hono server in production (`serveStatic` enabled when `NODE_ENV=production`).
+  - HTTPS enabled (handled by Railway).
+  - Environment variables configured for production (DATABASE_URL, BETTER_AUTH_SECRET, BETTER_AUTH_URL, CORS_ORIGIN, etc.).
+  - Health check endpoint (`/api/health`) returns 200.
 
 ---
 
@@ -1102,7 +1100,7 @@ These are **not** in scope for launch. Only consider after the core system is ru
 
 **Business Value:** Can't order without a menu.
 
-**Maps to:** FR-07, FR-08, FR-09, FR-10, FR-11, FR-12
+**Maps to:** FR-07, FR-08, FR-09, FR-10, FR-12
 
 ---
 
@@ -1150,21 +1148,6 @@ These are **not** in scope for launch. Only consider after the core system is ru
   - Unavailable items grayed out with badge on shop menu.
   - Shops cannot add unavailable items to cart.
   - Delete removes from menu. Past orders keep the snapshot.
-
----
-
-**Story ID: MENU-04**
-
-> As an **admin**,
-> I want to **create combo items**,
-> So that **shops can order popular bundles faster**.
-
-- **Story Points:** 5
-- **Priority:** Low (P2)
-- **Acceptance Criteria:**
-  - "Create Combo" form: combo name, combo price, select 2+ items with quantities.
-  - Combo appears in menu under "Combo" category.
-  - Admin can edit or delete combos.
 
 ---
 
@@ -1531,9 +1514,9 @@ These are **not** in scope for launch. Only consider after the core system is ru
 | **2** | 3–4 | Menu + Shop Mgmt + Password Reset | MENU-01, MENU-02, MENU-03, MENU-05, SHOP-01, SHOP-02, AUTH-04 | 25 | Admin manages menu and shops. Shops see menu. Forgot password works. |
 | **3** | 5–6 | Ordering | ORDER-01, ORDER-02, ORDER-03, ORDER-04, ORDER-05, ORDER-06 | 18 | Shops can place orders, repeat orders, view history. |
 | **4** | 7–8 | Admin Dashboard | ADMIN-01, ADMIN-02, ADMIN-03, ADMIN-04, ADMIN-05, ADMIN-06 | 20 | Live orders, mark done, daily summary. |
-| **5** | 9–10 | Khata + Combos + Deploy | KHATA-01, KHATA-02, KHATA-03, KHATA-04, MENU-04, SETUP-03 | 21 | Khata live. Deployed to production. |
+| **5** | 9–10 | Khata + Deploy | KHATA-01, KHATA-02, KHATA-03, KHATA-04, SETUP-03 | 16 | Khata live. Deployed to production. |
 
-**Total: ~106 story points across 5 sprints (~10 weeks)**
+**Total: ~101 story points across 5 sprints (~10 weeks)**
 
 ### Sprint Dependencies
 
@@ -1546,7 +1529,7 @@ Sprint 1: Setup + Auth (everything depends on this)
     │               │
     │               └── Sprint 4: Admin Dashboard (needs orders flowing)
     │                       │
-    │                       └── Sprint 5: Khata + Combos + Deploy
+    │                       └── Sprint 5: Khata + Deploy
 ```
 
 ### Definition of Done (every story)

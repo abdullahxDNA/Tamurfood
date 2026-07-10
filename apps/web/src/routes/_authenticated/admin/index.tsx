@@ -1,0 +1,593 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+
+export const Route = createFileRoute("/_authenticated/admin/")({
+  component: AdminDashboard,
+});
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+function todayDate() {
+  return new Date().toISOString().slice(0, 10);
+}
+function yesterdayDate() {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+function fmtTime(iso: string) {
+  return new Date(iso).toLocaleTimeString("en-BD", { hour: "2-digit", minute: "2-digit" });
+}
+function fmtDate(iso: string) {
+  return new Date(iso).toLocaleDateString("en-BD", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+function timeAgo(iso: string) {
+  const sec = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (sec < 60) return `${sec}s ago`;
+  if (sec < 3600) return `${Math.floor(sec / 60)}m ago`;
+  return `${Math.floor(sec / 3600)}h ago`;
+}
+
+function playChime(muted: boolean) {
+  if (muted) return;
+  try {
+    const ctx = new AudioContext();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(880, ctx.currentTime);
+    osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.15);
+    gain.gain.setValueAtTime(0.35, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.6);
+    osc.onended = () => ctx.close();
+  } catch {
+    // browser may block AudioContext without user gesture — ignore
+  }
+}
+
+// ─── Types ───────────────────────────────────────────────────────────────────
+
+interface OrderItem {
+  itemName: string;
+  quantity: number;
+  lineTotal: number;
+}
+
+interface AdminOrder {
+  id: string;
+  orderNumber: number;
+  shopId: string;
+  shopName: string;
+  totalAmount: number;
+  note: string | null;
+  isDone: boolean;
+  isCancelled: boolean;
+  placedAt: string;
+  doneAt: string | null;
+  items: OrderItem[];
+}
+
+interface AnalyticsStats {
+  count: number;
+  revenue: number;
+}
+interface AnalyticsData {
+  today: AnalyticsStats;
+  week: AnalyticsStats;
+  month: AnalyticsStats;
+}
+
+// ─── API ─────────────────────────────────────────────────────────────────────
+
+async function fetchAdminOrders(date: string) {
+  const res = await api.api.v1.admin.orders.$get({ query: { date } });
+  if (!res.ok) throw new Error("Failed to fetch orders");
+  return res.json() as Promise<{ orders: AdminOrder[]; total: number }>;
+}
+async function fetchAnalytics() {
+  const res = await api.api.v1.admin.analytics.$get();
+  if (!res.ok) throw new Error("Failed to fetch analytics");
+  return res.json() as Promise<AnalyticsData>;
+}
+async function fetchShopOrders(shopId: string) {
+  const res = await api.api.v1.admin.shops[":shopId"].orders.$get({ param: { shopId } });
+  if (!res.ok) throw new Error("Failed to fetch shop orders");
+  return res.json() as Promise<{ shopName: string; orders: AdminOrder[] }>;
+}
+
+// ─── Sub-components ──────────────────────────────────────────────────────────
+
+function StatCard({ title, stats }: { title: string; stats: AnalyticsStats }) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-2xl font-bold">{stats.count} orders</p>
+        <p className="text-sm text-muted-foreground">৳{stats.revenue.toLocaleString()}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function OrderCard({
+  order,
+  isNew,
+  onMarkDone,
+  onCancel,
+  onShopClick,
+}: {
+  order: AdminOrder;
+  isNew: boolean;
+  onMarkDone?: (id: string) => void;
+  onCancel?: (id: string) => void;
+  onShopClick: (id: string, name: string) => void;
+}) {
+  return (
+    <div
+      className={`border rounded-lg p-4 space-y-2 transition-all ${
+        isNew ? "ring-2 ring-primary bg-primary/5" : ""
+      }`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="font-semibold hover:underline text-left"
+            onClick={() => onShopClick(order.shopId, order.shopName)}
+          >
+            {order.shopName}
+          </button>
+          <span className="text-muted-foreground text-sm">#{order.orderNumber}</span>
+          {order.isCancelled ? (
+            <Badge variant="destructive">Cancelled</Badge>
+          ) : (
+            <Badge variant={order.isDone ? "secondary" : "default"}>
+              {order.isDone ? "Done" : "Pending"}
+            </Badge>
+          )}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="text-xs text-muted-foreground whitespace-nowrap">
+            {order.isDone ? fmtTime(order.placedAt) : timeAgo(order.placedAt)}
+          </span>
+          {onMarkDone && !order.isDone && !order.isCancelled && (
+            <Button size="sm" onClick={() => onMarkDone(order.id)}>
+              Mark Done
+            </Button>
+          )}
+          {onCancel && !order.isDone && !order.isCancelled && (
+            <Button size="sm" variant="outline" onClick={() => onCancel(order.id)}>
+              Cancel
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <div className="text-sm text-muted-foreground space-y-0.5">
+        {order.items.map((item, i) => (
+          <div key={i}>
+            {item.quantity}× {item.itemName} — ৳{item.lineTotal}
+          </div>
+        ))}
+      </div>
+
+      <div className="flex items-center justify-between text-sm">
+        {order.note ? (
+          <span className="text-muted-foreground italic">"{order.note}"</span>
+        ) : (
+          <span />
+        )}
+        <span className="font-semibold">৳{order.totalAmount}</span>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
+function AdminDashboard() {
+  const queryClient = useQueryClient();
+
+  const [muted, setMuted] = useState(false);
+  const mutedRef = useRef(muted);
+  mutedRef.current = muted;
+
+  const [sseStatus, setSseStatus] = useState<"connected" | "reconnecting">("connected");
+  const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
+  const [date, setDate] = useState(todayDate);
+  const [doneOpen, setDoneOpen] = useState(false);
+  const [confirmDoneId, setConfirmDoneId] = useState<string | null>(null);
+  const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
+  const [shopHistory, setShopHistory] = useState<{ id: string; name: string } | null>(null);
+  // live "time ago" tick
+  const [, setTick] = useState(0);
+
+  // Tick every 30s to refresh relative times
+  useEffect(() => {
+    const t = setInterval(() => setTick((n) => n + 1), 30_000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Queries
+  const { data: analytics } = useQuery({
+    queryKey: ["admin/analytics"],
+    queryFn: fetchAnalytics,
+    refetchInterval: 60_000,
+  });
+
+  const { data: ordersData, isLoading } = useQuery({
+    queryKey: ["admin/orders", date],
+    queryFn: () => fetchAdminOrders(date),
+  });
+
+  const { data: shopOrdersData } = useQuery({
+    queryKey: ["admin/shop-orders", shopHistory?.id],
+    queryFn: () => fetchShopOrders(shopHistory!.id),
+    enabled: !!shopHistory,
+  });
+
+  // Split + sort
+  const pending = (ordersData?.orders ?? [])
+    .filter((o) => !o.isDone && !o.isCancelled)
+    .sort((a, b) => new Date(a.placedAt).getTime() - new Date(b.placedAt).getTime()); // oldest first
+  const done = (ordersData?.orders ?? [])
+    .filter((o) => o.isDone || o.isCancelled)
+    .sort((a, b) => new Date(b.doneAt ?? b.placedAt).getTime() - new Date(a.doneAt ?? a.placedAt).getTime()); // newest first
+
+  // Tab title
+  useEffect(() => {
+    document.title =
+      pending.length > 0 ? `(${pending.length}) New Orders — Tamurfood` : "Tamurfood Admin";
+    return () => {
+      document.title = "Tamurfood Admin";
+    };
+  }, [pending.length]);
+
+  // SSE with reconnect fallback
+  useEffect(() => {
+    let pollInterval: ReturnType<typeof setInterval> | null = null;
+
+    const connect = () => {
+      const source = new EventSource("/api/v1/admin/orders/stream");
+
+      source.onopen = () => {
+        setSseStatus("connected");
+        if (pollInterval) {
+          clearInterval(pollInterval);
+          pollInterval = null;
+        }
+      };
+
+      source.addEventListener("new_order", (e) => {
+        const data = JSON.parse((e as MessageEvent).data);
+        playChime(mutedRef.current);
+        toast.success(`New order #${data.orderNumber} from ${data.shopName}`);
+        setHighlightedIds((prev) => new Set([...prev, data.orderId]));
+        setTimeout(() => {
+          setHighlightedIds((prev) => {
+            const next = new Set(prev);
+            next.delete(data.orderId);
+            return next;
+          });
+        }, 10_000);
+        queryClient.invalidateQueries({ queryKey: ["admin/orders"] });
+        queryClient.invalidateQueries({ queryKey: ["admin/analytics"] });
+      });
+
+      source.onerror = () => {
+        // Guard: only set up poll interval once, not on every retry attempt
+        if (source.readyState === EventSource.CLOSED) return;
+        setSseStatus("reconnecting");
+        if (!pollInterval) {
+          pollInterval = setInterval(() => {
+            queryClient.invalidateQueries({ queryKey: ["admin/orders"] });
+            queryClient.invalidateQueries({ queryKey: ["admin/analytics"] });
+          }, 10_000);
+        }
+      };
+
+      return source;
+    };
+
+    const source = connect();
+    return () => {
+      source.close();
+      if (pollInterval) clearInterval(pollInterval);
+    };
+  }, [queryClient]);
+
+  // Mark done (immutable)
+  const markDoneMutation = useMutation({
+    mutationFn: async ({ id, paid }: { id: string; paid: boolean }) => {
+      const res = await api.api.v1.admin.orders[":id"].done.$patch({
+        param: { id },
+        json: { paid },
+      });
+      if (!res.ok) throw new Error("Failed to mark done");
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["admin/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["admin/analytics"] });
+      if (data.paid) queryClient.invalidateQueries({ queryKey: ["admin/payments"] });
+      toast.success(data.paid ? "Order done — payment recorded." : "Order marked as done.");
+      setConfirmDoneId(null);
+    },
+    onError: (err) => toast.error((err as Error).message),
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.api.v1.admin.orders[":id"].cancel.$patch({ param: { id } });
+      if (!res.ok) throw new Error("Failed to cancel order");
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin/orders"] });
+      toast.success("Order cancelled.");
+      setConfirmCancelId(null);
+    },
+    onError: (err) => toast.error((err as Error).message),
+  });
+
+  const isToday = date === todayDate();
+  const isYesterday = date === yesterdayDate();
+
+  return (
+    <div className="space-y-5">
+      {/* Reconnect banner */}
+      {sseStatus === "reconnecting" && (
+        <div className="rounded-md bg-yellow-50 border border-yellow-200 px-4 py-2 text-sm text-yellow-800">
+          Lost connection to server. Trying to reconnect… Orders refresh every 10s.
+        </div>
+      )}
+
+      {/* Header row */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold">Orders</h1>
+        <div className="flex items-center gap-2">
+          {/* Date filter */}
+          <div className="flex items-center rounded-md border overflow-hidden text-sm">
+            <button
+              className={`px-3 py-1.5 ${isToday ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+              onClick={() => setDate(todayDate())}
+            >
+              Today
+            </button>
+            <button
+              className={`px-3 py-1.5 border-l ${isYesterday ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+              onClick={() => setDate(yesterdayDate())}
+            >
+              Yesterday
+            </button>
+            <input
+              type="date"
+              value={!isToday && !isYesterday ? date : ""}
+              onChange={(e) => e.target.value && setDate(e.target.value)}
+              className="px-2 py-1.5 border-l bg-transparent text-xs w-36 cursor-pointer"
+              placeholder="Pick date"
+            />
+          </div>
+          {/* Mute toggle */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setMuted((m) => !m)}
+            title={muted ? "Unmute alerts" : "Mute alerts"}
+          >
+            {muted ? "🔇 Muted" : "🔔 Sound"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Analytics strip */}
+      {analytics && isToday && (
+        <p className="text-sm text-muted-foreground">
+          Today:{" "}
+          <span className="font-medium text-foreground">{analytics.today.count} orders</span>
+          {" · "}
+          <span className="font-medium text-foreground">
+            ৳{analytics.today.revenue.toLocaleString()}
+          </span>
+        </p>
+      )}
+
+      {/* Full stat cards (weekly/monthly) */}
+      {analytics && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <StatCard title="Today" stats={analytics.today} />
+          <StatCard title="This Week" stats={analytics.week} />
+          <StatCard title="This Month" stats={analytics.month} />
+        </div>
+      )}
+
+      {/* Pending orders */}
+      <div>
+        <h2 className="text-base font-semibold mb-3">
+          Pending{pending.length > 0 && <span className="ml-2 text-muted-foreground">({pending.length})</span>}
+        </h2>
+        {isLoading && <p className="text-muted-foreground text-sm">Loading…</p>}
+        {!isLoading && pending.length === 0 && (
+          <p className="text-muted-foreground text-sm">
+            No pending orders. Waiting for shops to order…
+          </p>
+        )}
+        <div className="space-y-3">
+          {pending.map((order) => (
+            <OrderCard
+              key={order.id}
+              order={order}
+              isNew={highlightedIds.has(order.id)}
+              onMarkDone={(id) => setConfirmDoneId(id)}
+              onCancel={(id) => setConfirmCancelId(id)}
+              onShopClick={(id, name) => setShopHistory({ id, name })}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Done section (collapsed by default) */}
+      {done.length > 0 && (
+        <div>
+          <button
+            type="button"
+            className="flex items-center gap-2 text-base font-semibold mb-3 hover:text-primary"
+            onClick={() => setDoneOpen((o) => !o)}
+          >
+            <span>Completed ({done.length})</span>
+            <span className="text-muted-foreground text-sm">{doneOpen ? "▲" : "▼"}</span>
+          </button>
+          {doneOpen && (
+            <div className="space-y-3">
+              {done.map((order) => (
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  isNew={false}
+                  onShopClick={(id, name) => setShopHistory({ id, name })}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Confirm mark-done dialog */}
+      <Dialog
+        open={confirmDoneId !== null}
+        onOpenChange={(open) => { if (!open && !markDoneMutation.isPending) setConfirmDoneId(null); }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark order as done?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">Was this order paid?</p>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setConfirmDoneId(null)}
+              disabled={markDoneMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => confirmDoneId && markDoneMutation.mutate({ id: confirmDoneId, paid: false })}
+              disabled={markDoneMutation.isPending}
+            >
+              Done — Unpaid
+            </Button>
+            <Button
+              onClick={() => confirmDoneId && markDoneMutation.mutate({ id: confirmDoneId, paid: true })}
+              disabled={markDoneMutation.isPending}
+            >
+              {markDoneMutation.isPending ? "Saving…" : "Done + Paid"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm cancel dialog */}
+      <Dialog
+        open={confirmCancelId !== null}
+        onOpenChange={(open) => { if (!open && !cancelMutation.isPending) setConfirmCancelId(null); }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel this order?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            The order will be moved to Completed as Cancelled.
+          </p>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmCancelId(null)}
+              disabled={cancelMutation.isPending}
+            >
+              Keep Order
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => confirmCancelId && cancelMutation.mutate(confirmCancelId)}
+              disabled={cancelMutation.isPending}
+            >
+              {cancelMutation.isPending ? "Cancelling..." : "Yes, Cancel"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Shop history sheet */}
+      <Sheet open={!!shopHistory} onOpenChange={(open) => !open && setShopHistory(null)}>
+        <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
+          <SheetHeader>
+            <SheetTitle>{shopOrdersData?.shopName ?? shopHistory?.name} — Order History</SheetTitle>
+          </SheetHeader>
+          <div className="mt-4 space-y-3">
+            {!shopOrdersData && (
+              <p className="text-muted-foreground text-sm">Loading…</p>
+            )}
+            {shopOrdersData?.orders.length === 0 && (
+              <p className="text-muted-foreground text-sm">No orders yet.</p>
+            )}
+            {shopOrdersData?.orders.map((order) => (
+              <div key={order.id} className="border rounded-lg p-3 space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-sm">#{order.orderNumber}</span>
+                    <Badge variant={order.isDone ? "secondary" : "default"} className="text-xs">
+                      {order.isDone ? "Done" : "Pending"}
+                    </Badge>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    {fmtDate(order.placedAt)} {fmtTime(order.placedAt)}
+                  </span>
+                </div>
+                <div className="text-xs text-muted-foreground space-y-0.5">
+                  {order.items.map((item, i) => (
+                    <div key={i}>
+                      {item.quantity}× {item.itemName} — ৳{item.lineTotal}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex justify-between text-sm">
+                  {order.note ? (
+                    <span className="text-muted-foreground italic text-xs">"{order.note}"</span>
+                  ) : (
+                    <span />
+                  )}
+                  <span className="font-semibold">৳{order.totalAmount}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+}

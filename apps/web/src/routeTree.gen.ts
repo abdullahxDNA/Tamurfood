@@ -9,38 +9,265 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from "./routes/__root"
+import { Route as ResetPasswordRouteImport } from "./routes/reset-password"
+import { Route as LoginRouteImport } from "./routes/login"
+import { Route as ForgotPasswordRouteImport } from "./routes/forgot-password"
+import { Route as AuthenticatedRouteImport } from "./routes/_authenticated"
 import { Route as IndexRouteImport } from "./routes/index"
+import { Route as AuthenticatedShopRouteImport } from "./routes/_authenticated/shop"
+import { Route as AuthenticatedAdminRouteImport } from "./routes/_authenticated/admin"
+import { Route as AuthenticatedShopIndexRouteImport } from "./routes/_authenticated/shop/index"
+import { Route as AuthenticatedProfileIndexRouteImport } from "./routes/_authenticated/profile/index"
+import { Route as AuthenticatedAdminIndexRouteImport } from "./routes/_authenticated/admin/index"
+import { Route as AuthenticatedShopProfileIndexRouteImport } from "./routes/_authenticated/shop/profile/index"
+import { Route as AuthenticatedShopOrdersIndexRouteImport } from "./routes/_authenticated/shop/orders/index"
+import { Route as AuthenticatedShopKhataIndexRouteImport } from "./routes/_authenticated/shop/khata/index"
+import { Route as AuthenticatedAdminShopsIndexRouteImport } from "./routes/_authenticated/admin/shops/index"
+import { Route as AuthenticatedAdminPaymentsIndexRouteImport } from "./routes/_authenticated/admin/payments/index"
+import { Route as AuthenticatedAdminMenuIndexRouteImport } from "./routes/_authenticated/admin/menu/index"
+import { Route as AuthenticatedAdminKhataIndexRouteImport } from "./routes/_authenticated/admin/khata/index"
 
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: "/reset-password",
+  path: "/reset-password",
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: "/login",
+  path: "/login",
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: "/forgot-password",
+  path: "/forgot-password",
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: "/_authenticated",
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: "/",
   path: "/",
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedShopRoute = AuthenticatedShopRouteImport.update({
+  id: "/shop",
+  path: "/shop",
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
+  id: "/admin",
+  path: "/admin",
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedShopIndexRoute = AuthenticatedShopIndexRouteImport.update({
+  id: "/",
+  path: "/",
+  getParentRoute: () => AuthenticatedShopRoute,
+} as any)
+const AuthenticatedProfileIndexRoute =
+  AuthenticatedProfileIndexRouteImport.update({
+    id: "/profile/",
+    path: "/profile/",
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedAdminIndexRoute = AuthenticatedAdminIndexRouteImport.update({
+  id: "/",
+  path: "/",
+  getParentRoute: () => AuthenticatedAdminRoute,
+} as any)
+const AuthenticatedShopProfileIndexRoute =
+  AuthenticatedShopProfileIndexRouteImport.update({
+    id: "/profile/",
+    path: "/profile/",
+    getParentRoute: () => AuthenticatedShopRoute,
+  } as any)
+const AuthenticatedShopOrdersIndexRoute =
+  AuthenticatedShopOrdersIndexRouteImport.update({
+    id: "/orders/",
+    path: "/orders/",
+    getParentRoute: () => AuthenticatedShopRoute,
+  } as any)
+const AuthenticatedShopKhataIndexRoute =
+  AuthenticatedShopKhataIndexRouteImport.update({
+    id: "/khata/",
+    path: "/khata/",
+    getParentRoute: () => AuthenticatedShopRoute,
+  } as any)
+const AuthenticatedAdminShopsIndexRoute =
+  AuthenticatedAdminShopsIndexRouteImport.update({
+    id: "/shops/",
+    path: "/shops/",
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminPaymentsIndexRoute =
+  AuthenticatedAdminPaymentsIndexRouteImport.update({
+    id: "/payments/",
+    path: "/payments/",
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminMenuIndexRoute =
+  AuthenticatedAdminMenuIndexRouteImport.update({
+    id: "/menu/",
+    path: "/menu/",
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
+const AuthenticatedAdminKhataIndexRoute =
+  AuthenticatedAdminKhataIndexRouteImport.update({
+    id: "/khata/",
+    path: "/khata/",
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute
+  "/forgot-password": typeof ForgotPasswordRoute
+  "/login": typeof LoginRoute
+  "/reset-password": typeof ResetPasswordRoute
+  "/admin": typeof AuthenticatedAdminRouteWithChildren
+  "/shop": typeof AuthenticatedShopRouteWithChildren
+  "/admin/": typeof AuthenticatedAdminIndexRoute
+  "/profile/": typeof AuthenticatedProfileIndexRoute
+  "/shop/": typeof AuthenticatedShopIndexRoute
+  "/admin/khata/": typeof AuthenticatedAdminKhataIndexRoute
+  "/admin/menu/": typeof AuthenticatedAdminMenuIndexRoute
+  "/admin/payments/": typeof AuthenticatedAdminPaymentsIndexRoute
+  "/admin/shops/": typeof AuthenticatedAdminShopsIndexRoute
+  "/shop/khata/": typeof AuthenticatedShopKhataIndexRoute
+  "/shop/orders/": typeof AuthenticatedShopOrdersIndexRoute
+  "/shop/profile/": typeof AuthenticatedShopProfileIndexRoute
 }
 export interface FileRoutesByTo {
   "/": typeof IndexRoute
+  "/forgot-password": typeof ForgotPasswordRoute
+  "/login": typeof LoginRoute
+  "/reset-password": typeof ResetPasswordRoute
+  "/admin": typeof AuthenticatedAdminIndexRoute
+  "/profile": typeof AuthenticatedProfileIndexRoute
+  "/shop": typeof AuthenticatedShopIndexRoute
+  "/admin/khata": typeof AuthenticatedAdminKhataIndexRoute
+  "/admin/menu": typeof AuthenticatedAdminMenuIndexRoute
+  "/admin/payments": typeof AuthenticatedAdminPaymentsIndexRoute
+  "/admin/shops": typeof AuthenticatedAdminShopsIndexRoute
+  "/shop/khata": typeof AuthenticatedShopKhataIndexRoute
+  "/shop/orders": typeof AuthenticatedShopOrdersIndexRoute
+  "/shop/profile": typeof AuthenticatedShopProfileIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   "/": typeof IndexRoute
+  "/_authenticated": typeof AuthenticatedRouteWithChildren
+  "/forgot-password": typeof ForgotPasswordRoute
+  "/login": typeof LoginRoute
+  "/reset-password": typeof ResetPasswordRoute
+  "/_authenticated/admin": typeof AuthenticatedAdminRouteWithChildren
+  "/_authenticated/shop": typeof AuthenticatedShopRouteWithChildren
+  "/_authenticated/admin/": typeof AuthenticatedAdminIndexRoute
+  "/_authenticated/profile/": typeof AuthenticatedProfileIndexRoute
+  "/_authenticated/shop/": typeof AuthenticatedShopIndexRoute
+  "/_authenticated/admin/khata/": typeof AuthenticatedAdminKhataIndexRoute
+  "/_authenticated/admin/menu/": typeof AuthenticatedAdminMenuIndexRoute
+  "/_authenticated/admin/payments/": typeof AuthenticatedAdminPaymentsIndexRoute
+  "/_authenticated/admin/shops/": typeof AuthenticatedAdminShopsIndexRoute
+  "/_authenticated/shop/khata/": typeof AuthenticatedShopKhataIndexRoute
+  "/_authenticated/shop/orders/": typeof AuthenticatedShopOrdersIndexRoute
+  "/_authenticated/shop/profile/": typeof AuthenticatedShopProfileIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: "/"
+  fullPaths:
+    | "/"
+    | "/forgot-password"
+    | "/login"
+    | "/reset-password"
+    | "/admin"
+    | "/shop"
+    | "/admin/"
+    | "/profile/"
+    | "/shop/"
+    | "/admin/khata/"
+    | "/admin/menu/"
+    | "/admin/payments/"
+    | "/admin/shops/"
+    | "/shop/khata/"
+    | "/shop/orders/"
+    | "/shop/profile/"
   fileRoutesByTo: FileRoutesByTo
-  to: "/"
-  id: "__root__" | "/"
+  to:
+    | "/"
+    | "/forgot-password"
+    | "/login"
+    | "/reset-password"
+    | "/admin"
+    | "/profile"
+    | "/shop"
+    | "/admin/khata"
+    | "/admin/menu"
+    | "/admin/payments"
+    | "/admin/shops"
+    | "/shop/khata"
+    | "/shop/orders"
+    | "/shop/profile"
+  id:
+    | "__root__"
+    | "/"
+    | "/_authenticated"
+    | "/forgot-password"
+    | "/login"
+    | "/reset-password"
+    | "/_authenticated/admin"
+    | "/_authenticated/shop"
+    | "/_authenticated/admin/"
+    | "/_authenticated/profile/"
+    | "/_authenticated/shop/"
+    | "/_authenticated/admin/khata/"
+    | "/_authenticated/admin/menu/"
+    | "/_authenticated/admin/payments/"
+    | "/_authenticated/admin/shops/"
+    | "/_authenticated/shop/khata/"
+    | "/_authenticated/shop/orders/"
+    | "/_authenticated/shop/profile/"
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
+  LoginRoute: typeof LoginRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
 }
 
 declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
+    "/reset-password": {
+      id: "/reset-password"
+      path: "/reset-password"
+      fullPath: "/reset-password"
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/login": {
+      id: "/login"
+      path: "/login"
+      fullPath: "/login"
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/forgot-password": {
+      id: "/forgot-password"
+      path: "/forgot-password"
+      fullPath: "/forgot-password"
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/_authenticated": {
+      id: "/_authenticated"
+      path: ""
+      fullPath: "/"
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     "/": {
       id: "/"
       path: "/"
@@ -48,11 +275,151 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    "/_authenticated/shop": {
+      id: "/_authenticated/shop"
+      path: "/shop"
+      fullPath: "/shop"
+      preLoaderRoute: typeof AuthenticatedShopRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    "/_authenticated/admin": {
+      id: "/_authenticated/admin"
+      path: "/admin"
+      fullPath: "/admin"
+      preLoaderRoute: typeof AuthenticatedAdminRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    "/_authenticated/shop/": {
+      id: "/_authenticated/shop/"
+      path: "/"
+      fullPath: "/shop/"
+      preLoaderRoute: typeof AuthenticatedShopIndexRouteImport
+      parentRoute: typeof AuthenticatedShopRoute
+    }
+    "/_authenticated/profile/": {
+      id: "/_authenticated/profile/"
+      path: "/profile"
+      fullPath: "/profile/"
+      preLoaderRoute: typeof AuthenticatedProfileIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    "/_authenticated/admin/": {
+      id: "/_authenticated/admin/"
+      path: "/"
+      fullPath: "/admin/"
+      preLoaderRoute: typeof AuthenticatedAdminIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    "/_authenticated/shop/profile/": {
+      id: "/_authenticated/shop/profile/"
+      path: "/profile"
+      fullPath: "/shop/profile/"
+      preLoaderRoute: typeof AuthenticatedShopProfileIndexRouteImport
+      parentRoute: typeof AuthenticatedShopRoute
+    }
+    "/_authenticated/shop/orders/": {
+      id: "/_authenticated/shop/orders/"
+      path: "/orders"
+      fullPath: "/shop/orders/"
+      preLoaderRoute: typeof AuthenticatedShopOrdersIndexRouteImport
+      parentRoute: typeof AuthenticatedShopRoute
+    }
+    "/_authenticated/shop/khata/": {
+      id: "/_authenticated/shop/khata/"
+      path: "/khata"
+      fullPath: "/shop/khata/"
+      preLoaderRoute: typeof AuthenticatedShopKhataIndexRouteImport
+      parentRoute: typeof AuthenticatedShopRoute
+    }
+    "/_authenticated/admin/shops/": {
+      id: "/_authenticated/admin/shops/"
+      path: "/shops"
+      fullPath: "/admin/shops/"
+      preLoaderRoute: typeof AuthenticatedAdminShopsIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    "/_authenticated/admin/payments/": {
+      id: "/_authenticated/admin/payments/"
+      path: "/payments"
+      fullPath: "/admin/payments/"
+      preLoaderRoute: typeof AuthenticatedAdminPaymentsIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    "/_authenticated/admin/menu/": {
+      id: "/_authenticated/admin/menu/"
+      path: "/menu"
+      fullPath: "/admin/menu/"
+      preLoaderRoute: typeof AuthenticatedAdminMenuIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
+    "/_authenticated/admin/khata/": {
+      id: "/_authenticated/admin/khata/"
+      path: "/khata"
+      fullPath: "/admin/khata/"
+      preLoaderRoute: typeof AuthenticatedAdminKhataIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
   }
 }
 
+interface AuthenticatedAdminRouteChildren {
+  AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+  AuthenticatedAdminKhataIndexRoute: typeof AuthenticatedAdminKhataIndexRoute
+  AuthenticatedAdminMenuIndexRoute: typeof AuthenticatedAdminMenuIndexRoute
+  AuthenticatedAdminPaymentsIndexRoute: typeof AuthenticatedAdminPaymentsIndexRoute
+  AuthenticatedAdminShopsIndexRoute: typeof AuthenticatedAdminShopsIndexRoute
+}
+
+const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
+  AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+  AuthenticatedAdminKhataIndexRoute: AuthenticatedAdminKhataIndexRoute,
+  AuthenticatedAdminMenuIndexRoute: AuthenticatedAdminMenuIndexRoute,
+  AuthenticatedAdminPaymentsIndexRoute: AuthenticatedAdminPaymentsIndexRoute,
+  AuthenticatedAdminShopsIndexRoute: AuthenticatedAdminShopsIndexRoute,
+}
+
+const AuthenticatedAdminRouteWithChildren =
+  AuthenticatedAdminRoute._addFileChildren(AuthenticatedAdminRouteChildren)
+
+interface AuthenticatedShopRouteChildren {
+  AuthenticatedShopIndexRoute: typeof AuthenticatedShopIndexRoute
+  AuthenticatedShopKhataIndexRoute: typeof AuthenticatedShopKhataIndexRoute
+  AuthenticatedShopOrdersIndexRoute: typeof AuthenticatedShopOrdersIndexRoute
+  AuthenticatedShopProfileIndexRoute: typeof AuthenticatedShopProfileIndexRoute
+}
+
+const AuthenticatedShopRouteChildren: AuthenticatedShopRouteChildren = {
+  AuthenticatedShopIndexRoute: AuthenticatedShopIndexRoute,
+  AuthenticatedShopKhataIndexRoute: AuthenticatedShopKhataIndexRoute,
+  AuthenticatedShopOrdersIndexRoute: AuthenticatedShopOrdersIndexRoute,
+  AuthenticatedShopProfileIndexRoute: AuthenticatedShopProfileIndexRoute,
+}
+
+const AuthenticatedShopRouteWithChildren =
+  AuthenticatedShopRoute._addFileChildren(AuthenticatedShopRouteChildren)
+
+interface AuthenticatedRouteChildren {
+  AuthenticatedAdminRoute: typeof AuthenticatedAdminRouteWithChildren
+  AuthenticatedShopRoute: typeof AuthenticatedShopRouteWithChildren
+  AuthenticatedProfileIndexRoute: typeof AuthenticatedProfileIndexRoute
+}
+
+const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedAdminRoute: AuthenticatedAdminRouteWithChildren,
+  AuthenticatedShopRoute: AuthenticatedShopRouteWithChildren,
+  AuthenticatedProfileIndexRoute: AuthenticatedProfileIndexRoute,
+}
+
+const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
+  AuthenticatedRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  ForgotPasswordRoute: ForgotPasswordRoute,
+  LoginRoute: LoginRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

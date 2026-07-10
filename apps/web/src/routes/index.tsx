@@ -1,18 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Button } from "@/components/ui/button";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
-  component: HomePage,
+  beforeLoad: ({ context }) => {
+    const { session } = context as { session: { role: string } | null };
+    if (!session) {
+      throw redirect({ to: "/login" });
+    }
+    if (session.role === "admin") {
+      throw redirect({ to: "/admin" });
+    }
+    throw redirect({ to: "/shop" });
+  },
+  component: () => null,
 });
-
-function HomePage() {
-  return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold">Tamurfood</h1>
-        <p className="text-muted-foreground">B2B bakery ordering platform</p>
-        <Button>Get Started</Button>
-      </div>
-    </div>
-  );
-}
