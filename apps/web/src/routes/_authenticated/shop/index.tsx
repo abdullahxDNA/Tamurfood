@@ -457,7 +457,7 @@ function ShopMenu() {
               return (
                 <div
                   key={item.id}
-                  className={`flex flex-col overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md ${!item.isAvailable ? "opacity-50" : ""}`}
+                  className={`card-light flex flex-col overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md ${!item.isAvailable ? "opacity-50" : ""}`}
                 >
                   {/* Food photo — real upload if present, else a stock photo;
                       emoji shows through if the image fails to load. */}
