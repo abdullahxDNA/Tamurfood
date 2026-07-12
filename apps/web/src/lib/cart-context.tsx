@@ -1,9 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useReducer,
-  type ReactNode,
-} from "react";
+import { createContext, useContext, useReducer, type ReactNode } from "react";
 
 export interface CartEntry {
   name: string;

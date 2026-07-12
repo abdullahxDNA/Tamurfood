@@ -1,0 +1,6 @@
+node_modules
+dist
+bun.lock
+**/routeTree.gen.ts
+packages/db/drizzle
+supabase/.temp

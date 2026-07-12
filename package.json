@@ -1,7 +1,10 @@
 {
   "name": "tamurfood",
   "private": true,
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "overrides": {
     "drizzle-orm": "0.45.1"
   },
@@ -10,8 +13,13 @@
     "build": "bun run --cwd apps/web build",
     "check-types": "bun run --filter '*' check-types",
     "lint": "bun run --filter '*' lint",
+    "format": "prettier --write \"apps/**/*.{ts,tsx}\" \"packages/**/*.ts\" \"*.{json,md}\"",
+    "format:check": "prettier --check \"apps/**/*.{ts,tsx}\" \"packages/**/*.ts\" \"*.{json,md}\"",
     "db:generate": "bun run --cwd packages/db generate",
     "db:migrate": "bun run --cwd packages/db migrate",
     "db:studio": "bun run --cwd packages/db studio"
+  },
+  "devDependencies": {
+    "prettier": "^3.9.5"
   }
 }

@@ -50,10 +50,14 @@ async function fetchMenu(): Promise<MenuItem[]> {
   return res.json() as Promise<MenuItem[]>;
 }
 
-async function fetchCategories(): Promise<{ id: string; name: string; sortOrder: number }[]> {
+async function fetchCategories(): Promise<
+  { id: string; name: string; sortOrder: number }[]
+> {
   const res = await api.api.v1.menu.categories.$get();
   if (!res.ok) throw new Error("Failed to fetch categories");
-  return res.json() as Promise<{ id: string; name: string; sortOrder: number }[]>;
+  return res.json() as Promise<
+    { id: string; name: string; sortOrder: number }[]
+  >;
 }
 
 async function fetchLastOrder(): Promise<LastOrder | null> {
@@ -67,8 +71,18 @@ async function placeOrder(body: {
   note?: string;
 }) {
   const res = await api.api.v1.orders.$post({ json: body });
-  const data = await res.json() as { id?: string; orderNumber?: number; totalAmount?: number; error?: string; unavailableItems?: string[] };
-  if (!res.ok) throw Object.assign(new Error(data.error ?? "Failed to place order"), { status: res.status, data });
+  const data = (await res.json()) as {
+    id?: string;
+    orderNumber?: number;
+    totalAmount?: number;
+    error?: string;
+    unavailableItems?: string[];
+  };
+  if (!res.ok)
+    throw Object.assign(new Error(data.error ?? "Failed to place order"), {
+      status: res.status,
+      data,
+    });
   return data as { id: string; orderNumber: number; totalAmount: number };
 }
 
@@ -120,13 +134,18 @@ function ShopMenu() {
       } else {
         setPriceMismatch(null);
       }
-      setSuccessOrder({ orderNumber: data.orderNumber, totalAmount: data.totalAmount });
+      setSuccessOrder({
+        orderNumber: data.orderNumber,
+        totalAmount: data.totalAmount,
+      });
       clearCart();
       setNote("");
       queryClient.invalidateQueries({ queryKey: ["orders/last"] });
       queryClient.invalidateQueries({ queryKey: ["orders"] });
     },
-    onError: (err: Error & { status?: number; data?: { unavailableItems?: string[] } }) => {
+    onError: (
+      err: Error & { status?: number; data?: { unavailableItems?: string[] } },
+    ) => {
       if (err.status === 409 && err.data?.unavailableItems) {
         const ids = err.data.unavailableItems;
         setUnavailableWarning(ids.map((id) => cart[id]?.name ?? id));
@@ -209,7 +228,10 @@ function ShopMenu() {
         <h1 className="text-2xl font-bold">Menu</h1>
         <p className="text-destructive">
           Failed to load menu.{" "}
-          <button onClick={() => refetch()} className="underline hover:no-underline">
+          <button
+            onClick={() => refetch()}
+            className="underline hover:no-underline"
+          >
             Try again
           </button>
         </p>
@@ -221,7 +243,9 @@ function ShopMenu() {
     return (
       <div className="space-y-4">
         <h1 className="text-2xl font-bold">Menu</h1>
-        <p className="text-muted-foreground">No menu items available right now.</p>
+        <p className="text-muted-foreground">
+          No menu items available right now.
+        </p>
       </div>
     );
   }
@@ -255,7 +279,9 @@ function ShopMenu() {
       {lastOrder && (
         <div className="rounded-md border bg-muted/50 px-4 py-3 flex items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            Last order: {lastOrder.items.length} item{lastOrder.items.length !== 1 ? "s" : ""} &mdash; ৳{lastOrder.totalAmount}
+            Last order: {lastOrder.items.length} item
+            {lastOrder.items.length !== 1 ? "s" : ""} &mdash; ৳
+            {lastOrder.totalAmount}
           </p>
           <div className="flex items-center gap-2">
             {repeatWarning.length > 0 && (
@@ -272,7 +298,9 @@ function ShopMenu() {
 
       {/* No search results */}
       {q && Object.keys(grouped).length === 0 && (
-        <p className="text-muted-foreground text-sm">No items match "{search}".</p>
+        <p className="text-muted-foreground text-sm">
+          No items match "{search}".
+        </p>
       )}
 
       {/* Menu categories */}
@@ -305,7 +333,14 @@ function ShopMenu() {
                       <div className="flex items-center gap-1">
                         <button
                           className="h-9 w-9 rounded-md border flex items-center justify-center text-lg font-medium hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                          onClick={() => setQty(item.id, item.name, item.price, Math.max(0, qty - 1))}
+                          onClick={() =>
+                            setQty(
+                              item.id,
+                              item.name,
+                              item.price,
+                              Math.max(0, qty - 1),
+                            )
+                          }
                           disabled={qty === 0}
                           aria-label={`Decrease ${item.name}`}
                         >
@@ -316,7 +351,9 @@ function ShopMenu() {
                         </span>
                         <button
                           className="h-9 w-9 rounded-md border flex items-center justify-center text-lg font-medium hover:bg-muted transition-colors"
-                          onClick={() => setQty(item.id, item.name, item.price, qty + 1)}
+                          onClick={() =>
+                            setQty(item.id, item.name, item.price, qty + 1)
+                          }
                           aria-label={`Increase ${item.name}`}
                         >
                           +
@@ -341,19 +378,25 @@ function ShopMenu() {
               setConfirmOpen(true);
             }}
           >
-            <span>{totalItems} item{totalItems !== 1 ? "s" : ""} &mdash; ৳{totalAmount}</span>
+            <span>
+              {totalItems} item{totalItems !== 1 ? "s" : ""} &mdash; ৳
+              {totalAmount}
+            </span>
             <span>Place Order →</span>
           </button>
         </div>
       )}
 
       {/* Order confirmation sheet */}
-      <Sheet open={confirmOpen} onOpenChange={(open) => {
-        if (!open && !mutation.isPending) {
-          setConfirmOpen(false);
-          if (!successOrder) mutation.reset();
-        }
-      }}>
+      <Sheet
+        open={confirmOpen}
+        onOpenChange={(open) => {
+          if (!open && !mutation.isPending) {
+            setConfirmOpen(false);
+            if (!successOrder) mutation.reset();
+          }
+        }}
+      >
         <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto">
           <SheetHeader>
             <SheetTitle>
@@ -369,8 +412,12 @@ function ShopMenu() {
                 </div>
               )}
               <div className="rounded-md border bg-muted/50 p-4 text-center space-y-1">
-                <p className="text-lg font-semibold">Order #{successOrder.orderNumber}</p>
-                <p className="text-muted-foreground">Total: ৳{successOrder.totalAmount}</p>
+                <p className="text-lg font-semibold">
+                  Order #{successOrder.orderNumber}
+                </p>
+                <p className="text-muted-foreground">
+                  Total: ৳{successOrder.totalAmount}
+                </p>
               </div>
               <Button className="w-full" onClick={handleNewOrder}>
                 New Order
@@ -381,11 +428,16 @@ function ShopMenu() {
               {/* Cart items */}
               <div className="divide-y rounded-md border overflow-hidden">
                 {Object.entries(cart).map(([id, entry]) => (
-                  <div key={id} className="flex items-center justify-between px-4 py-2 text-sm">
+                  <div
+                    key={id}
+                    className="flex items-center justify-between px-4 py-2 text-sm"
+                  >
                     <span className="font-medium">{entry.name}</span>
                     <div className="flex items-center gap-4 text-muted-foreground">
                       <span>×{entry.quantity}</span>
-                      <span className="tabular-nums">৳{entry.price * entry.quantity}</span>
+                      <span className="tabular-nums">
+                        ৳{entry.price * entry.quantity}
+                      </span>
                     </div>
                   </div>
                 ))}
@@ -406,7 +458,8 @@ function ShopMenu() {
 
               {mutation.isError && (
                 <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-                  {(mutation.error as Error & { status?: number })?.status === 409
+                  {(mutation.error as Error & { status?: number })?.status ===
+                  409
                     ? "Some items are no longer available and have been removed from your cart."
                     : "Failed to place order. Please try again."}
                 </div>

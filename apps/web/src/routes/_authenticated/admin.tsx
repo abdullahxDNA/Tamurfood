@@ -40,7 +40,10 @@ function NavLinks({ onNavigate }: { onNavigate?: () => void }) {
           key={item.to}
           to={item.to}
           className="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
-          activeProps={{ className: "px-3 py-2 rounded-md text-sm font-medium bg-accent text-foreground" }}
+          activeProps={{
+            className:
+              "px-3 py-2 rounded-md text-sm font-medium bg-accent text-foreground",
+          }}
           onClick={onNavigate}
         >
           {item.label}

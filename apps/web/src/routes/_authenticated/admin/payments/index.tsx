@@ -71,7 +71,11 @@ function PaymentsPage() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const { data: payments = [], isLoading, isError } = useQuery({
+  const {
+    data: payments = [],
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["admin/payments"],
     queryFn: fetchPayments,
   });
@@ -90,7 +94,7 @@ function PaymentsPage() {
     }) => {
       const res = await api.api.v1.admin.payments.$post({ json: body });
       if (!res.ok) {
-        const d = await res.json() as { error?: string };
+        const d = (await res.json()) as { error?: string };
         throw new Error(d.error ?? "Failed to record payment");
       }
     },
@@ -102,10 +106,13 @@ function PaymentsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await api.api.v1.admin.payments[":id"].$delete({ param: { id } });
+      const res = await api.api.v1.admin.payments[":id"].$delete({
+        param: { id },
+      });
       if (!res.ok) throw new Error("Failed to delete payment");
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin/payments"] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["admin/payments"] }),
   });
 
   function handleDelete(id: string) {
@@ -146,7 +153,9 @@ function PaymentsPage() {
                 <TableCell>{p.paymentDate}</TableCell>
                 <TableCell>{p.shopName}</TableCell>
                 <TableCell>৳{p.amount.toLocaleString()}</TableCell>
-                <TableCell className="text-muted-foreground">{p.note ?? "—"}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {p.note ?? "—"}
+                </TableCell>
                 <TableCell>{p.recordedByName}</TableCell>
                 <TableCell className="text-right">
                   <Button
@@ -186,7 +195,12 @@ function RecordPaymentDialog({
 }: {
   shops: Shop[];
   onClose: () => void;
-  onSubmit: (data: { shopId: string; amount: number; paymentDate: string; note?: string }) => void;
+  onSubmit: (data: {
+    shopId: string;
+    amount: number;
+    paymentDate: string;
+    note?: string;
+  }) => void;
   isPending: boolean;
   error: string | null;
 }) {

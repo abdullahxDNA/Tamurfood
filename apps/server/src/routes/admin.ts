@@ -4,7 +4,14 @@ import { z } from "zod";
 import { zValidator } from "../lib/validator";
 import { eq, and, desc, gte, lt, sql, inArray } from "drizzle-orm";
 import { db } from "@tamurfood/db";
-import { orders, orderItems, shops, payments, user, analyticsEvents } from "@tamurfood/db/schema";
+import {
+  orders,
+  orderItems,
+  shops,
+  payments,
+  user,
+  analyticsEvents,
+} from "@tamurfood/db/schema";
 import { requireAdmin, type Variables } from "../lib/helpers";
 import { orderEvents, type NewOrderEvent } from "../lib/order-events";
 
@@ -35,7 +42,9 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
       conditions.push(lt(orders.placedAt, end) as ReturnType<typeof eq>);
     }
     if (isDoneParam !== undefined && isDoneParam !== "") {
-      conditions.push(eq(orders.isDone, isDoneParam === "true") as ReturnType<typeof eq>);
+      conditions.push(
+        eq(orders.isDone, isDoneParam === "true") as ReturnType<typeof eq>,
+      );
     }
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -101,10 +110,15 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
 
     return streamSSE(c, async (stream) => {
       const handler = async (data: NewOrderEvent) => {
-        await stream.writeSSE({ event: "new_order", data: JSON.stringify(data) });
+        await stream.writeSSE({
+          event: "new_order",
+          data: JSON.stringify(data),
+        });
       };
       orderEvents.on("new_order", handler);
-      stream.onAbort(() => { orderEvents.off("new_order", handler); });
+      stream.onAbort(() => {
+        orderEvents.off("new_order", handler);
+      });
       while (true) {
         await stream.sleep(30_000);
         await stream.writeSSE({ event: "ping", data: "" });
@@ -184,7 +198,11 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
 
     const now = new Date();
 
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const todayStart = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
     const weekStart = new Date(now);
     weekStart.setDate(weekStart.getDate() - 6);
     weekStart.setHours(0, 0, 0, 0);
@@ -368,7 +386,10 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
 
     return c.json({
       shopName: shop.shopName,
-      orders: orderRows.map((o) => ({ ...o, items: itemsByOrder.get(o.id) ?? [] })),
+      orders: orderRows.map((o) => ({
+        ...o,
+        items: itemsByOrder.get(o.id) ?? [],
+      })),
     });
   })
   // PATCH /orders/:id/cancel — admin cancels any pending order
@@ -388,7 +409,8 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
 
     if (!existing) return c.json({ error: "Not found" }, 404);
     if (existing.isDone) return c.json({ error: "Order already done" }, 409);
-    if (existing.isCancelled) return c.json({ error: "Order already cancelled" }, 409);
+    if (existing.isCancelled)
+      return c.json({ error: "Order already cancelled" }, 409);
 
     await db.execute(
       sql`UPDATE "orders" SET "is_cancelled" = true, "cancelled_at" = NOW() WHERE "id" = ${id}`,
@@ -396,4 +418,3 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
 
     return c.json({ isCancelled: true });
   });
-

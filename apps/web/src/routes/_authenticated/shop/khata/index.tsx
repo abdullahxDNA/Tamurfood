@@ -52,11 +52,17 @@ function nextMonth(month: string) {
 
 function fmtMonthLabel(month: string) {
   const [y, m] = month.split("-").map(Number);
-  return new Date(y, m - 1, 1).toLocaleDateString("en-BD", { month: "long", year: "numeric" });
+  return new Date(y, m - 1, 1).toLocaleDateString("en-BD", {
+    month: "long",
+    year: "numeric",
+  });
 }
 
 function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-BD", { day: "numeric", month: "short" });
+  return new Date(iso).toLocaleDateString("en-BD", {
+    day: "numeric",
+    month: "short",
+  });
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -115,15 +121,25 @@ function ShopKhataPage() {
         <div className="rounded-lg border p-4 space-y-2 text-sm">
           <div className="flex justify-between">
             <span className="text-muted-foreground">Ordered this month</span>
-            <span className="font-medium">৳{data.monthOrdered.toLocaleString()}</span>
+            <span className="font-medium">
+              ৳{data.monthOrdered.toLocaleString()}
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">Paid this month</span>
-            <span className="font-medium text-green-600">৳{data.monthPaid.toLocaleString()}</span>
+            <span className="font-medium text-green-600">
+              ৳{data.monthPaid.toLocaleString()}
+            </span>
           </div>
           <div className="border-t pt-2 flex justify-between font-semibold text-base">
             <span>Balance due</span>
-            <span className={data.outstandingBalance > 0 ? "text-destructive" : "text-green-600"}>
+            <span
+              className={
+                data.outstandingBalance > 0
+                  ? "text-destructive"
+                  : "text-green-600"
+              }
+            >
               {data.outstandingBalance > 0
                 ? `You owe ৳${data.outstandingBalance.toLocaleString()}`
                 : data.outstandingBalance < 0
@@ -139,7 +155,9 @@ function ShopKhataPage() {
       )}
 
       {data?.entries.length === 0 && (
-        <p className="text-muted-foreground text-sm">No transactions this month.</p>
+        <p className="text-muted-foreground text-sm">
+          No transactions this month.
+        </p>
       )}
 
       {/* Opening balance note */}
@@ -165,12 +183,18 @@ function ShopKhataPage() {
                       : "bg-green-100 text-green-700"
                   }`}
                 >
-                  {entry.type === "order" ? `Order #${entry.orderNumber}` : "Payment received"}
+                  {entry.type === "order"
+                    ? `Order #${entry.orderNumber}`
+                    : "Payment received"}
                 </span>
-                <span className="text-xs text-muted-foreground">{fmtDate(entry.date)}</span>
+                <span className="text-xs text-muted-foreground">
+                  {fmtDate(entry.date)}
+                </span>
               </div>
               {entry.note && (
-                <p className="text-xs text-muted-foreground italic">"{entry.note}"</p>
+                <p className="text-xs text-muted-foreground italic">
+                  "{entry.note}"
+                </p>
               )}
             </div>
             <div className="text-right space-y-0.5">
@@ -179,9 +203,13 @@ function ShopKhataPage() {
                   entry.type === "order" ? "text-destructive" : "text-green-600"
                 }`}
               >
-                {entry.type === "order" ? `+৳${entry.debit}` : `-৳${entry.credit}`}
+                {entry.type === "order"
+                  ? `+৳${entry.debit}`
+                  : `-৳${entry.credit}`}
               </p>
-              <p className="text-xs text-muted-foreground">bal: ৳{entry.balance}</p>
+              <p className="text-xs text-muted-foreground">
+                bal: ৳{entry.balance}
+              </p>
             </div>
           </div>
         ))}

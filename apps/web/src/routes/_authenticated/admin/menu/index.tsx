@@ -55,10 +55,7 @@ async function fetchCategories(): Promise<MenuCategory[]> {
   return res.json() as Promise<MenuCategory[]>;
 }
 
-type DialogMode =
-  | { type: "add" }
-  | { type: "edit"; item: MenuItem }
-  | null;
+type DialogMode = { type: "add" } | { type: "edit"; item: MenuItem } | null;
 
 function MenuPage() {
   const queryClient = useQueryClient();
@@ -66,7 +63,11 @@ function MenuPage() {
   const [manageCatsOpen, setManageCatsOpen] = useState(false);
   const [search, setSearch] = useState("");
 
-  const { data: items = [], isLoading, isError } = useQuery({
+  const {
+    data: items = [],
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["menu"],
     queryFn: fetchMenu,
   });
@@ -86,7 +87,7 @@ function MenuPage() {
     }) => {
       const res = await api.api.v1.menu.$post({ json: body });
       if (!res.ok) {
-        const d = await res.json() as { error?: string };
+        const d = (await res.json()) as { error?: string };
         throw new Error(d.error ?? "Failed to create item");
       }
     },
@@ -108,7 +109,10 @@ function MenuPage() {
       imageUrl?: string | null;
       sortOrder?: number;
     }) => {
-      const res = await api.api.v1.menu[":id"].$put({ json: body, param: { id } });
+      const res = await api.api.v1.menu[":id"].$put({
+        json: body,
+        param: { id },
+      });
       if (!res.ok) throw new Error("Failed to update item");
     },
     onSuccess: () => {
@@ -127,7 +131,9 @@ function MenuPage() {
 
   const toggleAvailabilityMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await api.api.v1.menu[":id"].availability.$patch({ param: { id } });
+      const res = await api.api.v1.menu[":id"].availability.$patch({
+        param: { id },
+      });
       if (!res.ok) throw new Error("Failed to toggle availability");
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu"] }),
@@ -140,7 +146,11 @@ function MenuPage() {
     const catItems = items.filter((i) => i.category === cat);
     if (catItems.length > 0) grouped.push([cat, catItems]);
   }
-  const otherCats = [...new Set(items.map((i) => i.category).filter((c) => !catNames.includes(c)))];
+  const otherCats = [
+    ...new Set(
+      items.map((i) => i.category).filter((c) => !catNames.includes(c)),
+    ),
+  ];
   for (const cat of otherCats) {
     grouped.push([cat, items.filter((i) => i.category === cat)]);
   }
@@ -152,7 +162,10 @@ function MenuPage() {
           // category name matches → show all its items
           if (cat.toLowerCase().includes(q)) return [cat, catItems];
           // otherwise filter items by name
-          return [cat, catItems.filter((i) => i.name.toLowerCase().includes(q))];
+          return [
+            cat,
+            catItems.filter((i) => i.name.toLowerCase().includes(q)),
+          ];
         })
         .filter(([, catItems]) => catItems.length > 0)
     : grouped;
@@ -185,10 +198,16 @@ function MenuPage() {
         <div className="relative max-w-sm">
           <svg
             className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none"
-            xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"
-            stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
           >
-            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+            <circle cx="11" cy="11" r="8" />
+            <path d="m21 21-4.35-4.35" />
           </svg>
           <Input
             placeholder="Search items or categories..."
@@ -203,19 +222,26 @@ function MenuPage() {
       {isError && <p className="text-destructive">Failed to load menu.</p>}
 
       {!isLoading && !isError && items.length === 0 && (
-        <p className="text-muted-foreground">No menu items yet. Add one to get started.</p>
+        <p className="text-muted-foreground">
+          No menu items yet. Add one to get started.
+        </p>
       )}
 
       {/* No results */}
       {q && filtered.length === 0 && (
-        <p className="text-sm text-muted-foreground">No items found for "{search}".</p>
+        <p className="text-sm text-muted-foreground">
+          No items found for "{search}".
+        </p>
       )}
 
       {/* Column layout */}
       {filtered.length > 0 && (
         <div className="flex gap-4 overflow-x-auto pb-2 items-start">
           {filtered.map(([category, catItems]) => (
-            <div key={category} className="min-w-[240px] w-[240px] flex-shrink-0">
+            <div
+              key={category}
+              className="min-w-[240px] w-[240px] flex-shrink-0"
+            >
               <div className="flex items-center justify-between border-b pb-1.5 mb-2">
                 <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
                   {category}
@@ -226,17 +252,26 @@ function MenuPage() {
               </div>
               <div className="space-y-2">
                 {catItems.map((item) => (
-                  <div key={item.id} className="rounded-md border p-2.5 space-y-2">
+                  <div
+                    key={item.id}
+                    className="rounded-md border p-2.5 space-y-2"
+                  >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-medium text-sm">{item.name}</span>
+                          <span className="font-medium text-sm">
+                            {item.name}
+                          </span>
                         </div>
-                        <p className="text-sm font-medium mt-0.5">৳{item.price}</p>
+                        <p className="text-sm font-medium mt-0.5">
+                          ৳{item.price}
+                        </p>
                       </div>
                       <Switch
                         checked={item.isAvailable}
-                        onCheckedChange={() => toggleAvailabilityMutation.mutate(item.id)}
+                        onCheckedChange={() =>
+                          toggleAvailabilityMutation.mutate(item.id)
+                        }
                         disabled={toggleAvailabilityMutation.isPending}
                       />
                     </div>
@@ -328,9 +363,13 @@ function MenuItemDialog({
   const queryClient = useQueryClient();
   const [name, setName] = useState(item?.name ?? "");
   const [price, setPrice] = useState(item?.price.toString() ?? "");
-  const [category, setCategory] = useState(item?.category ?? categories[0]?.name ?? "");
+  const [category, setCategory] = useState(
+    item?.category ?? categories[0]?.name ?? "",
+  );
   const [imageUrl, setImageUrl] = useState(item?.imageUrl ?? "");
-  const [sortOrder, setSortOrder] = useState(item?.sortOrder?.toString() ?? "0");
+  const [sortOrder, setSortOrder] = useState(
+    item?.sortOrder?.toString() ?? "0",
+  );
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -342,9 +381,11 @@ function MenuItemDialog({
 
   const addCategoryMutation = useMutation({
     mutationFn: async (catName: string) => {
-      const res = await api.api.v1.menu.categories.$post({ json: { name: catName } });
+      const res = await api.api.v1.menu.categories.$post({
+        json: { name: catName },
+      });
       if (!res.ok) {
-        const d = await res.json() as { error?: string };
+        const d = (await res.json()) as { error?: string };
         throw new Error(d.error ?? "Failed to add category");
       }
     },
@@ -372,10 +413,10 @@ function MenuItemDialog({
         credentials: "include",
       });
       if (!res.ok) {
-        const d = await res.json() as { error?: string };
+        const d = (await res.json()) as { error?: string };
         throw new Error(d.error ?? "Upload failed");
       }
-      const { url } = await res.json() as { url: string };
+      const { url } = (await res.json()) as { url: string };
       setImageUrl(url);
     } catch (err) {
       setUploadError(err instanceof Error ? err.message : "Upload failed");
@@ -434,13 +475,20 @@ function MenuItemDialog({
                     autoFocus
                     placeholder="New category name"
                     value={newCatInput}
-                    onChange={(e) => { setNewCatInput(e.target.value); setNewCatError(null); }}
+                    onChange={(e) => {
+                      setNewCatInput(e.target.value);
+                      setNewCatError(null);
+                    }}
                   />
                   <Button
                     type="button"
                     size="sm"
-                    disabled={!newCatInput.trim() || addCategoryMutation.isPending}
-                    onClick={() => addCategoryMutation.mutate(newCatInput.trim())}
+                    disabled={
+                      !newCatInput.trim() || addCategoryMutation.isPending
+                    }
+                    onClick={() =>
+                      addCategoryMutation.mutate(newCatInput.trim())
+                    }
                   >
                     {addCategoryMutation.isPending ? "Saving..." : "Save"}
                   </Button>
@@ -448,12 +496,18 @@ function MenuItemDialog({
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() => { setNewCatMode(false); setNewCatInput(""); setNewCatError(null); }}
+                    onClick={() => {
+                      setNewCatMode(false);
+                      setNewCatInput("");
+                      setNewCatError(null);
+                    }}
                   >
                     Cancel
                   </Button>
                 </div>
-                {newCatError && <p className="text-sm text-destructive">{newCatError}</p>}
+                {newCatError && (
+                  <p className="text-sm text-destructive">{newCatError}</p>
+                )}
               </div>
             ) : (
               <Select
@@ -475,7 +529,10 @@ function MenuItemDialog({
                       {cat.name}
                     </SelectItem>
                   ))}
-                  <SelectItem value="__new__" className="text-primary font-medium">
+                  <SelectItem
+                    value="__new__"
+                    className="text-primary font-medium"
+                  >
                     + New category
                   </SelectItem>
                 </SelectContent>
@@ -524,7 +581,9 @@ function MenuItemDialog({
                 )}
               </div>
             </div>
-            {uploadError && <p className="text-sm text-destructive">{uploadError}</p>}
+            {uploadError && (
+              <p className="text-sm text-destructive">{uploadError}</p>
+            )}
           </div>
           <div className="space-y-2">
             <Label htmlFor="sortOrder">Sort Order</Label>
@@ -540,7 +599,10 @@ function MenuItemDialog({
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending || uploading || newCatMode}>
+            <Button
+              type="submit"
+              disabled={isPending || uploading || newCatMode}
+            >
               {isPending ? "Saving..." : mode === "add" ? "Add Item" : "Save"}
             </Button>
           </DialogFooter>
@@ -568,17 +630,23 @@ function CategoriesDialog({
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await api.api.v1.menu.categories[":id"].$delete({ param: { id } });
+      const res = await api.api.v1.menu.categories[":id"].$delete({
+        param: { id },
+      });
       if (!res.ok) throw new Error("Failed to delete");
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu-categories"] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["menu-categories"] }),
   });
 
   const renameMutation = useMutation({
     mutationFn: async ({ id, name }: { id: string; name: string }) => {
-      const res = await api.api.v1.menu.categories[":id"].$put({ param: { id }, json: { name } });
+      const res = await api.api.v1.menu.categories[":id"].$put({
+        param: { id },
+        json: { name },
+      });
       if (!res.ok) {
-        const d = await res.json() as { error?: string };
+        const d = (await res.json()) as { error?: string };
         throw new Error(d.error ?? "Failed to rename");
       }
     },
@@ -622,21 +690,36 @@ function CategoriesDialog({
                     <Input
                       autoFocus
                       value={editValue}
-                      onChange={(e) => { setEditValue(e.target.value); setEditError(null); }}
+                      onChange={(e) => {
+                        setEditValue(e.target.value);
+                        setEditError(null);
+                      }}
                     />
                     <Button
                       type="button"
                       size="sm"
                       disabled={!editValue.trim() || renameMutation.isPending}
-                      onClick={() => renameMutation.mutate({ id: cat.id, name: editValue.trim() })}
+                      onClick={() =>
+                        renameMutation.mutate({
+                          id: cat.id,
+                          name: editValue.trim(),
+                        })
+                      }
                     >
                       {renameMutation.isPending ? "Saving..." : "Save"}
                     </Button>
-                    <Button type="button" size="sm" variant="outline" onClick={cancelEdit}>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={cancelEdit}
+                    >
                       Cancel
                     </Button>
                   </div>
-                  {editError && <p className="text-xs text-destructive">{editError}</p>}
+                  {editError && (
+                    <p className="text-xs text-destructive">{editError}</p>
+                  )}
                 </div>
               ) : (
                 <div className="flex items-center justify-between gap-2 rounded-md border px-3 py-2">
@@ -672,7 +755,9 @@ function CategoriesDialog({
           ))}
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={onClose}>Close</Button>
+          <Button variant="outline" onClick={onClose}>
+            Close
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

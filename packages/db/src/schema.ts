@@ -18,7 +18,9 @@ export const user = pgTable("user", {
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
   phoneNumber: varchar("phone_number", { length: 20 }).unique(),
-  phoneNumberVerified: boolean("phone_number_verified").notNull().default(false),
+  phoneNumberVerified: boolean("phone_number_verified")
+    .notNull()
+    .default(false),
   role: varchar("role", { length: 10 }).notNull().default("shop"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull(),
@@ -67,7 +69,10 @@ export const verification = pgTable("verification", {
 
 export const shops = pgTable("shops", {
   id: text("id").primaryKey(),
-  userId: text("user_id").notNull().unique().references(() => user.id, { onDelete: "cascade" }),
+  userId: text("user_id")
+    .notNull()
+    .unique()
+    .references(() => user.id, { onDelete: "cascade" }),
   shopName: varchar("shop_name", { length: 150 }).notNull(),
   ownerName: varchar("owner_name", { length: 100 }).notNull(),
   address: text("address"),
@@ -91,7 +96,9 @@ export const orders = pgTable(
   {
     id: text("id").primaryKey(),
     orderNumber: serial("order_number"),
-    shopId: text("shop_id").notNull().references(() => shops.id, { onDelete: "restrict" }),
+    shopId: text("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "restrict" }),
     totalAmount: integer("total_amount").notNull(),
     note: varchar("note", { length: 500 }),
     isDone: boolean("is_done").notNull().default(false),
@@ -108,8 +115,12 @@ export const orders = pgTable(
 
 export const orderItems = pgTable("order_items", {
   id: text("id").primaryKey(),
-  orderId: text("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
-  menuItemId: text("menu_item_id").notNull().references(() => menuItems.id, { onDelete: "restrict" }),
+  orderId: text("order_id")
+    .notNull()
+    .references(() => orders.id, { onDelete: "cascade" }),
+  menuItemId: text("menu_item_id")
+    .notNull()
+    .references(() => menuItems.id, { onDelete: "restrict" }),
   itemName: varchar("item_name", { length: 100 }).notNull(),
   itemPrice: integer("item_price").notNull(),
   quantity: integer("quantity").notNull(),
@@ -121,16 +132,18 @@ export const payments = pgTable(
   "payments",
   {
     id: text("id").primaryKey(),
-    shopId: text("shop_id").notNull().references(() => shops.id, { onDelete: "restrict" }),
+    shopId: text("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "restrict" }),
     amount: integer("amount").notNull(),
     paymentDate: date("payment_date").notNull(),
     note: varchar("note", { length: 300 }),
-    recordedBy: text("recorded_by").notNull().references(() => user.id, { onDelete: "restrict" }),
+    recordedBy: text("recorded_by")
+      .notNull()
+      .references(() => user.id, { onDelete: "restrict" }),
     createdAt: timestamp("created_at").notNull(),
   },
-  (t) => [
-    index("payments_shop_date_idx").on(t.shopId, t.paymentDate),
-  ],
+  (t) => [index("payments_shop_date_idx").on(t.shopId, t.paymentDate)],
 );
 
 export const menuCategories = pgTable("menu_categories", {
@@ -149,7 +162,5 @@ export const analyticsEvents = pgTable(
     metadata: jsonb("metadata"),
     createdAt: timestamp("created_at").notNull(),
   },
-  (t) => [
-    index("analytics_event_type_idx").on(t.eventType, t.createdAt),
-  ],
+  (t) => [index("analytics_event_type_idx").on(t.eventType, t.createdAt)],
 );

@@ -48,7 +48,7 @@ function ProfilePage() {
       setNewPassword("");
       setConfirmPassword("");
     } else {
-      const data = await res.json() as { error: string };
+      const data = (await res.json()) as { error: string };
       toast.error(data.error ?? "Failed to change password.");
     }
 

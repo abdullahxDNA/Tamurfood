@@ -6,7 +6,12 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   Dialog,
   DialogContent,
@@ -30,7 +35,10 @@ function yesterdayDate() {
   return d.toISOString().slice(0, 10);
 }
 function fmtTime(iso: string) {
-  return new Date(iso).toLocaleTimeString("en-BD", { hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleTimeString("en-BD", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 function fmtDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-BD", {
@@ -112,7 +120,9 @@ async function fetchAnalytics() {
   return res.json() as Promise<AnalyticsData>;
 }
 async function fetchShopOrders(shopId: string) {
-  const res = await api.api.v1.admin.shops[":shopId"].orders.$get({ param: { shopId } });
+  const res = await api.api.v1.admin.shops[":shopId"].orders.$get({
+    param: { shopId },
+  });
   if (!res.ok) throw new Error("Failed to fetch shop orders");
   return res.json() as Promise<{ shopName: string; orders: AdminOrder[] }>;
 }
@@ -123,11 +133,15 @@ function StatCard({ title, stats }: { title: string; stats: AnalyticsStats }) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
+        <CardTitle className="text-sm font-medium text-muted-foreground">
+          {title}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <p className="text-2xl font-bold">{stats.count} orders</p>
-        <p className="text-sm text-muted-foreground">৳{stats.revenue.toLocaleString()}</p>
+        <p className="text-sm text-muted-foreground">
+          ৳{stats.revenue.toLocaleString()}
+        </p>
       </CardContent>
     </Card>
   );
@@ -161,7 +175,9 @@ function OrderCard({
           >
             {order.shopName}
           </button>
-          <span className="text-muted-foreground text-sm">#{order.orderNumber}</span>
+          <span className="text-muted-foreground text-sm">
+            #{order.orderNumber}
+          </span>
           {order.isCancelled ? (
             <Badge variant="destructive">Cancelled</Badge>
           ) : (
@@ -180,7 +196,11 @@ function OrderCard({
             </Button>
           )}
           {onCancel && !order.isDone && !order.isCancelled && (
-            <Button size="sm" variant="outline" onClick={() => onCancel(order.id)}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onCancel(order.id)}
+            >
               Cancel
             </Button>
           )}
@@ -214,15 +234,23 @@ function AdminDashboard() {
 
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(muted);
-  mutedRef.current = muted;
+  // Keep the ref in sync for reads inside async SSE callbacks (see playChime).
+  useEffect(() => {
+    mutedRef.current = muted;
+  }, [muted]);
 
-  const [sseStatus, setSseStatus] = useState<"connected" | "reconnecting">("connected");
+  const [sseStatus, setSseStatus] = useState<"connected" | "reconnecting">(
+    "connected",
+  );
   const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
   const [date, setDate] = useState(todayDate);
   const [doneOpen, setDoneOpen] = useState(false);
   const [confirmDoneId, setConfirmDoneId] = useState<string | null>(null);
   const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
-  const [shopHistory, setShopHistory] = useState<{ id: string; name: string } | null>(null);
+  const [shopHistory, setShopHistory] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   // live "time ago" tick
   const [, setTick] = useState(0);
 
@@ -253,15 +281,23 @@ function AdminDashboard() {
   // Split + sort
   const pending = (ordersData?.orders ?? [])
     .filter((o) => !o.isDone && !o.isCancelled)
-    .sort((a, b) => new Date(a.placedAt).getTime() - new Date(b.placedAt).getTime()); // oldest first
+    .sort(
+      (a, b) => new Date(a.placedAt).getTime() - new Date(b.placedAt).getTime(),
+    ); // oldest first
   const done = (ordersData?.orders ?? [])
     .filter((o) => o.isDone || o.isCancelled)
-    .sort((a, b) => new Date(b.doneAt ?? b.placedAt).getTime() - new Date(a.doneAt ?? a.placedAt).getTime()); // newest first
+    .sort(
+      (a, b) =>
+        new Date(b.doneAt ?? b.placedAt).getTime() -
+        new Date(a.doneAt ?? a.placedAt).getTime(),
+    ); // newest first
 
   // Tab title
   useEffect(() => {
     document.title =
-      pending.length > 0 ? `(${pending.length}) New Orders — Tamurfood` : "Tamurfood Admin";
+      pending.length > 0
+        ? `(${pending.length}) New Orders — Tamurfood`
+        : "Tamurfood Admin";
     return () => {
       document.title = "Tamurfood Admin";
     };
@@ -333,8 +369,11 @@ function AdminDashboard() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["admin/orders"] });
       queryClient.invalidateQueries({ queryKey: ["admin/analytics"] });
-      if (data.paid) queryClient.invalidateQueries({ queryKey: ["admin/payments"] });
-      toast.success(data.paid ? "Order done — payment recorded." : "Order marked as done.");
+      if (data.paid)
+        queryClient.invalidateQueries({ queryKey: ["admin/payments"] });
+      toast.success(
+        data.paid ? "Order done — payment recorded." : "Order marked as done.",
+      );
       setConfirmDoneId(null);
     },
     onError: (err) => toast.error((err as Error).message),
@@ -342,7 +381,9 @@ function AdminDashboard() {
 
   const cancelMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await api.api.v1.admin.orders[":id"].cancel.$patch({ param: { id } });
+      const res = await api.api.v1.admin.orders[":id"].cancel.$patch({
+        param: { id },
+      });
       if (!res.ok) throw new Error("Failed to cancel order");
       return res.json();
     },
@@ -362,7 +403,8 @@ function AdminDashboard() {
       {/* Reconnect banner */}
       {sseStatus === "reconnecting" && (
         <div className="rounded-md bg-yellow-50 border border-yellow-200 px-4 py-2 text-sm text-yellow-800">
-          Lost connection to server. Trying to reconnect… Orders refresh every 10s.
+          Lost connection to server. Trying to reconnect… Orders refresh every
+          10s.
         </div>
       )}
 
@@ -408,7 +450,9 @@ function AdminDashboard() {
       {analytics && isToday && (
         <p className="text-sm text-muted-foreground">
           Today:{" "}
-          <span className="font-medium text-foreground">{analytics.today.count} orders</span>
+          <span className="font-medium text-foreground">
+            {analytics.today.count} orders
+          </span>
           {" · "}
           <span className="font-medium text-foreground">
             ৳{analytics.today.revenue.toLocaleString()}
@@ -428,7 +472,12 @@ function AdminDashboard() {
       {/* Pending orders */}
       <div>
         <h2 className="text-base font-semibold mb-3">
-          Pending{pending.length > 0 && <span className="ml-2 text-muted-foreground">({pending.length})</span>}
+          Pending
+          {pending.length > 0 && (
+            <span className="ml-2 text-muted-foreground">
+              ({pending.length})
+            </span>
+          )}
         </h2>
         {isLoading && <p className="text-muted-foreground text-sm">Loading…</p>}
         {!isLoading && pending.length === 0 && (
@@ -459,7 +508,9 @@ function AdminDashboard() {
             onClick={() => setDoneOpen((o) => !o)}
           >
             <span>Completed ({done.length})</span>
-            <span className="text-muted-foreground text-sm">{doneOpen ? "▲" : "▼"}</span>
+            <span className="text-muted-foreground text-sm">
+              {doneOpen ? "▲" : "▼"}
+            </span>
           </button>
           {doneOpen && (
             <div className="space-y-3">
@@ -479,7 +530,9 @@ function AdminDashboard() {
       {/* Confirm mark-done dialog */}
       <Dialog
         open={confirmDoneId !== null}
-        onOpenChange={(open) => { if (!open && !markDoneMutation.isPending) setConfirmDoneId(null); }}
+        onOpenChange={(open) => {
+          if (!open && !markDoneMutation.isPending) setConfirmDoneId(null);
+        }}
       >
         <DialogContent>
           <DialogHeader>
@@ -496,13 +549,19 @@ function AdminDashboard() {
             </Button>
             <Button
               variant="outline"
-              onClick={() => confirmDoneId && markDoneMutation.mutate({ id: confirmDoneId, paid: false })}
+              onClick={() =>
+                confirmDoneId &&
+                markDoneMutation.mutate({ id: confirmDoneId, paid: false })
+              }
               disabled={markDoneMutation.isPending}
             >
               Done — Unpaid
             </Button>
             <Button
-              onClick={() => confirmDoneId && markDoneMutation.mutate({ id: confirmDoneId, paid: true })}
+              onClick={() =>
+                confirmDoneId &&
+                markDoneMutation.mutate({ id: confirmDoneId, paid: true })
+              }
               disabled={markDoneMutation.isPending}
             >
               {markDoneMutation.isPending ? "Saving…" : "Done + Paid"}
@@ -514,7 +573,9 @@ function AdminDashboard() {
       {/* Confirm cancel dialog */}
       <Dialog
         open={confirmCancelId !== null}
-        onOpenChange={(open) => { if (!open && !cancelMutation.isPending) setConfirmCancelId(null); }}
+        onOpenChange={(open) => {
+          if (!open && !cancelMutation.isPending) setConfirmCancelId(null);
+        }}
       >
         <DialogContent>
           <DialogHeader>
@@ -533,7 +594,9 @@ function AdminDashboard() {
             </Button>
             <Button
               variant="destructive"
-              onClick={() => confirmCancelId && cancelMutation.mutate(confirmCancelId)}
+              onClick={() =>
+                confirmCancelId && cancelMutation.mutate(confirmCancelId)
+              }
               disabled={cancelMutation.isPending}
             >
               {cancelMutation.isPending ? "Cancelling..." : "Yes, Cancel"}
@@ -543,10 +606,15 @@ function AdminDashboard() {
       </Dialog>
 
       {/* Shop history sheet */}
-      <Sheet open={!!shopHistory} onOpenChange={(open) => !open && setShopHistory(null)}>
+      <Sheet
+        open={!!shopHistory}
+        onOpenChange={(open) => !open && setShopHistory(null)}
+      >
         <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
           <SheetHeader>
-            <SheetTitle>{shopOrdersData?.shopName ?? shopHistory?.name} — Order History</SheetTitle>
+            <SheetTitle>
+              {shopOrdersData?.shopName ?? shopHistory?.name} — Order History
+            </SheetTitle>
           </SheetHeader>
           <div className="mt-4 space-y-3">
             {!shopOrdersData && (
@@ -559,8 +627,13 @@ function AdminDashboard() {
               <div key={order.id} className="border rounded-lg p-3 space-y-1.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm">#{order.orderNumber}</span>
-                    <Badge variant={order.isDone ? "secondary" : "default"} className="text-xs">
+                    <span className="font-medium text-sm">
+                      #{order.orderNumber}
+                    </span>
+                    <Badge
+                      variant={order.isDone ? "secondary" : "default"}
+                      className="text-xs"
+                    >
                       {order.isDone ? "Done" : "Pending"}
                     </Badge>
                   </div>
@@ -577,7 +650,9 @@ function AdminDashboard() {
                 </div>
                 <div className="flex justify-between text-sm">
                   {order.note ? (
-                    <span className="text-muted-foreground italic text-xs">"{order.note}"</span>
+                    <span className="text-muted-foreground italic text-xs">
+                      "{order.note}"
+                    </span>
                   ) : (
                     <span />
                   )}

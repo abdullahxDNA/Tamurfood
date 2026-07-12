@@ -37,7 +37,9 @@ function ShopLayout() {
     <CartProvider>
       <div className="min-h-screen pb-16">
         <header className="border-b px-6 py-4 flex items-center justify-between">
-          <span className="font-semibold truncate min-w-0 mr-4">{session.name}</span>
+          <span className="font-semibold truncate min-w-0 mr-4">
+            {session.name}
+          </span>
           <div className="flex items-center gap-4">
             <Button variant="outline" size="sm" onClick={handleLogout}>
               Logout

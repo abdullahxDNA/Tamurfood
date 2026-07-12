@@ -32,7 +32,11 @@ export const menuRouter = new Hono<{ Variables: Variables }>()
     const items = await db
       .select()
       .from(menuItems)
-      .orderBy(asc(menuItems.category), asc(menuItems.sortOrder), asc(menuItems.name));
+      .orderBy(
+        asc(menuItems.category),
+        asc(menuItems.sortOrder),
+        asc(menuItems.name),
+      );
 
     return c.json(items);
   })
@@ -70,29 +74,36 @@ export const menuRouter = new Hono<{ Variables: Variables }>()
     return c.json(cats);
   })
   // POST /categories — create category (admin only), 409 if name already exists
-  .post("/categories", zValidator("json", z.object({
-    name: z.string().min(1).max(50),
-    sortOrder: z.number().int().optional(),
-  })), async (c) => {
-    const err = requireAdmin(c);
-    if (err) return err;
+  .post(
+    "/categories",
+    zValidator(
+      "json",
+      z.object({
+        name: z.string().min(1).max(50),
+        sortOrder: z.number().int().optional(),
+      }),
+    ),
+    async (c) => {
+      const err = requireAdmin(c);
+      if (err) return err;
 
-    const body = c.req.valid("json");
-    const id = crypto.randomUUID();
+      const body = c.req.valid("json");
+      const id = crypto.randomUUID();
 
-    try {
-      await db.insert(menuCategories).values({
-        id,
-        name: body.name,
-        sortOrder: body.sortOrder ?? 0,
-        createdAt: new Date(),
-      });
-    } catch {
-      return c.json({ error: "Category already exists" }, 409);
-    }
+      try {
+        await db.insert(menuCategories).values({
+          id,
+          name: body.name,
+          sortOrder: body.sortOrder ?? 0,
+          createdAt: new Date(),
+        });
+      } catch {
+        return c.json({ error: "Category already exists" }, 409);
+      }
 
-    return c.json({ id }, 201);
-  })
+      return c.json({ id }, 201);
+    },
+  )
   // DELETE /categories/:id — delete category (admin only)
   .delete("/categories/:id", async (c) => {
     const err = requireAdmin(c);
@@ -104,21 +115,28 @@ export const menuRouter = new Hono<{ Variables: Variables }>()
     return c.json({ success: true });
   })
   // PUT /categories/:id — rename category (admin only)
-  .put("/categories/:id", zValidator("json", z.object({ name: z.string().min(1).max(50) })), async (c) => {
-    const err = requireAdmin(c);
-    if (err) return err;
+  .put(
+    "/categories/:id",
+    zValidator("json", z.object({ name: z.string().min(1).max(50) })),
+    async (c) => {
+      const err = requireAdmin(c);
+      if (err) return err;
 
-    const id = c.req.param("id");
-    const { name } = c.req.valid("json");
+      const id = c.req.param("id");
+      const { name } = c.req.valid("json");
 
-    try {
-      await db.update(menuCategories).set({ name }).where(eq(menuCategories.id, id));
-    } catch {
-      return c.json({ error: "Category name already exists" }, 409);
-    }
+      try {
+        await db
+          .update(menuCategories)
+          .set({ name })
+          .where(eq(menuCategories.id, id));
+      } catch {
+        return c.json({ error: "Category name already exists" }, 409);
+      }
 
-    return c.json({ success: true });
-  })
+      return c.json({ success: true });
+    },
+  )
   // POST /upload — upload menu image (admin only), returns { url }
   .post("/upload", async (c) => {
     const err = requireAdmin(c);
@@ -127,32 +145,41 @@ export const menuRouter = new Hono<{ Variables: Variables }>()
     const formData = await c.req.formData();
     const file = formData.get("file");
 
-    if (!(file instanceof File)) return c.json({ error: "No file provided" }, 400);
+    if (!(file instanceof File))
+      return c.json({ error: "No file provided" }, 400);
 
     const allowed = ["image/png", "image/jpeg", "image/webp"];
-    if (!allowed.includes(file.type)) return c.json({ error: "Invalid file type" }, 400);
-    if (file.size > 5 * 1024 * 1024) return c.json({ error: "File too large (max 5MiB)" }, 400);
+    if (!allowed.includes(file.type))
+      return c.json({ error: "Invalid file type" }, 400);
+    if (file.size > 5 * 1024 * 1024)
+      return c.json({ error: "File too large (max 5MiB)" }, 400);
 
     const ext = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
     const path = `${crypto.randomUUID()}.${ext}`;
     const supabaseUrl = env.SUPABASE_URL;
     const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
 
-    const res = await fetch(`${supabaseUrl}/storage/v1/object/menu-images/${path}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${serviceKey}`,
-        "Content-Type": file.type,
+    const res = await fetch(
+      `${supabaseUrl}/storage/v1/object/menu-images/${path}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${serviceKey}`,
+          "Content-Type": file.type,
+        },
+        body: await file.arrayBuffer(),
       },
-      body: await file.arrayBuffer(),
-    });
+    );
 
     if (!res.ok) {
       console.error("[upload error]", await res.text());
       return c.json({ error: "Upload failed" }, 500);
     }
 
-    return c.json({ url: `${supabaseUrl}/storage/v1/object/public/menu-images/${path}` }, 201);
+    return c.json(
+      { url: `${supabaseUrl}/storage/v1/object/public/menu-images/${path}` },
+      201,
+    );
   })
   // PUT /:id — update regular item
   .put("/:id", zValidator("json", updateMenuItemSchema), async (c) => {

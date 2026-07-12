@@ -3,7 +3,12 @@ import { z } from "zod";
 import { zValidator } from "../lib/validator";
 import { eq, and, desc, gte, lt, sql, inArray } from "drizzle-orm";
 import { db } from "@tamurfood/db";
-import { orders, orderItems, menuItems, analyticsEvents } from "@tamurfood/db/schema";
+import {
+  orders,
+  orderItems,
+  menuItems,
+  analyticsEvents,
+} from "@tamurfood/db/schema";
 import { requireSession, getShopForUser, type Variables } from "../lib/helpers";
 import { orderEvents, type NewOrderEvent } from "../lib/order-events";
 
@@ -177,7 +182,9 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
       .from(menuItems)
       .where(inArray(menuItems.id, menuItemIds));
 
-    const availMap = new Map(availabilityRows.map((r) => [r.id, r.isAvailable]));
+    const availMap = new Map(
+      availabilityRows.map((r) => [r.id, r.isAvailable]),
+    );
 
     return c.json({
       ...lastOrder,
@@ -291,7 +298,8 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
     if (!existing) return c.json({ error: "Not found" }, 404);
     if (existing.shopId !== shop.id) return c.json({ error: "Forbidden" }, 403);
     if (existing.isDone) return c.json({ error: "Order already done" }, 409);
-    if (existing.isCancelled) return c.json({ error: "Order already cancelled" }, 409);
+    if (existing.isCancelled)
+      return c.json({ error: "Order already cancelled" }, 409);
 
     await db.execute(
       sql`UPDATE "orders" SET "is_cancelled" = true, "cancelled_at" = NOW() WHERE "id" = ${id}`,

@@ -55,7 +55,11 @@ function ShopsPage() {
   const [search, setSearch] = useState("");
   const [dialog, setDialog] = useState<DialogMode>(null);
 
-  const { data: shops = [], isLoading, isError } = useQuery({
+  const {
+    data: shops = [],
+    isLoading,
+    isError,
+  } = useQuery({
     queryKey: ["shops"],
     queryFn: fetchShops,
   });
@@ -71,7 +75,7 @@ function ShopsPage() {
     }) => {
       const res = await api.api.v1.shops.$post({ json: body });
       if (!res.ok) {
-        const d = await res.json() as { error?: string };
+        const d = (await res.json()) as { error?: string };
         throw new Error(d.error ?? "Failed to create shop");
       }
     },
@@ -91,7 +95,10 @@ function ShopsPage() {
       ownerName: string;
       address?: string | null;
     }) => {
-      const res = await api.api.v1.shops[":id"].$put({ json: body, param: { id } });
+      const res = await api.api.v1.shops[":id"].$put({
+        json: body,
+        param: { id },
+      });
       if (!res.ok) throw new Error("Failed to update shop");
     },
     onSuccess: () => {
@@ -102,7 +109,9 @@ function ShopsPage() {
 
   const toggleStatusMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await api.api.v1.shops[":id"].status.$patch({ param: { id } });
+      const res = await api.api.v1.shops[":id"].status.$patch({
+        param: { id },
+      });
       if (!res.ok) throw new Error("Failed to toggle status");
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["shops"] }),
@@ -226,7 +235,9 @@ function ShopsPage() {
           onClose={() => setDialog(null)}
           onSubmit={(data) => {
             if (dialog.type === "add") {
-              createMutation.mutate(data as Parameters<typeof createMutation.mutate>[0]);
+              createMutation.mutate(
+                data as Parameters<typeof createMutation.mutate>[0],
+              );
             } else {
               updateMutation.mutate({ id: dialog.shop.id, ...data });
             }

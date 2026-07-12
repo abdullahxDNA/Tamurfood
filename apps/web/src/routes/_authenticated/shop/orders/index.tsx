@@ -69,7 +69,10 @@ function getStartDate(filter: DateFilter): Date {
   return new Date(now.getFullYear(), now.getMonth(), 1);
 }
 
-async function fetchOrders(page: number, date?: string): Promise<OrdersResponse> {
+async function fetchOrders(
+  page: number,
+  date?: string,
+): Promise<OrdersResponse> {
   const query: Record<string, string> = { page: String(page) };
   if (date) query.date = date;
   const res = await api.api.v1.orders.$get({ query });
@@ -129,7 +132,9 @@ function OrderHistory() {
 
   const cancelMutation = useMutation({
     mutationFn: async (id: string) => {
-      const res = await api.api.v1.orders[":id"].cancel.$patch({ param: { id } });
+      const res = await api.api.v1.orders[":id"].cancel.$patch({
+        param: { id },
+      });
       if (!res.ok) throw new Error("Failed to cancel order");
       return res.json();
     },
@@ -190,7 +195,11 @@ function OrderHistory() {
                 : "bg-transparent text-muted-foreground border-border hover:text-foreground"
             }`}
           >
-            {f === "today" ? "Today" : f === "week" ? "This Week" : "This Month"}
+            {f === "today"
+              ? "Today"
+              : f === "week"
+                ? "This Week"
+                : "This Month"}
           </button>
         ))}
       </div>
@@ -206,7 +215,10 @@ function OrderHistory() {
       {isError && (
         <p className="text-destructive text-sm">
           Failed to load orders.{" "}
-          <button onClick={() => refetch()} className="underline hover:no-underline">
+          <button
+            onClick={() => refetch()}
+            className="underline hover:no-underline"
+          >
             Try again
           </button>
         </p>
@@ -226,7 +238,9 @@ function OrderHistory() {
           <div key={order.id} className="rounded-lg border p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm">#{order.orderNumber}</span>
+                <span className="font-semibold text-sm">
+                  #{order.orderNumber}
+                </span>
                 <span className="text-xs text-muted-foreground">
                   {new Date(order.placedAt).toLocaleDateString("en-GB", {
                     day: "numeric",
@@ -266,7 +280,9 @@ function OrderHistory() {
             )}
 
             <div className="flex items-center justify-between pt-1 border-t">
-              <span className="font-semibold text-sm">৳{order.totalAmount}</span>
+              <span className="font-semibold text-sm">
+                ৳{order.totalAmount}
+              </span>
               <div className="flex items-center gap-2">
                 {!order.isCancelled && !order.isDone && (
                   <Button
@@ -305,7 +321,9 @@ function OrderHistory() {
       {/* Cancel confirmation dialog */}
       <Dialog
         open={confirmCancelId !== null}
-        onOpenChange={(open) => { if (!open && !cancelMutation.isPending) setConfirmCancelId(null); }}
+        onOpenChange={(open) => {
+          if (!open && !cancelMutation.isPending) setConfirmCancelId(null);
+        }}
       >
         <DialogContent>
           <DialogHeader>
@@ -324,7 +342,9 @@ function OrderHistory() {
             </Button>
             <Button
               variant="destructive"
-              onClick={() => confirmCancelId && cancelMutation.mutate(confirmCancelId)}
+              onClick={() =>
+                confirmCancelId && cancelMutation.mutate(confirmCancelId)
+              }
               disabled={cancelMutation.isPending}
             >
               {cancelMutation.isPending ? "Cancelling..." : "Yes, Cancel"}

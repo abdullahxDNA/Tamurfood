@@ -1,4 +1,9 @@
-import { createFileRoute, redirect, useRouter, Link } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  redirect,
+  useRouter,
+  Link,
+} from "@tanstack/react-router";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { authClient } from "@/lib/auth-client";
@@ -96,9 +101,7 @@ function LoginPage() {
                 required
               />
             </div>
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
+            {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? "Signing in..." : "Sign In"}
             </Button>
