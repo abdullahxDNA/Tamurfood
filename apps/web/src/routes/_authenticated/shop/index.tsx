@@ -450,7 +450,7 @@ function ShopMenu() {
                 >
                   {/* Food photo (real imageUrl when uploaded, else mock visual) */}
                   <div
-                    className={`flex aspect-square items-center justify-center bg-gradient-to-br ${hashPick(
+                    className={`flex aspect-[4/3] items-center justify-center bg-gradient-to-br ${hashPick(
                       item.id,
                       GRADIENTS,
                     )}`}
