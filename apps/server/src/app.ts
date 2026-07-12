@@ -1,7 +1,10 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { logger } from "hono/logger";
 import { secureHeaders } from "hono/secure-headers";
 import { auth } from "./auth";
+import { APIError } from "better-auth/api";
+import { env } from "./env";
 import { shopsRouter } from "./routes/shops";
 import { menuRouter } from "./routes/menu";
 import { ordersRouter } from "./routes/orders";
@@ -10,10 +13,11 @@ import { khataRouter } from "./routes/khata";
 import type { Variables } from "./lib/helpers";
 
 const app = new Hono<{ Variables: Variables }>()
+  .use(logger())
   .use(
     "/api/*",
     cors({
-      origin: process.env.CORS_ORIGIN ?? "http://localhost:5173",
+      origin: env.CORS_ORIGIN,
       credentials: true,
       allowHeaders: ["Content-Type"],
     }),
@@ -24,7 +28,7 @@ const app = new Hono<{ Variables: Variables }>()
       return await auth.handler(c.req.raw);
     } catch (err) {
       console.error("[auth handler error]", err);
-      return c.json({ error: String(err) }, 500);
+      return c.json({ error: "Authentication error" }, 500);
     }
   })
   // Session middleware for /api/v1/* routes
@@ -72,9 +76,13 @@ const app = new Hono<{ Variables: Variables }>()
       });
       return c.json({ success: true });
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to change password";
-      return c.json({ error: message }, 400);
+      // Better Auth APIError messages (e.g. wrong current password) are safe to
+      // surface. Anything else is unexpected — log it, return a generic message.
+      if (error instanceof APIError) {
+        return c.json({ error: error.message }, 400);
+      }
+      console.error("[change-password error]", error);
+      return c.json({ error: "Failed to change password" }, 400);
     }
   })
   .route("/api/v1/shops", shopsRouter)
@@ -82,6 +90,12 @@ const app = new Hono<{ Variables: Variables }>()
   .route("/api/v1/orders", ordersRouter)
   .route("/api/v1/admin", adminRouter)
   .route("/api/v1/khata", khataRouter);
+
+// Global fallback: log the real error, never leak internals to the client.
+app.onError((err, c) => {
+  console.error("[unhandled error]", err);
+  return c.json({ error: "Internal server error" }, 500);
+});
 
 export default app;
 export type AppType = typeof app;

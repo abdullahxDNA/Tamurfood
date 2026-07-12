@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@tamurfood/db";
 import { user, session, account, shops } from "@tamurfood/db/schema";
 import { auth } from "../auth";
-import { requireAdmin, requireSession, getShopForUser, type Variables } from "../lib/helpers";
+import { requireAdmin, requireSession, type Variables } from "../lib/helpers";
 
 const createShopSchema = z.object({
   shopName: z.string().min(1).max(150),

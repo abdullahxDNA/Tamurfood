@@ -22,6 +22,3 @@ dist/
 
 # Supabase
 supabase/.temp/
-
-# Bun
-bun.lock

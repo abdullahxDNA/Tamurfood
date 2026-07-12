@@ -5,6 +5,7 @@ import { eq, asc } from "drizzle-orm";
 import { db } from "@tamurfood/db";
 import { menuItems, menuCategories } from "@tamurfood/db/schema";
 import { requireAdmin, requireSession, type Variables } from "../lib/helpers";
+import { env } from "../env";
 
 const menuItemSchema = z.object({
   name: z.string().min(1).max(100),
@@ -134,8 +135,8 @@ export const menuRouter = new Hono<{ Variables: Variables }>()
 
     const ext = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
     const path = `${crypto.randomUUID()}.${ext}`;
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseUrl = env.SUPABASE_URL;
+    const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
 
     const res = await fetch(`${supabaseUrl}/storage/v1/object/menu-images/${path}`, {
       method: "POST",
