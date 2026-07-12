@@ -451,7 +451,7 @@ function ShopMenu() {
           className="scroll-mt-16 space-y-3"
         >
           <h2 className="text-lg font-semibold border-b pb-1">{category}</h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {catItems.map((item) => {
               const qty = cart[item.id]?.quantity ?? 0;
               return (
