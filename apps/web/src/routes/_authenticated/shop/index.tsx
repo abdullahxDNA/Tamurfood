@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -86,6 +86,70 @@ async function placeOrder(body: {
   return data as { id: string; orderNumber: number; totalAmount: number };
 }
 
+// ─── Food visuals ─────────────────────────────────────────────────────────────
+// Each food type maps to a real stock photo (Unsplash) + an emoji fallback.
+// When item.imageUrl is set (a real photo uploaded via admin), that is used
+// instead. If a stock photo fails to load, the emoji shows through.
+
+const FOOD_MAP: { keywords: string[]; emoji: string; img: string }[] = [
+  { keywords: ["samosa", "singara", "somosa"], emoji: "🥟", img: "1601050690597-df0568f70950" }, // prettier-ignore
+  { keywords: ["roll"], emoji: "🌯", img: "1626700051175-6818013e1d4f" },
+  { keywords: ["kabab", "keema", "kebab"], emoji: "🍢", img: "1529193591184-b1d58069ecdd" }, // prettier-ignore
+  { keywords: ["paratha", "porota", "puri", "ruti", "bakarkhani"], emoji: "🫓", img: "1565557623262-b51c2513a641" }, // prettier-ignore
+  { keywords: ["cake"], emoji: "🍰", img: "1578985545062-69928b1d9587" },
+  { keywords: ["bun", "danish", "bread"], emoji: "🍞", img: "1509440159596-0249088772ff" }, // prettier-ignore
+  { keywords: ["biscuit", "cookie"], emoji: "🍪", img: "1499636136210-6f4ee915583e" }, // prettier-ignore
+  {
+    keywords: ["chaa", "cha", "tea"],
+    emoji: "🍵",
+    img: "1544787219-7f47ccb76574",
+  },
+  { keywords: ["jilapi", "misti", "mithai", "sweet"], emoji: "🍥", img: "1606313564200-e75d5e30476c" }, // prettier-ignore
+  { keywords: ["sandwich"], emoji: "🥪", img: "1528735602780-2552fd46c7af" },
+  { keywords: ["piyaju", "patties", "peyaju", "onthon"], emoji: "🧆", img: "1606491956689-2ea866880c84" }, // prettier-ignore
+  { keywords: ["dim", "egg", "anda"], emoji: "🥚", img: "1482049016688-2d3e1b311543" }, // prettier-ignore
+];
+
+const DEFAULT_IMG = "1504674900247-0877df9cc836"; // generic food flatlay
+
+function foodMatch(name: string) {
+  const n = name.toLowerCase();
+  return FOOD_MAP.find((f) => f.keywords.some((k) => n.includes(k)));
+}
+
+function foodEmoji(name: string): string {
+  return foodMatch(name)?.emoji ?? "🍽️";
+}
+
+function foodImage(name: string): string {
+  const id = foodMatch(name)?.img ?? DEFAULT_IMG;
+  return `https://images.unsplash.com/photo-${id}?w=400&h=300&fit=crop&q=80`;
+}
+
+const GRADIENTS = [
+  "from-amber-100 to-orange-200",
+  "from-rose-100 to-red-200",
+  "from-lime-100 to-green-200",
+  "from-sky-100 to-blue-200",
+  "from-violet-100 to-purple-200",
+  "from-yellow-100 to-amber-200",
+];
+
+const MOCK_TAGLINES = [
+  "Freshly made daily",
+  "Baked this morning",
+  "House favourite",
+  "Made to order",
+  "Crispy & fresh",
+];
+
+// Deterministic pick so a given item always looks the same.
+function hashPick<T>(id: string, arr: T[]): T {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return arr[h % arr.length];
+}
+
 function ShopMenu() {
   const { cart, setQty, clearCart, totalItems, totalAmount } = useCart();
   const queryClient = useQueryClient();
@@ -100,6 +164,18 @@ function ShopMenu() {
   const [priceMismatch, setPriceMismatch] = useState<number | null>(null);
   const [unavailableWarning, setUnavailableWarning] = useState<string[]>([]);
   const [repeatWarning, setRepeatWarning] = useState<string[]>([]);
+
+  // Sticky category bar: refs to each section + the currently-visible category
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [activeCategory, setActiveCategory] = useState<string>("");
+
+  function scrollToCategory(cat: string) {
+    sectionRefs.current[cat]?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+    setActiveCategory(cat);
+  }
 
   const {
     data: items = [],
@@ -209,6 +285,30 @@ function ShopMenu() {
     }
   }
 
+  const categoryKeys = Object.keys(grouped);
+  const categoryKey = categoryKeys.join("|");
+
+  // Highlight the category currently in view (scroll-spy).
+  useEffect(() => {
+    const cats = categoryKey ? categoryKey.split("|") : [];
+    if (cats.length === 0) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        const cat = visible[0]?.target.getAttribute("data-category");
+        if (cat) setActiveCategory(cat);
+      },
+      { rootMargin: "-64px 0px -70% 0px" },
+    );
+    for (const cat of cats) {
+      const el = sectionRefs.current[cat];
+      if (el) observer.observe(el);
+    }
+    return () => observer.disconnect();
+  }, [categoryKey]);
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -252,6 +352,22 @@ function ShopMenu() {
 
   return (
     <div className="space-y-6">
+      {/* Promo / event banner — swap for a real shop image or event graphic later */}
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 px-5 py-6 text-white shadow-sm">
+        <p className="text-xs font-medium uppercase tracking-wide opacity-90">
+          Today&apos;s special
+        </p>
+        <h2 className="mt-1 text-xl font-bold leading-tight">
+          Fresh bakery items, baked daily 🥐
+        </h2>
+        <p className="mt-1 text-sm opacity-90">
+          Order before 10&nbsp;AM for same-day delivery
+        </p>
+        <span className="pointer-events-none absolute -right-4 -top-4 text-7xl opacity-20">
+          🍩
+        </span>
+      </div>
+
       <div className="space-y-3">
         <h1 className="text-2xl font-bold">Menu</h1>
         <Input
@@ -261,6 +377,27 @@ function ShopMenu() {
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
+
+      {/* Sticky category bar — click to jump to a category */}
+      {categoryKeys.length > 0 && (
+        <div className="sticky top-0 z-20 -mx-6 border-b bg-background/95 px-6 py-2 backdrop-blur">
+          <div className="flex gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {categoryKeys.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => scrollToCategory(cat)}
+                className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                  activeCategory === cat
+                    ? "bg-foreground text-background"
+                    : "hover:bg-muted"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Unavailable warning after server 409 */}
       {unavailableWarning.length > 0 && (
@@ -303,63 +440,106 @@ function ShopMenu() {
         </p>
       )}
 
-      {/* Menu categories */}
+      {/* Menu categories — Foodpanda-style photo grid, 3 per row */}
       {Object.entries(grouped).map(([category, catItems]) => (
-        <div key={category} className="space-y-2">
+        <div
+          key={category}
+          ref={(el) => {
+            sectionRefs.current[category] = el;
+          }}
+          data-category={category}
+          className="scroll-mt-16 space-y-3"
+        >
           <h2 className="text-lg font-semibold border-b pb-1">{category}</h2>
-          <div className="divide-y">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {catItems.map((item) => {
               const qty = cart[item.id]?.quantity ?? 0;
               return (
                 <div
                   key={item.id}
-                  className={`flex items-center justify-between py-3 px-1 ${!item.isAvailable ? "opacity-50" : ""}`}
+                  className={`flex flex-col overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md ${!item.isAvailable ? "opacity-50" : ""}`}
                 >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium truncate">{item.name}</span>
-                      {!item.isAvailable && (
-                        <Badge variant="secondary" className="text-xs shrink-0">
-                          Unavailable
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 ml-4 shrink-0">
-                    <span className="text-sm font-medium text-muted-foreground w-16 text-right">
-                      ৳{item.price}
+                  {/* Food photo — real upload if present, else a stock photo;
+                      emoji shows through if the image fails to load. */}
+                  <div
+                    className={`relative flex aspect-[4/3] items-center justify-center bg-gradient-to-br ${hashPick(
+                      item.id,
+                      GRADIENTS,
+                    )}`}
+                  >
+                    <span className="text-4xl sm:text-5xl">
+                      {foodEmoji(item.name)}
                     </span>
-                    {item.isAvailable && (
-                      <div className="flex items-center gap-1">
-                        <button
-                          className="h-9 w-9 rounded-md border flex items-center justify-center text-lg font-medium hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                          onClick={() =>
-                            setQty(
-                              item.id,
-                              item.name,
-                              item.price,
-                              Math.max(0, qty - 1),
-                            )
-                          }
-                          disabled={qty === 0}
-                          aria-label={`Decrease ${item.name}`}
-                        >
-                          −
-                        </button>
-                        <span className="w-8 text-center tabular-nums font-medium">
-                          {qty || ""}
-                        </span>
-                        <button
-                          className="h-9 w-9 rounded-md border flex items-center justify-center text-lg font-medium hover:bg-muted transition-colors"
-                          onClick={() =>
-                            setQty(item.id, item.name, item.price, qty + 1)
-                          }
-                          aria-label={`Increase ${item.name}`}
-                        >
-                          +
-                        </button>
-                      </div>
+                    <img
+                      src={item.imageUrl ?? foodImage(item.name)}
+                      alt={item.name}
+                      loading="lazy"
+                      className="absolute inset-0 h-full w-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                  </div>
+
+                  {/* Body */}
+                  <div className="flex flex-1 flex-col gap-0.5 p-2">
+                    <span className="line-clamp-1 text-sm font-medium leading-tight">
+                      {item.name}
+                    </span>
+                    <p className="line-clamp-1 flex-1 text-xs text-muted-foreground">
+                      {hashPick(item.id, MOCK_TAGLINES)}
+                    </p>
+                    {!item.isAvailable && (
+                      <Badge variant="secondary" className="w-fit text-[10px]">
+                        Unavailable
+                      </Badge>
                     )}
+                    <div className="mt-1 flex items-center justify-between">
+                      <span className="text-sm font-semibold">
+                        ৳{item.price}
+                      </span>
+                      {item.isAvailable &&
+                        (qty === 0 ? (
+                          <button
+                            className="h-8 rounded-md bg-foreground px-3 text-sm font-medium text-background transition-colors hover:opacity-90"
+                            onClick={() =>
+                              setQty(item.id, item.name, item.price, 1)
+                            }
+                            aria-label={`Add ${item.name}`}
+                          >
+                            Add
+                          </button>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <button
+                              className="flex h-8 w-8 items-center justify-center rounded-md border text-lg font-medium transition-colors hover:bg-muted"
+                              onClick={() =>
+                                setQty(
+                                  item.id,
+                                  item.name,
+                                  item.price,
+                                  Math.max(0, qty - 1),
+                                )
+                              }
+                              aria-label={`Decrease ${item.name}`}
+                            >
+                              −
+                            </button>
+                            <span className="w-5 text-center text-sm font-medium tabular-nums">
+                              {qty}
+                            </span>
+                            <button
+                              className="flex h-8 w-8 items-center justify-center rounded-md border text-lg font-medium transition-colors hover:bg-muted"
+                              onClick={() =>
+                                setQty(item.id, item.name, item.price, qty + 1)
+                              }
+                              aria-label={`Increase ${item.name}`}
+                            >
+                              +
+                            </button>
+                          </div>
+                        ))}
+                    </div>
                   </div>
                 </div>
               );
@@ -368,11 +548,14 @@ function ShopMenu() {
         </div>
       ))}
 
+      {/* Spacer so the last row isn't hidden behind the floating cart bar */}
+      {totalItems > 0 && <div aria-hidden className="h-24" />}
+
       {/* Floating cart bar */}
       {totalItems > 0 && (
-        <div className="fixed bottom-16 left-4 right-4 z-10">
+        <div className="fixed bottom-[4.5rem] left-4 right-4 z-10">
           <button
-            className="w-full rounded-xl bg-foreground text-background px-5 py-3 flex items-center justify-between shadow-lg font-medium"
+            className="flex w-full items-center justify-between rounded-2xl bg-foreground px-6 py-4 text-base font-semibold text-background shadow-xl transition-transform active:scale-[0.99]"
             onClick={() => {
               setSuccessOrder(null);
               setConfirmOpen(true);
