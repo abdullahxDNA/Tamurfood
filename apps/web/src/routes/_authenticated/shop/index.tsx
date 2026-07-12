@@ -66,6 +66,20 @@ async function fetchLastOrder(): Promise<LastOrder | null> {
   return res.json() as Promise<LastOrder | null>;
 }
 
+interface Banner {
+  title: string | null;
+  subtitle: string | null;
+  tagline: string | null;
+  imageUrl: string | null;
+  enabled: boolean;
+}
+
+async function fetchBanner(): Promise<Banner | null> {
+  const res = await api.api.v1.banner.$get();
+  if (!res.ok) throw new Error("Failed to fetch banner");
+  return res.json() as Promise<Banner | null>;
+}
+
 async function placeOrder(body: {
   items: { menuItemId: string; quantity: number }[];
   note?: string;
@@ -198,6 +212,12 @@ function ShopMenu() {
     queryKey: ["orders/last"],
     queryFn: fetchLastOrder,
     staleTime: 0,
+  });
+
+  const { data: banner } = useQuery({
+    queryKey: ["banner"],
+    queryFn: fetchBanner,
+    staleTime: 5 * 60 * 1000,
   });
 
   const mutation = useMutation({
@@ -352,23 +372,38 @@ function ShopMenu() {
 
   return (
     <div className="space-y-6">
-      {/* Full-width hero banner — swap for a real shop image or event graphic later */}
-      <div className="relative left-1/2 -mt-6 w-screen -translate-x-1/2 overflow-hidden bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-sm">
-        <div className="mx-auto max-w-5xl px-6 py-12 sm:py-16">
-          <p className="text-xs font-medium uppercase tracking-wide opacity-90">
-            Today&apos;s special
-          </p>
-          <h2 className="mt-1 text-2xl font-bold leading-tight sm:text-4xl">
-            Fresh bakery items, baked daily 🥐
-          </h2>
-          <p className="mt-2 text-sm opacity-90 sm:text-base">
-            Order before 10&nbsp;AM for same-day delivery
-          </p>
+      {/* Full-width hero banner — content managed from Admin → Banner */}
+      {banner?.enabled !== false && (
+        <div
+          className="relative left-1/2 -mt-6 w-screen -translate-x-1/2 overflow-hidden bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-sm"
+          style={
+            banner?.imageUrl
+              ? {
+                  backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.5), rgba(0,0,0,0.15)), url(${banner.imageUrl})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }
+              : undefined
+          }
+        >
+          <div className="mx-auto max-w-5xl px-6 py-12 sm:py-16">
+            <p className="text-xs font-medium uppercase tracking-wide opacity-90">
+              {banner?.subtitle ?? "Today's special"}
+            </p>
+            <h2 className="mt-1 text-2xl font-bold leading-tight sm:text-4xl">
+              {banner?.title ?? "Fresh bakery items, baked daily 🥐"}
+            </h2>
+            <p className="mt-2 text-sm opacity-90 sm:text-base">
+              {banner?.tagline ?? "Order before 10 AM for same-day delivery"}
+            </p>
+          </div>
+          {!banner?.imageUrl && (
+            <span className="pointer-events-none absolute -right-6 -top-8 text-[9rem] opacity-20">
+              🍩
+            </span>
+          )}
         </div>
-        <span className="pointer-events-none absolute -right-6 -top-8 text-[9rem] opacity-20">
-          🍩
-        </span>
-      </div>
+      )}
 
       <div className="space-y-3">
         <h1 className="text-2xl font-bold">Menu</h1>

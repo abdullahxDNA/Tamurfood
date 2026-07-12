@@ -30,6 +30,7 @@ const NAV_ITEMS = [
   { label: "Shops", to: "/admin/shops" as const },
   { label: "Payments", to: "/admin/payments" as const },
   { label: "Khata", to: "/admin/khata" as const },
+  { label: "Banner", to: "/admin/banner" as const },
 ];
 
 function NavLinks({ onNavigate }: { onNavigate?: () => void }) {

@@ -50,6 +50,13 @@
       "when": 1741132900000,
       "tag": "0006_remove_combos",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1741133000000,
+      "tag": "0007_add_banner",
+      "breakpoints": true
     }
   ]
 }

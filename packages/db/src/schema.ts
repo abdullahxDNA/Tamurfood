@@ -164,3 +164,14 @@ export const analyticsEvents = pgTable(
   },
   (t) => [index("analytics_event_type_idx").on(t.eventType, t.createdAt)],
 );
+
+// Singleton row (id = "default") holding the shop hero banner, editable by admin.
+export const banner = pgTable("banner", {
+  id: text("id").primaryKey(),
+  title: varchar("title", { length: 100 }),
+  subtitle: varchar("subtitle", { length: 60 }),
+  tagline: varchar("tagline", { length: 150 }),
+  imageUrl: text("image_url"),
+  enabled: boolean("enabled").notNull().default(true),
+  updatedAt: timestamp("updated_at").notNull(),
+});
