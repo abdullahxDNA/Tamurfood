@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -154,6 +154,18 @@ function ShopMenu() {
   const [unavailableWarning, setUnavailableWarning] = useState<string[]>([]);
   const [repeatWarning, setRepeatWarning] = useState<string[]>([]);
 
+  // Sticky category bar: refs to each section + the currently-visible category
+  const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [activeCategory, setActiveCategory] = useState<string>("");
+
+  function scrollToCategory(cat: string) {
+    sectionRefs.current[cat]?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+    setActiveCategory(cat);
+  }
+
   const {
     data: items = [],
     isLoading,
@@ -262,6 +274,30 @@ function ShopMenu() {
     }
   }
 
+  const categoryKeys = Object.keys(grouped);
+  const categoryKey = categoryKeys.join("|");
+
+  // Highlight the category currently in view (scroll-spy).
+  useEffect(() => {
+    const cats = categoryKey ? categoryKey.split("|") : [];
+    if (cats.length === 0) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        const cat = visible[0]?.target.getAttribute("data-category");
+        if (cat) setActiveCategory(cat);
+      },
+      { rootMargin: "-64px 0px -70% 0px" },
+    );
+    for (const cat of cats) {
+      const el = sectionRefs.current[cat];
+      if (el) observer.observe(el);
+    }
+    return () => observer.disconnect();
+  }, [categoryKey]);
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -331,6 +367,27 @@ function ShopMenu() {
         />
       </div>
 
+      {/* Sticky category bar — click to jump to a category */}
+      {categoryKeys.length > 0 && (
+        <div className="sticky top-0 z-20 -mx-6 border-b bg-background/95 px-6 py-2 backdrop-blur">
+          <div className="flex gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {categoryKeys.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => scrollToCategory(cat)}
+                className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                  activeCategory === cat
+                    ? "bg-foreground text-background"
+                    : "hover:bg-muted"
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Unavailable warning after server 409 */}
       {unavailableWarning.length > 0 && (
         <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
@@ -374,7 +431,14 @@ function ShopMenu() {
 
       {/* Menu categories — Foodpanda-style photo grid, 3 per row */}
       {Object.entries(grouped).map(([category, catItems]) => (
-        <div key={category} className="space-y-3">
+        <div
+          key={category}
+          ref={(el) => {
+            sectionRefs.current[category] = el;
+          }}
+          data-category={category}
+          className="scroll-mt-16 space-y-3"
+        >
           <h2 className="text-lg font-semibold border-b pb-1">{category}</h2>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {catItems.map((item) => {
