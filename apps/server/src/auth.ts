@@ -14,6 +14,10 @@ export const auth = betterAuth({
   baseURL: env.BETTER_AUTH_URL,
   emailAndPassword: {
     enabled: true,
+    // Invite-only B2B: block public self-registration via /api/auth/sign-up/email.
+    // Shop accounts are created by the admin (see routes/shops.ts), which uses the
+    // internal adapter directly and is unaffected by this flag.
+    disableSignUp: true,
     sendResetPassword: async ({ user: u, url }) => {
       const transporter = nodemailer.createTransport({
         service: "gmail",
