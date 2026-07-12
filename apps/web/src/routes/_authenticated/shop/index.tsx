@@ -536,13 +536,13 @@ function ShopMenu() {
       ))}
 
       {/* Spacer so the last row isn't hidden behind the floating cart bar */}
-      {totalItems > 0 && <div aria-hidden className="h-16" />}
+      {totalItems > 0 && <div aria-hidden className="h-24" />}
 
       {/* Floating cart bar */}
       {totalItems > 0 && (
-        <div className="fixed bottom-16 left-4 right-4 z-10">
+        <div className="fixed bottom-[4.5rem] left-4 right-4 z-10">
           <button
-            className="w-full rounded-xl bg-foreground text-background px-5 py-3 flex items-center justify-between shadow-lg font-medium"
+            className="flex w-full items-center justify-between rounded-2xl bg-foreground px-6 py-4 text-base font-semibold text-background shadow-xl transition-transform active:scale-[0.99]"
             onClick={() => {
               setSuccessOrder(null);
               setConfirmOpen(true);
