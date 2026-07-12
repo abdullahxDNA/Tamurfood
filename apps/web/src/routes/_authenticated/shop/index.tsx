@@ -450,7 +450,7 @@ function ShopMenu() {
                 >
                   {/* Food photo (real imageUrl when uploaded, else mock visual) */}
                   <div
-                    className={`flex aspect-[16/9] items-center justify-center bg-gradient-to-br ${hashPick(
+                    className={`flex aspect-square items-center justify-center bg-gradient-to-br ${hashPick(
                       item.id,
                       GRADIENTS,
                     )}`}
@@ -462,18 +462,18 @@ function ShopMenu() {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <span className="text-3xl sm:text-4xl">
+                      <span className="text-4xl sm:text-5xl">
                         {foodEmoji(item.name)}
                       </span>
                     )}
                   </div>
 
                   {/* Body */}
-                  <div className="flex flex-1 flex-col gap-1 p-2">
-                    <span className="line-clamp-2 text-sm font-medium leading-tight">
+                  <div className="flex flex-1 flex-col gap-0.5 p-2">
+                    <span className="line-clamp-1 text-sm font-medium leading-tight">
                       {item.name}
                     </span>
-                    <p className="line-clamp-2 flex-1 text-xs text-muted-foreground">
+                    <p className="line-clamp-1 flex-1 text-xs text-muted-foreground">
                       {hashPick(item.id, MOCK_TAGLINES)}
                     </p>
                     {!item.isAvailable && (
