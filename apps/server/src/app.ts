@@ -10,6 +10,7 @@ import { menuRouter } from "./routes/menu";
 import { ordersRouter } from "./routes/orders";
 import { adminRouter } from "./routes/admin";
 import { khataRouter } from "./routes/khata";
+import { bannerRouter } from "./routes/banner";
 import type { Variables } from "./lib/helpers";
 
 const app = new Hono<{ Variables: Variables }>()
@@ -89,7 +90,8 @@ const app = new Hono<{ Variables: Variables }>()
   .route("/api/v1/menu", menuRouter)
   .route("/api/v1/orders", ordersRouter)
   .route("/api/v1/admin", adminRouter)
-  .route("/api/v1/khata", khataRouter);
+  .route("/api/v1/khata", khataRouter)
+  .route("/api/v1/banner", bannerRouter);
 
 // Global fallback: log the real error, never leak internals to the client.
 app.onError((err, c) => {

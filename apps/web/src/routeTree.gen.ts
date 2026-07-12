@@ -26,6 +26,7 @@ import { Route as AuthenticatedAdminShopsIndexRouteImport } from "./routes/_auth
 import { Route as AuthenticatedAdminPaymentsIndexRouteImport } from "./routes/_authenticated/admin/payments/index"
 import { Route as AuthenticatedAdminMenuIndexRouteImport } from "./routes/_authenticated/admin/menu/index"
 import { Route as AuthenticatedAdminKhataIndexRouteImport } from "./routes/_authenticated/admin/khata/index"
+import { Route as AuthenticatedAdminBannerIndexRouteImport } from "./routes/_authenticated/admin/banner/index"
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: "/reset-password",
@@ -119,6 +120,12 @@ const AuthenticatedAdminKhataIndexRoute =
     path: "/khata/",
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminBannerIndexRoute =
+  AuthenticatedAdminBannerIndexRouteImport.update({
+    id: "/banner/",
+    path: "/banner/",
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByFullPath {
   "/admin/": typeof AuthenticatedAdminIndexRoute
   "/profile/": typeof AuthenticatedProfileIndexRoute
   "/shop/": typeof AuthenticatedShopIndexRoute
+  "/admin/banner/": typeof AuthenticatedAdminBannerIndexRoute
   "/admin/khata/": typeof AuthenticatedAdminKhataIndexRoute
   "/admin/menu/": typeof AuthenticatedAdminMenuIndexRoute
   "/admin/payments/": typeof AuthenticatedAdminPaymentsIndexRoute
@@ -146,6 +154,7 @@ export interface FileRoutesByTo {
   "/admin": typeof AuthenticatedAdminIndexRoute
   "/profile": typeof AuthenticatedProfileIndexRoute
   "/shop": typeof AuthenticatedShopIndexRoute
+  "/admin/banner": typeof AuthenticatedAdminBannerIndexRoute
   "/admin/khata": typeof AuthenticatedAdminKhataIndexRoute
   "/admin/menu": typeof AuthenticatedAdminMenuIndexRoute
   "/admin/payments": typeof AuthenticatedAdminPaymentsIndexRoute
@@ -166,6 +175,7 @@ export interface FileRoutesById {
   "/_authenticated/admin/": typeof AuthenticatedAdminIndexRoute
   "/_authenticated/profile/": typeof AuthenticatedProfileIndexRoute
   "/_authenticated/shop/": typeof AuthenticatedShopIndexRoute
+  "/_authenticated/admin/banner/": typeof AuthenticatedAdminBannerIndexRoute
   "/_authenticated/admin/khata/": typeof AuthenticatedAdminKhataIndexRoute
   "/_authenticated/admin/menu/": typeof AuthenticatedAdminMenuIndexRoute
   "/_authenticated/admin/payments/": typeof AuthenticatedAdminPaymentsIndexRoute
@@ -186,6 +196,7 @@ export interface FileRouteTypes {
     | "/admin/"
     | "/profile/"
     | "/shop/"
+    | "/admin/banner/"
     | "/admin/khata/"
     | "/admin/menu/"
     | "/admin/payments/"
@@ -202,6 +213,7 @@ export interface FileRouteTypes {
     | "/admin"
     | "/profile"
     | "/shop"
+    | "/admin/banner"
     | "/admin/khata"
     | "/admin/menu"
     | "/admin/payments"
@@ -221,6 +233,7 @@ export interface FileRouteTypes {
     | "/_authenticated/admin/"
     | "/_authenticated/profile/"
     | "/_authenticated/shop/"
+    | "/_authenticated/admin/banner/"
     | "/_authenticated/admin/khata/"
     | "/_authenticated/admin/menu/"
     | "/_authenticated/admin/payments/"
@@ -359,11 +372,19 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthenticatedAdminKhataIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    "/_authenticated/admin/banner/": {
+      id: "/_authenticated/admin/banner/"
+      path: "/banner"
+      fullPath: "/admin/banner/"
+      preLoaderRoute: typeof AuthenticatedAdminBannerIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
   }
 }
 
 interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminIndexRoute: typeof AuthenticatedAdminIndexRoute
+  AuthenticatedAdminBannerIndexRoute: typeof AuthenticatedAdminBannerIndexRoute
   AuthenticatedAdminKhataIndexRoute: typeof AuthenticatedAdminKhataIndexRoute
   AuthenticatedAdminMenuIndexRoute: typeof AuthenticatedAdminMenuIndexRoute
   AuthenticatedAdminPaymentsIndexRoute: typeof AuthenticatedAdminPaymentsIndexRoute
@@ -372,6 +393,7 @@ interface AuthenticatedAdminRouteChildren {
 
 const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminIndexRoute: AuthenticatedAdminIndexRoute,
+  AuthenticatedAdminBannerIndexRoute: AuthenticatedAdminBannerIndexRoute,
   AuthenticatedAdminKhataIndexRoute: AuthenticatedAdminKhataIndexRoute,
   AuthenticatedAdminMenuIndexRoute: AuthenticatedAdminMenuIndexRoute,
   AuthenticatedAdminPaymentsIndexRoute: AuthenticatedAdminPaymentsIndexRoute,
