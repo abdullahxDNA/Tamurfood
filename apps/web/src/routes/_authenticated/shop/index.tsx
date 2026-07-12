@@ -86,6 +86,59 @@ async function placeOrder(body: {
   return data as { id: string; orderNumber: number; totalAmount: number };
 }
 
+// ─── Mock food visuals (until real photos are uploaded via admin) ─────────────
+// When item.imageUrl is set (admin upload), that real photo is used instead.
+
+const FOOD_EMOJI: { keywords: string[]; emoji: string }[] = [
+  { keywords: ["samosa", "singara", "somosa"], emoji: "🥟" },
+  { keywords: ["roll"], emoji: "🌯" },
+  { keywords: ["kabab", "keema", "kebab"], emoji: "🍢" },
+  {
+    keywords: ["paratha", "porota", "puri", "ruti", "bakarkhani"],
+    emoji: "🫓",
+  },
+  { keywords: ["cake"], emoji: "🍰" },
+  { keywords: ["bun", "danish", "bread"], emoji: "🍞" },
+  { keywords: ["biscuit", "cookie"], emoji: "🍪" },
+  { keywords: ["chaa", "cha", "tea"], emoji: "🍵" },
+  { keywords: ["jilapi", "misti", "mithai", "sweet", "mithai"], emoji: "🍥" },
+  { keywords: ["sandwich"], emoji: "🥪" },
+  { keywords: ["piyaju", "patties", "peyaju", "onthon"], emoji: "🧆" },
+  { keywords: ["dim", "egg", "anda"], emoji: "🥚" },
+];
+
+function foodEmoji(name: string): string {
+  const n = name.toLowerCase();
+  for (const f of FOOD_EMOJI) {
+    if (f.keywords.some((k) => n.includes(k))) return f.emoji;
+  }
+  return "🍽️";
+}
+
+const GRADIENTS = [
+  "from-amber-100 to-orange-200",
+  "from-rose-100 to-red-200",
+  "from-lime-100 to-green-200",
+  "from-sky-100 to-blue-200",
+  "from-violet-100 to-purple-200",
+  "from-yellow-100 to-amber-200",
+];
+
+const MOCK_TAGLINES = [
+  "Freshly made daily",
+  "Baked this morning",
+  "House favourite",
+  "Made to order",
+  "Crispy & fresh",
+];
+
+// Deterministic pick so a given item always looks the same.
+function hashPick<T>(id: string, arr: T[]): T {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return arr[h % arr.length];
+}
+
 function ShopMenu() {
   const { cart, setQty, clearCart, totalItems, totalAmount } = useCart();
   const queryClient = useQueryClient();
@@ -252,6 +305,22 @@ function ShopMenu() {
 
   return (
     <div className="space-y-6">
+      {/* Promo / event banner — swap for a real shop image or event graphic later */}
+      <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 px-5 py-6 text-white shadow-sm">
+        <p className="text-xs font-medium uppercase tracking-wide opacity-90">
+          Today&apos;s special
+        </p>
+        <h2 className="mt-1 text-xl font-bold leading-tight">
+          Fresh bakery items, baked daily 🥐
+        </h2>
+        <p className="mt-1 text-sm opacity-90">
+          Order before 10&nbsp;AM for same-day delivery
+        </p>
+        <span className="pointer-events-none absolute -right-4 -top-4 text-7xl opacity-20">
+          🍩
+        </span>
+      </div>
+
       <div className="space-y-3">
         <h1 className="text-2xl font-bold">Menu</h1>
         <Input
@@ -303,63 +372,97 @@ function ShopMenu() {
         </p>
       )}
 
-      {/* Menu categories */}
+      {/* Menu categories — Foodpanda-style photo grid, 3 per row */}
       {Object.entries(grouped).map(([category, catItems]) => (
-        <div key={category} className="space-y-2">
+        <div key={category} className="space-y-3">
           <h2 className="text-lg font-semibold border-b pb-1">{category}</h2>
-          <div className="divide-y">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             {catItems.map((item) => {
               const qty = cart[item.id]?.quantity ?? 0;
               return (
                 <div
                   key={item.id}
-                  className={`flex items-center justify-between py-3 px-1 ${!item.isAvailable ? "opacity-50" : ""}`}
+                  className={`flex flex-col overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md ${!item.isAvailable ? "opacity-50" : ""}`}
                 >
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium truncate">{item.name}</span>
-                      {!item.isAvailable && (
-                        <Badge variant="secondary" className="text-xs shrink-0">
-                          Unavailable
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 ml-4 shrink-0">
-                    <span className="text-sm font-medium text-muted-foreground w-16 text-right">
-                      ৳{item.price}
-                    </span>
-                    {item.isAvailable && (
-                      <div className="flex items-center gap-1">
-                        <button
-                          className="h-9 w-9 rounded-md border flex items-center justify-center text-lg font-medium hover:bg-muted transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                          onClick={() =>
-                            setQty(
-                              item.id,
-                              item.name,
-                              item.price,
-                              Math.max(0, qty - 1),
-                            )
-                          }
-                          disabled={qty === 0}
-                          aria-label={`Decrease ${item.name}`}
-                        >
-                          −
-                        </button>
-                        <span className="w-8 text-center tabular-nums font-medium">
-                          {qty || ""}
-                        </span>
-                        <button
-                          className="h-9 w-9 rounded-md border flex items-center justify-center text-lg font-medium hover:bg-muted transition-colors"
-                          onClick={() =>
-                            setQty(item.id, item.name, item.price, qty + 1)
-                          }
-                          aria-label={`Increase ${item.name}`}
-                        >
-                          +
-                        </button>
-                      </div>
+                  {/* Food photo (real imageUrl when uploaded, else mock visual) */}
+                  <div
+                    className={`flex aspect-[4/3] items-center justify-center bg-gradient-to-br ${hashPick(
+                      item.id,
+                      GRADIENTS,
+                    )}`}
+                  >
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-4xl sm:text-5xl">
+                        {foodEmoji(item.name)}
+                      </span>
                     )}
+                  </div>
+
+                  {/* Body */}
+                  <div className="flex flex-1 flex-col gap-1 p-2.5">
+                    <span className="line-clamp-2 text-sm font-medium leading-tight">
+                      {item.name}
+                    </span>
+                    <p className="line-clamp-2 flex-1 text-xs text-muted-foreground">
+                      {hashPick(item.id, MOCK_TAGLINES)}
+                    </p>
+                    {!item.isAvailable && (
+                      <Badge variant="secondary" className="w-fit text-[10px]">
+                        Unavailable
+                      </Badge>
+                    )}
+                    <div className="mt-1 flex items-center justify-between">
+                      <span className="text-sm font-semibold">
+                        ৳{item.price}
+                      </span>
+                      {item.isAvailable &&
+                        (qty === 0 ? (
+                          <button
+                            className="h-8 rounded-md bg-foreground px-3 text-sm font-medium text-background transition-colors hover:opacity-90"
+                            onClick={() =>
+                              setQty(item.id, item.name, item.price, 1)
+                            }
+                            aria-label={`Add ${item.name}`}
+                          >
+                            Add
+                          </button>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <button
+                              className="flex h-8 w-8 items-center justify-center rounded-md border text-lg font-medium transition-colors hover:bg-muted"
+                              onClick={() =>
+                                setQty(
+                                  item.id,
+                                  item.name,
+                                  item.price,
+                                  Math.max(0, qty - 1),
+                                )
+                              }
+                              aria-label={`Decrease ${item.name}`}
+                            >
+                              −
+                            </button>
+                            <span className="w-5 text-center text-sm font-medium tabular-nums">
+                              {qty}
+                            </span>
+                            <button
+                              className="flex h-8 w-8 items-center justify-center rounded-md border text-lg font-medium transition-colors hover:bg-muted"
+                              onClick={() =>
+                                setQty(item.id, item.name, item.price, qty + 1)
+                              }
+                              aria-label={`Increase ${item.name}`}
+                            >
+                              +
+                            </button>
+                          </div>
+                        ))}
+                    </div>
                   </div>
                 </div>
               );
