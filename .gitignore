@@ -22,3 +22,6 @@ dist/
 
 # Supabase
 supabase/.temp/
+
+# Local-only deployment notes (may contain infra values)
+DEPLOY.md
