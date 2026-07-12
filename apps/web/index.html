@@ -5,9 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Tamurfood</title>
     <script>
-      // Apply saved theme before render to avoid a flash of the wrong theme.
+      // Dark mode is scoped to the shop side. Apply the saved theme before
+      // render (only on shop paths) to avoid a flash of the wrong theme.
       try {
-        if (localStorage.getItem("theme") === "dark") {
+        if (
+          localStorage.getItem("theme") === "dark" &&
+          location.pathname.startsWith("/shop")
+        ) {
           document.documentElement.classList.add("dark");
         }
       } catch (e) {}

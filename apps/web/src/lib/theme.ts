@@ -3,12 +3,11 @@ import { useEffect, useState } from "react";
 export type Theme = "light" | "dark";
 
 function getStoredTheme(): Theme {
-  if (typeof document !== "undefined") {
-    return document.documentElement.classList.contains("dark")
-      ? "dark"
-      : "light";
+  try {
+    return localStorage.getItem("theme") === "dark" ? "dark" : "light";
+  } catch {
+    return "light";
   }
-  return "light";
 }
 
 /**
@@ -28,6 +27,12 @@ export function useTheme() {
       // ignore storage errors (private mode, etc.)
     }
   }, [theme]);
+
+  // Dark mode is scoped to the shop side. When this layout unmounts (e.g. the
+  // user navigates to an admin page), remove the class so admin stays light.
+  useEffect(() => {
+    return () => document.documentElement.classList.remove("dark");
+  }, []);
 
   const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
 
