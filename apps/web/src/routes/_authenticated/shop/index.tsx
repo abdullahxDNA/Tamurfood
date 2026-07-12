@@ -86,33 +86,44 @@ async function placeOrder(body: {
   return data as { id: string; orderNumber: number; totalAmount: number };
 }
 
-// ─── Mock food visuals (until real photos are uploaded via admin) ─────────────
-// When item.imageUrl is set (admin upload), that real photo is used instead.
+// ─── Food visuals ─────────────────────────────────────────────────────────────
+// Each food type maps to a real stock photo (Unsplash) + an emoji fallback.
+// When item.imageUrl is set (a real photo uploaded via admin), that is used
+// instead. If a stock photo fails to load, the emoji shows through.
 
-const FOOD_EMOJI: { keywords: string[]; emoji: string }[] = [
-  { keywords: ["samosa", "singara", "somosa"], emoji: "🥟" },
-  { keywords: ["roll"], emoji: "🌯" },
-  { keywords: ["kabab", "keema", "kebab"], emoji: "🍢" },
+const FOOD_MAP: { keywords: string[]; emoji: string; img: string }[] = [
+  { keywords: ["samosa", "singara", "somosa"], emoji: "🥟", img: "1601050690597-df0568f70950" }, // prettier-ignore
+  { keywords: ["roll"], emoji: "🌯", img: "1626700051175-6818013e1d4f" },
+  { keywords: ["kabab", "keema", "kebab"], emoji: "🍢", img: "1529193591184-b1d58069ecdd" }, // prettier-ignore
+  { keywords: ["paratha", "porota", "puri", "ruti", "bakarkhani"], emoji: "🫓", img: "1565557623262-b51c2513a641" }, // prettier-ignore
+  { keywords: ["cake"], emoji: "🍰", img: "1578985545062-69928b1d9587" },
+  { keywords: ["bun", "danish", "bread"], emoji: "🍞", img: "1509440159596-0249088772ff" }, // prettier-ignore
+  { keywords: ["biscuit", "cookie"], emoji: "🍪", img: "1499636136210-6f4ee915583e" }, // prettier-ignore
   {
-    keywords: ["paratha", "porota", "puri", "ruti", "bakarkhani"],
-    emoji: "🫓",
+    keywords: ["chaa", "cha", "tea"],
+    emoji: "🍵",
+    img: "1544787219-7f47ccb76574",
   },
-  { keywords: ["cake"], emoji: "🍰" },
-  { keywords: ["bun", "danish", "bread"], emoji: "🍞" },
-  { keywords: ["biscuit", "cookie"], emoji: "🍪" },
-  { keywords: ["chaa", "cha", "tea"], emoji: "🍵" },
-  { keywords: ["jilapi", "misti", "mithai", "sweet", "mithai"], emoji: "🍥" },
-  { keywords: ["sandwich"], emoji: "🥪" },
-  { keywords: ["piyaju", "patties", "peyaju", "onthon"], emoji: "🧆" },
-  { keywords: ["dim", "egg", "anda"], emoji: "🥚" },
+  { keywords: ["jilapi", "misti", "mithai", "sweet"], emoji: "🍥", img: "1606313564200-e75d5e30476c" }, // prettier-ignore
+  { keywords: ["sandwich"], emoji: "🥪", img: "1528735602780-2552fd46c7af" },
+  { keywords: ["piyaju", "patties", "peyaju", "onthon"], emoji: "🧆", img: "1606491956689-2ea866880c84" }, // prettier-ignore
+  { keywords: ["dim", "egg", "anda"], emoji: "🥚", img: "1482049016688-2d3e1b311543" }, // prettier-ignore
 ];
 
-function foodEmoji(name: string): string {
+const DEFAULT_IMG = "1504674900247-0877df9cc836"; // generic food flatlay
+
+function foodMatch(name: string) {
   const n = name.toLowerCase();
-  for (const f of FOOD_EMOJI) {
-    if (f.keywords.some((k) => n.includes(k))) return f.emoji;
-  }
-  return "🍽️";
+  return FOOD_MAP.find((f) => f.keywords.some((k) => n.includes(k)));
+}
+
+function foodEmoji(name: string): string {
+  return foodMatch(name)?.emoji ?? "🍽️";
+}
+
+function foodImage(name: string): string {
+  const id = foodMatch(name)?.img ?? DEFAULT_IMG;
+  return `https://images.unsplash.com/photo-${id}?w=400&h=300&fit=crop&q=80`;
 }
 
 const GRADIENTS = [
@@ -448,24 +459,26 @@ function ShopMenu() {
                   key={item.id}
                   className={`flex flex-col overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md ${!item.isAvailable ? "opacity-50" : ""}`}
                 >
-                  {/* Food photo (real imageUrl when uploaded, else mock visual) */}
+                  {/* Food photo — real upload if present, else a stock photo;
+                      emoji shows through if the image fails to load. */}
                   <div
-                    className={`flex aspect-[4/3] items-center justify-center bg-gradient-to-br ${hashPick(
+                    className={`relative flex aspect-[4/3] items-center justify-center bg-gradient-to-br ${hashPick(
                       item.id,
                       GRADIENTS,
                     )}`}
                   >
-                    {item.imageUrl ? (
-                      <img
-                        src={item.imageUrl}
-                        alt={item.name}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
-                      <span className="text-4xl sm:text-5xl">
-                        {foodEmoji(item.name)}
-                      </span>
-                    )}
+                    <span className="text-4xl sm:text-5xl">
+                      {foodEmoji(item.name)}
+                    </span>
+                    <img
+                      src={item.imageUrl ?? foodImage(item.name)}
+                      alt={item.name}
+                      loading="lazy"
+                      className="absolute inset-0 h-full w-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
                   </div>
 
                   {/* Body */}
