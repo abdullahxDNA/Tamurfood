@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import { z } from "zod";
-import { zValidator } from "@hono/zod-validator";
+import { zValidator } from "../lib/validator";
 import { eq, and, desc, gte, lt, sql, inArray } from "drizzle-orm";
 import { db } from "@tamurfood/db";
 import { orders, orderItems, shops, payments, user, analyticsEvents } from "@tamurfood/db/schema";

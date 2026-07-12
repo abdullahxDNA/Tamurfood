@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { z } from "zod";
-import { zValidator } from "@hono/zod-validator";
+import { zValidator } from "../lib/validator";
 import { eq, asc } from "drizzle-orm";
 import { db } from "@tamurfood/db";
 import { menuItems, menuCategories } from "@tamurfood/db/schema";
