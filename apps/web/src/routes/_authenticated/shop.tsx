@@ -37,7 +37,7 @@ function ShopLayout() {
 
   return (
     <CartProvider>
-      <div className="min-h-screen pb-16">
+      <div className="min-h-screen overflow-x-clip pb-16">
         <header className="border-b px-6 py-4 flex items-center justify-between">
           <span className="font-semibold truncate min-w-0 mr-4">
             {session.name}

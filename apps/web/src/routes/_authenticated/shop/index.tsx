@@ -352,18 +352,20 @@ function ShopMenu() {
 
   return (
     <div className="space-y-6">
-      {/* Promo / event banner — swap for a real shop image or event graphic later */}
-      <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 px-5 py-6 text-white shadow-sm">
-        <p className="text-xs font-medium uppercase tracking-wide opacity-90">
-          Today&apos;s special
-        </p>
-        <h2 className="mt-1 text-xl font-bold leading-tight">
-          Fresh bakery items, baked daily 🥐
-        </h2>
-        <p className="mt-1 text-sm opacity-90">
-          Order before 10&nbsp;AM for same-day delivery
-        </p>
-        <span className="pointer-events-none absolute -right-4 -top-4 text-7xl opacity-20">
+      {/* Full-width hero banner — swap for a real shop image or event graphic later */}
+      <div className="relative left-1/2 -mt-6 w-screen -translate-x-1/2 overflow-hidden bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-sm">
+        <div className="mx-auto max-w-5xl px-6 py-12 sm:py-16">
+          <p className="text-xs font-medium uppercase tracking-wide opacity-90">
+            Today&apos;s special
+          </p>
+          <h2 className="mt-1 text-2xl font-bold leading-tight sm:text-4xl">
+            Fresh bakery items, baked daily 🥐
+          </h2>
+          <p className="mt-2 text-sm opacity-90 sm:text-base">
+            Order before 10&nbsp;AM for same-day delivery
+          </p>
+        </div>
+        <span className="pointer-events-none absolute -right-6 -top-8 text-[9rem] opacity-20">
           🍩
         </span>
       </div>
