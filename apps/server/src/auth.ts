@@ -4,25 +4,26 @@ import { phoneNumber } from "better-auth/plugins";
 import { db } from "@tamurfood/db";
 import { user, session, account, verification } from "@tamurfood/db/schema";
 import nodemailer from "nodemailer";
+import { env } from "./env";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: { user, session, account, verification },
   }),
-  baseURL: process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
+  baseURL: env.BETTER_AUTH_URL,
   emailAndPassword: {
     enabled: true,
     sendResetPassword: async ({ user: u, url }) => {
       const transporter = nodemailer.createTransport({
         service: "gmail",
         auth: {
-          user: process.env.GMAIL_USER,
-          pass: process.env.GMAIL_APP_PASSWORD,
+          user: env.GMAIL_USER,
+          pass: env.GMAIL_APP_PASSWORD,
         },
       });
       await transporter.sendMail({
-        from: process.env.GMAIL_USER,
+        from: env.GMAIL_USER,
         to: u.email,
         subject: "Reset your Tamurfood password",
         html: `<p>Click <a href="${url}">here</a> to reset your password. Link expires in 15 minutes.</p>`,
@@ -32,10 +33,17 @@ export const auth = betterAuth({
   session: {
     expiresIn: 60 * 60 * 24 * 7, // 7 days
   },
-  trustedOrigins: [
-    process.env.CORS_ORIGIN ?? "http://localhost:5173",
-    process.env.BETTER_AUTH_URL ?? "http://localhost:3000",
-  ],
+  // In-memory rate limiting — fine for a single Railway instance. A
+  // multi-instance deployment would need shared (database) storage.
+  rateLimit: {
+    enabled: true,
+    window: 60,
+    max: 100,
+    customRules: {
+      "/sign-in/*": { window: 60, max: 5 },
+    },
+  },
+  trustedOrigins: [env.CORS_ORIGIN, env.BETTER_AUTH_URL],
   plugins: [
     phoneNumber({
       sendOTP: async ({ phoneNumber: phone, code }) => {
