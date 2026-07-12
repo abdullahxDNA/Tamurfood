@@ -450,7 +450,7 @@ function ShopMenu() {
                 >
                   {/* Food photo (real imageUrl when uploaded, else mock visual) */}
                   <div
-                    className={`flex aspect-[4/3] items-center justify-center bg-gradient-to-br ${hashPick(
+                    className={`flex aspect-[16/9] items-center justify-center bg-gradient-to-br ${hashPick(
                       item.id,
                       GRADIENTS,
                     )}`}
@@ -462,14 +462,14 @@ function ShopMenu() {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <span className="text-4xl sm:text-5xl">
+                      <span className="text-3xl sm:text-4xl">
                         {foodEmoji(item.name)}
                       </span>
                     )}
                   </div>
 
                   {/* Body */}
-                  <div className="flex flex-1 flex-col gap-1 p-2.5">
+                  <div className="flex flex-1 flex-col gap-1 p-2">
                     <span className="line-clamp-2 text-sm font-medium leading-tight">
                       {item.name}
                     </span>
@@ -534,6 +534,9 @@ function ShopMenu() {
           </div>
         </div>
       ))}
+
+      {/* Spacer so the last row isn't hidden behind the floating cart bar */}
+      {totalItems > 0 && <div aria-hidden className="h-16" />}
 
       {/* Floating cart bar */}
       {totalItems > 0 && (
