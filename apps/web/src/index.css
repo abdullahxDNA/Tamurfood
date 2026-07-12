@@ -69,16 +69,17 @@
 }
 
 /* Menu cards stay light even in dark mode (so food photos pop). Resets the
-   theme tokens to light values for everything inside the card. */
+   theme tokens to light values for everything inside the card. The body uses a
+   soft warm off-white (not stark white) so it blends with the food photos. */
 .card-light {
-  --color-card: hsl(0 0% 100%);
-  --color-card-foreground: hsl(240 10% 3.9%);
-  --color-foreground: hsl(240 10% 3.9%);
-  --color-background: hsl(0 0% 100%);
-  --color-muted: hsl(240 4.8% 95.9%);
-  --color-muted-foreground: hsl(240 3.8% 46.1%);
-  --color-border: hsl(240 5.9% 90%);
-  --color-secondary: hsl(240 4.8% 95.9%);
-  --color-secondary-foreground: hsl(240 5.9% 10%);
+  --color-card: hsl(36 22% 96%);
+  --color-card-foreground: hsl(24 10% 12%);
+  --color-foreground: hsl(24 10% 12%);
+  --color-background: hsl(36 22% 96%);
+  --color-muted: hsl(36 16% 92%);
+  --color-muted-foreground: hsl(28 8% 40%);
+  --color-border: hsl(36 16% 88%);
+  --color-secondary: hsl(36 16% 92%);
+  --color-secondary-foreground: hsl(24 10% 12%);
   color: var(--color-card-foreground);
 }
