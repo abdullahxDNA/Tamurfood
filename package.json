@@ -2,8 +2,14 @@
   "name": "tamurfood",
   "private": true,
   "workspaces": ["apps/*", "packages/*"],
+  "overrides": {
+    "drizzle-orm": "0.45.1"
+  },
   "scripts": {
     "dev": "bun run --filter '*' dev",
+    "build": "bun run --cwd apps/web build",
+    "check-types": "bun run --filter '*' check-types",
+    "lint": "bun run --filter '*' lint",
     "db:generate": "bun run --cwd packages/db generate",
     "db:migrate": "bun run --cwd packages/db migrate",
     "db:studio": "bun run --cwd packages/db studio"
