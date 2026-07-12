@@ -90,31 +90,32 @@ export const shopsRouter = new Hono<{ Variables: Variables }>()
 
     const email = body.email ?? `${body.phone}@tamurfood.local`;
 
-    // Create auth user via Better Auth
-    const result = await auth.api.signUpEmail({
-      body: {
-        email,
-        name: body.ownerName,
-        password: body.password,
-      },
+    // Create the auth user directly via Better Auth's internal adapter.
+    // Public sign-up is disabled (see auth.ts), so we bypass the sign-up route —
+    // this is the same primitive Better Auth's own admin plugin uses.
+    const ctx = await auth.$context;
+    const newUser = await ctx.internalAdapter.createUser({
+      email,
+      name: body.ownerName,
+      role: "shop",
+      phoneNumber: body.phone,
+      isActive: true,
     });
 
-    if (!result || !result.user) {
+    if (!newUser) {
       return c.json({ error: "Failed to create user" }, 500);
     }
 
-    const userId = result.user.id;
+    const userId = newUser.id;
 
-    // Update user with phone, role
-    await db
-      .update(user)
-      .set({
-        phoneNumber: body.phone,
-        role: "shop",
-        name: body.ownerName,
-        updatedAt: new Date(),
-      })
-      .where(eq(user.id, userId));
+    // Link a credential (email+password) account so the user can sign in.
+    const hash = await ctx.password.hash(body.password);
+    await ctx.internalAdapter.linkAccount({
+      accountId: userId,
+      providerId: "credential",
+      password: hash,
+      userId,
+    });
 
     // Create shop record
     const shopId = crypto.randomUUID();
