@@ -10,6 +10,7 @@ import { useRouter } from "@tanstack/react-router";
 import type { SessionUser } from "@/lib/session";
 import { Button } from "@/components/ui/button";
 import { CartProvider } from "@/lib/cart-context";
+import { useTheme } from "@/lib/theme";
 
 export const Route = createFileRoute("/_authenticated/shop")({
   beforeLoad: ({ context }) => {
@@ -26,6 +27,7 @@ function ShopLayout() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { session } = Route.useRouteContext();
+  const { theme, toggleTheme } = useTheme();
 
   async function handleLogout() {
     await authClient.signOut();
@@ -40,7 +42,19 @@ function ShopLayout() {
           <span className="font-semibold truncate min-w-0 mr-4">
             {session.name}
           </span>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleTheme}
+              aria-label={
+                theme === "dark"
+                  ? "Switch to light mode"
+                  : "Switch to dark mode"
+              }
+            >
+              {theme === "dark" ? "☀️" : "🌙"}
+            </Button>
             <Button variant="outline" size="sm" onClick={handleLogout}>
               Logout
             </Button>
