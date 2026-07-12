@@ -11,8 +11,8 @@ const createShopSchema = z.object({
   shopName: z.string().min(1).max(150),
   ownerName: z.string().min(1).max(100),
   phone: z.string().min(5).max(20),
-  email: z.string().email().optional(),
-  address: z.string().max(500).optional(),
+  email: z.string().email().optional().nullable(),
+  address: z.string().max(500).optional().nullable(),
   password: z.string().min(6),
 });
 
