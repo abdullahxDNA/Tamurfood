@@ -1,5 +1,9 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
@@ -85,9 +89,6 @@ function OrderHistory() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<DateFilter>("today");
-  const [page, setPage] = useState(1);
-  const [allOrders, setAllOrders] = useState<Order[]>([]);
-  const [hasMore, setHasMore] = useState(false);
   const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
 
   // Track previous isDone state to detect "order ready" transitions
@@ -96,30 +97,38 @@ function OrderHistory() {
 
   const dateParam = filter === "today" ? getDateParam(filter) : undefined;
 
-  const { isLoading, isError, refetch } = useQuery({
-    queryKey: ["orders", filter, page],
-    queryFn: async () => {
-      const result = await fetchOrders(page, dateParam);
-      if (page === 1) {
-        setAllOrders(result.orders);
-      } else {
-        setAllOrders((prev) => [...prev, ...result.orders]);
-      }
-      setHasMore(page * result.pageSize < result.total);
-      return result;
-    },
+  const {
+    data,
+    isLoading,
+    isError,
+    refetch,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteQuery({
+    queryKey: ["orders", filter],
+    queryFn: ({ pageParam }) => fetchOrders(pageParam, dateParam),
+    initialPageParam: 1,
+    getNextPageParam: (lastPage, pages) =>
+      pages.length * lastPage.pageSize < lastPage.total
+        ? pages.length + 1
+        : undefined,
     staleTime: 30 * 1000,
     // Poll every 20s on "today" view so shop sees when orders flip to done
     refetchInterval: filter === "today" ? 20_000 : false,
   });
 
+  // Derived from the cache — always in sync, even when returning to a filter.
+  const allOrders = data?.pages.flatMap((p) => p.orders) ?? [];
+
   // Toast when an order transitions from pending → done
   useEffect(() => {
-    if (allOrders.length === 0) return;
+    const orders = data?.pages.flatMap((p) => p.orders) ?? [];
+    if (orders.length === 0) return;
     const prev = prevStatusRef.current;
 
     if (!isFirstLoadRef.current) {
-      for (const order of allOrders) {
+      for (const order of orders) {
         if (prev.get(order.id) === false && order.isDone) {
           toast.success(`Order #${order.orderNumber} is ready for pickup!`);
         }
@@ -127,8 +136,8 @@ function OrderHistory() {
     }
 
     isFirstLoadRef.current = false;
-    prevStatusRef.current = new Map(allOrders.map((o) => [o.id, o.isDone]));
-  }, [allOrders]);
+    prevStatusRef.current = new Map(orders.map((o) => [o.id, o.isDone]));
+  }, [data]);
 
   const cancelMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -142,9 +151,6 @@ function OrderHistory() {
       toast.success("Order cancelled.");
       setConfirmCancelId(null);
       queryClient.invalidateQueries({ queryKey: ["orders"] });
-      // Reset so next refetch re-populates allOrders cleanly
-      setPage(1);
-      setAllOrders([]);
       isFirstLoadRef.current = true;
       prevStatusRef.current = new Map();
     },
@@ -153,14 +159,8 @@ function OrderHistory() {
 
   function handleFilterChange(newFilter: DateFilter) {
     setFilter(newFilter);
-    setPage(1);
-    setAllOrders([]);
     isFirstLoadRef.current = true;
     prevStatusRef.current = new Map();
-  }
-
-  function handleLoadMore() {
-    setPage((p) => p + 1);
   }
 
   function handleReorder(order: Order) {
@@ -204,7 +204,7 @@ function OrderHistory() {
         ))}
       </div>
 
-      {isLoading && page === 1 && (
+      {isLoading && (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="h-24 rounded-md bg-muted animate-pulse" />
@@ -307,14 +307,14 @@ function OrderHistory() {
         ))}
       </div>
 
-      {hasMore && (
+      {hasNextPage && (
         <Button
           variant="outline"
           className="w-full"
-          onClick={handleLoadMore}
-          disabled={isLoading}
+          onClick={() => fetchNextPage()}
+          disabled={isFetchingNextPage}
         >
-          {isLoading ? "Loading..." : "Load more"}
+          {isFetchingNextPage ? "Loading..." : "Load more"}
         </Button>
       )}
 
