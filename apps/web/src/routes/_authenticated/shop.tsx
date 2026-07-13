@@ -38,11 +38,14 @@ function ShopLayout() {
   return (
     <CartProvider>
       <div className="min-h-screen overflow-x-clip pb-16">
-        <header className="border-b px-6 py-4 flex items-center justify-between">
-          <span className="font-semibold truncate min-w-0 mr-4">
-            {session.name}
+        <header className="border-b px-6 py-4 flex items-center justify-between gap-3">
+          <span className="text-lg font-extrabold tracking-tight whitespace-nowrap">
+            তামুরফুড <span className="text-muted-foreground">·</span> Tamurfood
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <span className="hidden sm:inline text-sm text-muted-foreground truncate max-w-[10rem]">
+              {session.name}
+            </span>
             <Button
               variant="outline"
               size="sm"
