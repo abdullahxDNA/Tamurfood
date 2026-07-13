@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -281,6 +282,26 @@ function ShopMenu() {
     setSuccessOrder(null);
     setPriceMismatch(null);
     setConfirmOpen(false);
+  }
+
+  function handleClearCart() {
+    // Snapshot the cart so it can be restored if the clear was accidental.
+    const snapshot = Object.entries(cart).map(([id, entry]) => ({
+      id,
+      ...entry,
+    }));
+    clearCart();
+    toast("Cart cleared", {
+      duration: 5000,
+      action: {
+        label: "Undo",
+        onClick: () => {
+          for (const item of snapshot) {
+            setQty(item.id, item.name, item.price, item.quantity);
+          }
+        },
+      },
+    });
   }
 
   // Filter by search query
@@ -592,7 +613,7 @@ function ShopMenu() {
       {totalItems > 0 && (
         <div className="fixed bottom-[4.5rem] left-4 right-4 z-10 flex items-stretch gap-2">
           <button
-            onClick={() => clearCart()}
+            onClick={handleClearCart}
             aria-label="Clear all items"
             title="Clear all items"
             className="flex items-center justify-center rounded-2xl border bg-card px-4 text-card-foreground shadow-xl transition-colors hover:bg-muted"
