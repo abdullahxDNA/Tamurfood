@@ -819,6 +819,37 @@ function MenuItemDialog({
 
 // ─── Manage categories dialog ─────────────────────────────────────────────────
 
+// ─── Draggable category row (in the Manage Categories dialog) ─────────────────
+function SortableCatRow({
+  id,
+  children,
+}: {
+  id: string;
+  children: (handle: React.HTMLAttributes<HTMLElement>) => ReactNode;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div ref={setNodeRef} style={style}>
+      {children({
+        ...attributes,
+        ...listeners,
+      } as React.HTMLAttributes<HTMLElement>)}
+    </div>
+  );
+}
+
 function CategoriesDialog({
   open,
   onClose,
@@ -832,6 +863,35 @@ function CategoriesDialog({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const reorderMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const res = await api.api.v1.menu.categories.reorder.$patch({
+        json: { ids },
+      });
+      if (!res.ok) throw new Error("Failed to reorder categories");
+    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["menu-categories"] }),
+  });
+
+  function handleDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const from = categories.findIndex((c) => c.id === active.id);
+    const to = categories.findIndex((c) => c.id === over.id);
+    if (from === -1 || to === -1) return;
+    const newCats = arrayMove(categories, from, to);
+    queryClient.setQueryData(["menu-categories"], newCats);
+    reorderMutation.mutate(newCats.map((c) => c.id));
+  }
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -887,77 +947,121 @@ function CategoriesDialog({
               No categories yet. Add one from the Add Item dialog.
             </p>
           )}
-          {categories.map((cat) => (
-            <div key={cat.id}>
-              {editingId === cat.id ? (
-                <div className="space-y-1.5">
-                  <div className="flex gap-2">
-                    <Input
-                      autoFocus
-                      value={editValue}
-                      onChange={(e) => {
-                        setEditValue(e.target.value);
-                        setEditError(null);
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      size="sm"
-                      disabled={!editValue.trim() || renameMutation.isPending}
-                      onClick={() =>
-                        renameMutation.mutate({
-                          id: cat.id,
-                          name: editValue.trim(),
-                        })
-                      }
-                    >
-                      {renameMutation.isPending ? "Saving..." : "Save"}
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={cancelEdit}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                  {editError && (
-                    <p className="text-xs text-destructive">{editError}</p>
-                  )}
-                </div>
-              ) : (
-                <div className="flex items-center justify-between gap-2 rounded-md border px-3 py-2">
-                  <span className="text-sm font-medium">{cat.name}</span>
-                  <div className="flex gap-1.5">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={() => startEdit(cat)}
-                    >
-                      Rename
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      className="h-7 text-xs"
-                      disabled={deleteMutation.isPending}
-                      onClick={() => {
-                        if (confirm(`Delete category "${cat.name}"?`)) {
-                          deleteMutation.mutate(cat.id);
+          {categories.length > 0 && (
+            <>
+              <p className="text-xs text-muted-foreground">
+                Drag the ⠿ handles to reorder — the shop shows categories in
+                this order.
+              </p>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEnd}
+              >
+                <SortableContext
+                  items={categories.map((c) => c.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-2">
+                    {categories.map((cat) => (
+                      <SortableCatRow key={cat.id} id={cat.id}>
+                        {(handle) =>
+                          editingId === cat.id ? (
+                            <div className="space-y-1.5">
+                              <div className="flex gap-2">
+                                <Input
+                                  autoFocus
+                                  value={editValue}
+                                  onChange={(e) => {
+                                    setEditValue(e.target.value);
+                                    setEditError(null);
+                                  }}
+                                />
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  disabled={
+                                    !editValue.trim() ||
+                                    renameMutation.isPending
+                                  }
+                                  onClick={() =>
+                                    renameMutation.mutate({
+                                      id: cat.id,
+                                      name: editValue.trim(),
+                                    })
+                                  }
+                                >
+                                  {renameMutation.isPending
+                                    ? "Saving..."
+                                    : "Save"}
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={cancelEdit}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                              {editError && (
+                                <p className="text-xs text-destructive">
+                                  {editError}
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-between gap-2 rounded-md border px-3 py-2">
+                              <div className="flex min-w-0 items-center gap-2">
+                                <button
+                                  {...handle}
+                                  type="button"
+                                  className="cursor-grab touch-none text-muted-foreground active:cursor-grabbing"
+                                  aria-label="Drag to reorder category"
+                                >
+                                  <GripVertical className="h-4 w-4" />
+                                </button>
+                                <span className="truncate text-sm font-medium">
+                                  {cat.name}
+                                </span>
+                              </div>
+                              <div className="flex shrink-0 gap-1.5">
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  onClick={() => startEdit(cat)}
+                                >
+                                  Rename
+                                </Button>
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="sm"
+                                  className="h-7 text-xs"
+                                  disabled={deleteMutation.isPending}
+                                  onClick={() => {
+                                    if (
+                                      confirm(`Delete category "${cat.name}"?`)
+                                    ) {
+                                      deleteMutation.mutate(cat.id);
+                                    }
+                                  }}
+                                >
+                                  Delete
+                                </Button>
+                              </div>
+                            </div>
+                          )
                         }
-                      }}
-                    >
-                      Delete
-                    </Button>
+                      </SortableCatRow>
+                    ))}
                   </div>
-                </div>
-              )}
-            </div>
-          ))}
+                </SortableContext>
+              </DndContext>
+            </>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
