@@ -178,7 +178,6 @@ function ShopMenu() {
   } | null>(null);
   const [priceMismatch, setPriceMismatch] = useState<number | null>(null);
   const [unavailableWarning, setUnavailableWarning] = useState<string[]>([]);
-  const [repeatWarning, setRepeatWarning] = useState<string[]>([]);
 
   // Sticky category bar: refs to each section + the currently-visible category
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -266,7 +265,7 @@ function ShopMenu() {
       setQty(item.menuItemId, item.itemName, item.itemPrice, item.quantity);
     }
     if (warned.length > 0) {
-      setRepeatWarning(warned);
+      toast(`Skipped unavailable: ${warned.join(", ")}`);
     }
   }
 
@@ -436,23 +435,48 @@ function ShopMenu() {
         />
       </div>
 
-      {/* Sticky category bar — click to jump to a category */}
+      {/* Sticky category bar — jump to a category, plus repeat-last-order */}
       {categoryKeys.length > 0 && (
         <div className="sticky top-0 z-20 -mx-6 border-b bg-background/95 px-6 py-2 backdrop-blur">
-          <div className="flex gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            {categoryKeys.map((cat) => (
+          <div className="flex items-center gap-2">
+            <div className="flex flex-1 gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {categoryKeys.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => scrollToCategory(cat)}
+                  className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                    activeCategory === cat
+                      ? "bg-foreground text-background"
+                      : "hover:bg-muted"
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+            {lastOrder && (
               <button
-                key={cat}
-                onClick={() => scrollToCategory(cat)}
-                className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
-                  activeCategory === cat
-                    ? "bg-foreground text-background"
-                    : "hover:bg-muted"
-                }`}
+                onClick={handleRepeatLastOrder}
+                title={`Repeat last order — ৳${lastOrder.totalAmount}`}
+                className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted"
               >
-                {cat}
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M3 2v6h6" />
+                  <path d="M3 13a9 9 0 1 0 3-7.7L3 8" />
+                </svg>
+                Repeat
               </button>
-            ))}
+            )}
           </div>
         </div>
       )}
@@ -467,27 +491,6 @@ function ShopMenu() {
           >
             Dismiss
           </button>
-        </div>
-      )}
-
-      {/* Repeat last order banner */}
-      {lastOrder && (
-        <div className="rounded-md border bg-muted/50 px-4 py-3 flex items-center justify-between gap-4">
-          <p className="text-sm text-muted-foreground">
-            Last order: {lastOrder.items.length} item
-            {lastOrder.items.length !== 1 ? "s" : ""} &mdash; ৳
-            {lastOrder.totalAmount}
-          </p>
-          <div className="flex items-center gap-2">
-            {repeatWarning.length > 0 && (
-              <span className="text-xs text-muted-foreground">
-                Skipped: {repeatWarning.join(", ")}
-              </span>
-            )}
-            <Button size="sm" variant="outline" onClick={handleRepeatLastOrder}>
-              Repeat
-            </Button>
-          </div>
         </div>
       )}
 
