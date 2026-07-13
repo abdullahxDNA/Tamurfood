@@ -438,8 +438,8 @@ function ShopMenu() {
       {/* Sticky category bar — jump to a category, plus repeat-last-order */}
       {categoryKeys.length > 0 && (
         <div className="sticky top-0 z-20 -mx-6 border-b bg-background/95 px-6 py-2 backdrop-blur">
-          <div className="flex items-center gap-2">
-            <div className="flex flex-1 gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="flex gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-1 [&::-webkit-scrollbar]:hidden">
               {categoryKeys.map((cat) => (
                 <button
                   key={cat}
@@ -458,7 +458,7 @@ function ShopMenu() {
               <button
                 onClick={handleRepeatLastOrder}
                 title={`Repeat last order — ৳${lastOrder.totalAmount}`}
-                className="flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted"
+                className="flex shrink-0 items-center gap-1 self-start whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted sm:self-auto"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
