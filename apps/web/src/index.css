@@ -37,6 +37,13 @@
   --color-sidebar-ring: hsl(217.2 91.2% 59.8%);
 }
 
+/* Apply theme colors at the body level so portaled content (dialogs, sheets,
+   toasts) inherits the correct foreground/background in dark mode too. */
+body {
+  background-color: var(--color-background);
+  color: var(--color-foreground);
+}
+
 /* Dark theme — activated by the `.dark` class on <html> */
 .dark {
   --color-background: hsl(240 10% 3.9%);
