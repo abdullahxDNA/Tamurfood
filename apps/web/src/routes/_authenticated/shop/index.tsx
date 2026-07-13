@@ -407,6 +407,10 @@ function ShopMenu() {
           }
         >
           <div className="mx-auto max-w-5xl px-6 py-12 sm:py-16">
+            {/* Fixed brand mark (not editable) */}
+            <p className="mb-3 text-lg font-extrabold tracking-tight sm:text-xl">
+              তামুরফুড <span className="opacity-75">·</span> Tamurfood
+            </p>
             <p className="text-xs font-medium uppercase tracking-wide opacity-90">
               {banner?.subtitle ?? "Today's special"}
             </p>
