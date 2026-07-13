@@ -304,7 +304,7 @@ function AddEditDialog({
     onSubmit({
       shopName,
       ownerName,
-      ...(mode === "add" ? { phone, password } : {}),
+      ...(mode === "add" ? { phone, password } : { phone: phone || undefined }),
       ...(email ? { email } : {}),
       address: address || null,
     });
@@ -335,18 +335,16 @@ function AddEditDialog({
               required
             />
           </div>
-          {mode === "add" && (
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                id="phone"
-                type="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                required
-              />
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone Number</Label>
+            <Input
+              id="phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              required={mode === "add"}
+            />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email (optional)</Label>
             <Input

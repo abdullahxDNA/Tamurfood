@@ -20,6 +20,7 @@ const updateShopSchema = z.object({
   shopName: z.string().min(1).max(150),
   ownerName: z.string().min(1).max(100),
   address: z.string().max(500).optional().nullable(),
+  phone: z.string().min(5).max(20).optional(),
 });
 
 const resetPasswordSchema = z.object({
@@ -161,7 +162,11 @@ export const shopsRouter = new Hono<{ Variables: Variables }>()
         .where(eq(shops.id, id)),
       db
         .update(user)
-        .set({ name: body.ownerName, updatedAt: new Date() })
+        .set({
+          name: body.ownerName,
+          ...(body.phone ? { phoneNumber: body.phone } : {}),
+          updatedAt: new Date(),
+        })
         .where(eq(user.id, shop[0].userId)),
     ]);
 
