@@ -3,7 +3,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { phoneNumber } from "better-auth/plugins";
 import { db } from "@tamurfood/db";
 import { user, session, account, verification } from "@tamurfood/db/schema";
-import nodemailer from "nodemailer";
+import { Resend } from "resend";
 import { env } from "./env";
 
 export const auth = betterAuth({
@@ -19,21 +19,16 @@ export const auth = betterAuth({
     // internal adapter directly and is unaffected by this flag.
     disableSignUp: true,
     sendResetPassword: async ({ user: u, url }) => {
-      console.log(`[reset-password] sending to ${u.email}, url=${url}`);
+      console.log(`[reset-password] sending to ${u.email}`);
       try {
-        const transporter = nodemailer.createTransport({
-          service: "gmail",
-          auth: {
-            user: env.GMAIL_USER,
-            pass: env.GMAIL_APP_PASSWORD,
-          },
-        });
-        await transporter.sendMail({
-          from: env.GMAIL_USER,
+        const resend = new Resend(env.RESEND_API_KEY);
+        const { error } = await resend.emails.send({
+          from: "Tamurfood <onboarding@resend.dev>",
           to: u.email,
           subject: "Reset your Tamurfood password",
           html: `<p>Click <a href="${url}">here</a> to reset your password. Link expires in 15 minutes.</p>`,
         });
+        if (error) throw error;
         console.log(`[reset-password] sent OK to ${u.email}`);
       } catch (err) {
         console.error("[reset-password] failed to send email:", err);

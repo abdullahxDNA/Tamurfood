@@ -20,9 +20,8 @@ export const env = createEnv({
       .default("development"),
     PORT: z.coerce.number().default(3000),
 
-    // Gmail SMTP (password-reset emails)
-    GMAIL_USER: z.string().email(),
-    GMAIL_APP_PASSWORD: z.string().min(1),
+    // Resend (password-reset emails)
+    RESEND_API_KEY: z.string().min(1),
 
     // Supabase Storage (server-side image uploads via service role)
     SUPABASE_URL: z.string().url(),
