@@ -11,6 +11,8 @@ RUN bun install --frozen-lockfile
 
 # Copy all source files
 COPY . .
+# Remove any .env files/symlinks so Railway env vars are used
+RUN find . -name ".env" -o -name ".env.local" | xargs rm -f 2>/dev/null || true
 
 # Build frontend — VITE_ vars are baked in at build time
 ARG VITE_SUPABASE_URL
