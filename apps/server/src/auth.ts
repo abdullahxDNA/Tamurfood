@@ -19,19 +19,25 @@ export const auth = betterAuth({
     // internal adapter directly and is unaffected by this flag.
     disableSignUp: true,
     sendResetPassword: async ({ user: u, url }) => {
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: env.GMAIL_USER,
-          pass: env.GMAIL_APP_PASSWORD,
-        },
-      });
-      await transporter.sendMail({
-        from: env.GMAIL_USER,
-        to: u.email,
-        subject: "Reset your Tamurfood password",
-        html: `<p>Click <a href="${url}">here</a> to reset your password. Link expires in 15 minutes.</p>`,
-      });
+      console.log(`[reset-password] sending to ${u.email}, url=${url}`);
+      try {
+        const transporter = nodemailer.createTransport({
+          service: "gmail",
+          auth: {
+            user: env.GMAIL_USER,
+            pass: env.GMAIL_APP_PASSWORD,
+          },
+        });
+        await transporter.sendMail({
+          from: env.GMAIL_USER,
+          to: u.email,
+          subject: "Reset your Tamurfood password",
+          html: `<p>Click <a href="${url}">here</a> to reset your password. Link expires in 15 minutes.</p>`,
+        });
+        console.log(`[reset-password] sent OK to ${u.email}`);
+      } catch (err) {
+        console.error("[reset-password] failed to send email:", err);
+      }
     },
   },
   session: {
