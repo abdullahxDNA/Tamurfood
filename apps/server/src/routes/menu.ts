@@ -73,6 +73,44 @@ export const menuRouter = new Hono<{ Variables: Variables }>()
 
     return c.json(cats);
   })
+  // PATCH /categories/reorder — set category order from the given id order (admin)
+  .patch(
+    "/categories/reorder",
+    zValidator("json", z.object({ ids: z.array(z.string()) })),
+    async (c) => {
+      const err = requireAdmin(c);
+      if (err) return err;
+      const { ids } = c.req.valid("json");
+      await Promise.all(
+        ids.map((id, i) =>
+          db
+            .update(menuCategories)
+            .set({ sortOrder: i })
+            .where(eq(menuCategories.id, id)),
+        ),
+      );
+      return c.json({ success: true });
+    },
+  )
+  // PATCH /reorder — set item order within a category from the given id order (admin)
+  .patch(
+    "/reorder",
+    zValidator("json", z.object({ ids: z.array(z.string()) })),
+    async (c) => {
+      const err = requireAdmin(c);
+      if (err) return err;
+      const { ids } = c.req.valid("json");
+      await Promise.all(
+        ids.map((id, i) =>
+          db
+            .update(menuItems)
+            .set({ sortOrder: i })
+            .where(eq(menuItems.id, id)),
+        ),
+      );
+      return c.json({ success: true });
+    },
+  )
   // POST /categories — create category (admin only), 409 if name already exists
   .post(
     "/categories",

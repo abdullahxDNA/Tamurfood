@@ -1,6 +1,25 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useRef } from "react";
+import { useState, useRef, type ReactNode } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  horizontalListSortingStrategy,
+  verticalListSortingStrategy,
+  sortableKeyboardCoordinates,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import { GripVertical } from "lucide-react";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,6 +75,139 @@ async function fetchCategories(): Promise<MenuCategory[]> {
 }
 
 type DialogMode = { type: "add" } | { type: "edit"; item: MenuItem } | null;
+
+// ─── Draggable item card ──────────────────────────────────────────────────────
+function SortableItem({
+  item,
+  onEdit,
+  onDelete,
+  onToggle,
+  toggling,
+  deleting,
+}: {
+  item: MenuItem;
+  onEdit: () => void;
+  onDelete: () => void;
+  onToggle: () => void;
+  toggling: boolean;
+  deleting: boolean;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: item.id });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="space-y-2 rounded-md border bg-card p-2.5"
+    >
+      <div className="flex items-start justify-between gap-1.5">
+        <button
+          {...attributes}
+          {...listeners}
+          className="mt-0.5 cursor-grab touch-none text-muted-foreground active:cursor-grabbing"
+          aria-label="Drag to reorder item"
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+        <div className="min-w-0 flex-1">
+          <span className="text-sm font-medium">{item.name}</span>
+          <p className="mt-0.5 text-sm font-medium">৳{item.price}</p>
+        </div>
+        <Switch
+          checked={item.isAvailable}
+          onCheckedChange={onToggle}
+          disabled={toggling}
+        />
+      </div>
+      <div className="flex gap-1.5">
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 flex-1 text-xs"
+          onClick={onEdit}
+        >
+          Edit
+        </Button>
+        <Button
+          variant="destructive"
+          size="sm"
+          className="h-7 flex-1 text-xs"
+          onClick={onDelete}
+          disabled={deleting}
+        >
+          Delete
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Draggable category column ────────────────────────────────────────────────
+function SortableColumn({
+  id,
+  count,
+  disabled,
+  children,
+}: {
+  id: string;
+  count: number;
+  disabled: boolean;
+  children: ReactNode;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id, disabled });
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.6 : 1,
+  };
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="w-[240px] min-w-[240px] flex-shrink-0"
+    >
+      <div className="mb-2 flex items-center justify-between border-b pb-1.5">
+        <div className="flex min-w-0 items-center gap-1.5">
+          {!disabled && (
+            <button
+              {...attributes}
+              {...listeners}
+              className="cursor-grab touch-none text-muted-foreground active:cursor-grabbing"
+              aria-label="Drag to reorder category"
+            >
+              <GripVertical className="h-4 w-4" />
+            </button>
+          )}
+          <h2 className="truncate text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            {id}
+          </h2>
+        </div>
+        <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+          {count}
+        </span>
+      </div>
+      {children}
+    </div>
+  );
+}
 
 function MenuPage() {
   const queryClient = useQueryClient();
@@ -138,6 +290,72 @@ function MenuPage() {
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu"] }),
   });
+
+  const reorderCategoriesMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const res = await api.api.v1.menu.categories.reorder.$patch({
+        json: { ids },
+      });
+      if (!res.ok) throw new Error("Failed to reorder categories");
+    },
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["menu-categories"] }),
+  });
+
+  const reorderItemsMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      const res = await api.api.v1.menu.reorder.$patch({ json: { ids } });
+      if (!res.ok) throw new Error("Failed to reorder items");
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu"] }),
+  });
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  function handleDragEnd(e: DragEndEvent) {
+    const { active, over } = e;
+    if (!over || active.id === over.id) return;
+    const activeId = String(active.id);
+    const overId = String(over.id);
+    const dbCatNames = categories.map((c) => c.name);
+
+    // Category column drag. The drop target may be another column OR an item
+    // inside it — resolve either to a category.
+    if (dbCatNames.includes(activeId)) {
+      const overCat = dbCatNames.includes(overId)
+        ? overId
+        : items.find((i) => i.id === overId)?.category;
+      if (!overCat || overCat === activeId || !dbCatNames.includes(overCat))
+        return;
+      const from = dbCatNames.indexOf(activeId);
+      const to = dbCatNames.indexOf(overCat);
+      const newCats = arrayMove(categories, from, to);
+      queryClient.setQueryData(["menu-categories"], newCats);
+      reorderCategoriesMutation.mutate(newCats.map((c) => c.id));
+      return;
+    }
+
+    // Item drag — reorder within the same category.
+    const activeItem = items.find((i) => i.id === activeId);
+    const overItem = items.find((i) => i.id === overId);
+    if (activeItem && overItem && activeItem.category === overItem.category) {
+      const cat = activeItem.category;
+      const catItems = items.filter((i) => i.category === cat);
+      const from = catItems.findIndex((i) => i.id === activeId);
+      const to = catItems.findIndex((i) => i.id === overId);
+      const reordered = arrayMove(catItems, from, to);
+      const others = items.filter((i) => i.category !== cat);
+      // Display re-groups by category, so relative order within the category is
+      // all that matters.
+      queryClient.setQueryData(["menu"], [...others, ...reordered]);
+      reorderItemsMutation.mutate(reordered.map((i) => i.id));
+    }
+  }
 
   // Column-wise grouping: DB-ordered categories first, then any uncategorized
   const catNames = categories.map((c) => c.name);
@@ -234,72 +452,59 @@ function MenuPage() {
         </p>
       )}
 
-      {/* Column layout */}
+      {/* Drag to reorder hint */}
+      {filtered.length > 0 && !q && (
+        <p className="text-xs text-muted-foreground">
+          Drag the ⠿ handles to reorder categories and items — the shop shows
+          them in this order.
+        </p>
+      )}
+
+      {/* Column layout (drag-and-drop) */}
       {filtered.length > 0 && (
-        <div className="flex gap-4 overflow-x-auto pb-2 items-start">
-          {filtered.map(([category, catItems]) => (
-            <div
-              key={category}
-              className="min-w-[240px] w-[240px] flex-shrink-0"
-            >
-              <div className="flex items-center justify-between border-b pb-1.5 mb-2">
-                <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-                  {category}
-                </h2>
-                <span className="text-xs font-medium text-muted-foreground bg-muted rounded-full px-2 py-0.5">
-                  {catItems.length}
-                </span>
-              </div>
-              <div className="space-y-2">
-                {catItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="rounded-md border p-2.5 space-y-2"
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={filtered.map(([category]) => category)}
+            strategy={horizontalListSortingStrategy}
+          >
+            <div className="flex items-start gap-4 overflow-x-auto pb-2">
+              {filtered.map(([category, catItems]) => (
+                <SortableColumn
+                  key={category}
+                  id={category}
+                  count={catItems.length}
+                  disabled={!!q || !categories.some((c) => c.name === category)}
+                >
+                  <SortableContext
+                    items={catItems.map((i) => i.id)}
+                    strategy={verticalListSortingStrategy}
+                    disabled={!!q}
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="font-medium text-sm">
-                            {item.name}
-                          </span>
-                        </div>
-                        <p className="text-sm font-medium mt-0.5">
-                          ৳{item.price}
-                        </p>
-                      </div>
-                      <Switch
-                        checked={item.isAvailable}
-                        onCheckedChange={() =>
-                          toggleAvailabilityMutation.mutate(item.id)
-                        }
-                        disabled={toggleAvailabilityMutation.isPending}
-                      />
+                    <div className="space-y-2">
+                      {catItems.map((item) => (
+                        <SortableItem
+                          key={item.id}
+                          item={item}
+                          onEdit={() => setDialog({ type: "edit", item })}
+                          onDelete={() => handleDelete(item.id, item.name)}
+                          onToggle={() =>
+                            toggleAvailabilityMutation.mutate(item.id)
+                          }
+                          toggling={toggleAvailabilityMutation.isPending}
+                          deleting={deleteMutation.isPending}
+                        />
+                      ))}
                     </div>
-                    <div className="flex gap-1.5">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1 h-7 text-xs"
-                        onClick={() => setDialog({ type: "edit", item })}
-                      >
-                        Edit
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="flex-1 h-7 text-xs"
-                        onClick={() => handleDelete(item.id, item.name)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        Delete
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  </SortableContext>
+                </SortableColumn>
+              ))}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       {/* Manage categories dialog */}
