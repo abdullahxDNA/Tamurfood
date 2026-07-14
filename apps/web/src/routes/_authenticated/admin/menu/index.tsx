@@ -669,6 +669,7 @@ function MenuPage() {
       category: string;
       imageUrl?: string | null;
       sortOrder?: number;
+      isVisible?: boolean;
     }) => {
       const res = await api.api.v1.menu.$post({ json: body });
       if (!res.ok) {
@@ -893,6 +894,7 @@ function MenuPage() {
     category: string;
     imageUrl?: string | null;
     sortOrder?: number;
+    isVisible?: boolean;
   }) {
     if (isModerator) {
       if (dialog?.type === "add") {
@@ -1128,6 +1130,7 @@ function MenuItemDialog({
     category: string;
     imageUrl?: string | null;
     sortOrder?: number;
+    isVisible?: boolean;
   }) => void;
   isPending: boolean;
   error: string | null;
@@ -1142,6 +1145,8 @@ function MenuItemDialog({
   const [sortOrder, setSortOrder] = useState(
     item?.sortOrder?.toString() ?? "0",
   );
+  // New items: choose whether they go live immediately or start hidden.
+  const [visible, setVisible] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -1205,6 +1210,8 @@ function MenuItemDialog({
       category,
       imageUrl: imageUrl || null,
       sortOrder: parseInt(sortOrder, 10) || 0,
+      // Only meaningful when an admin adds a new item.
+      ...(mode === "add" && !isModerator ? { isVisible: visible } : {}),
     });
   }
 
@@ -1382,6 +1389,21 @@ function MenuItemDialog({
                 type="number"
                 value={sortOrder}
                 onChange={(e) => setSortOrder(e.target.value)}
+              />
+            </div>
+          )}
+          {mode === "add" && !isModerator && (
+            <div className="flex items-center justify-between rounded-md border p-2.5">
+              <div className="space-y-0.5">
+                <Label htmlFor="visible">Show to shops now</Label>
+                <p className="text-xs text-muted-foreground">
+                  Turn off to add it hidden and reveal it later.
+                </p>
+              </div>
+              <Switch
+                id="visible"
+                checked={visible}
+                onCheckedChange={setVisible}
               />
             </div>
           )}
