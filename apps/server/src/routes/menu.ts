@@ -33,14 +33,20 @@ const updateMenuItemSchema = z.object({
 });
 
 export const menuRouter = new Hono<{ Variables: Variables }>()
-  // GET / — list all items ordered by category then sortOrder
+  // GET / — list items ordered by category then sortOrder.
+  // Admin sees every item (to manage hidden ones); shops and moderators see
+  // only visible (published) items.
   .get("/", async (c) => {
     const err = requireSession(c);
     if (err) return err;
 
+    const session = c.get("session")!;
+    const isAdmin = session.user.role === "admin";
+
     const items = await db
       .select()
       .from(menuItems)
+      .where(isAdmin ? undefined : eq(menuItems.isVisible, true))
       .orderBy(
         asc(menuItems.category),
         asc(menuItems.sortOrder),
@@ -373,6 +379,30 @@ export const menuRouter = new Hono<{ Variables: Variables }>()
       return c.json({ stockQuantity: quantity });
     },
   )
+  // PATCH /:id/visibility — hide/show an item from shops & moderators (admin only)
+  .patch("/:id/visibility", async (c) => {
+    const err = requireAdmin(c);
+    if (err) return err;
+
+    const id = c.req.param("id");
+    const existing = await db
+      .select({ isVisible: menuItems.isVisible })
+      .from(menuItems)
+      .where(eq(menuItems.id, id))
+      .limit(1);
+
+    if (existing.length === 0) {
+      return c.json({ error: "Item not found" }, 404);
+    }
+
+    const newVisible = !existing[0].isVisible;
+    await db
+      .update(menuItems)
+      .set({ isVisible: newVisible })
+      .where(eq(menuItems.id, id));
+
+    return c.json({ isVisible: newVisible });
+  })
   // PATCH /:id/availability — toggle isAvailable (moderator can do this instantly)
   .patch("/:id/availability", async (c) => {
     const err = requireModerator(c);

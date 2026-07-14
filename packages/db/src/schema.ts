@@ -87,6 +87,10 @@ export const menuItems = pgTable("menu_items", {
   category: varchar("category", { length: 50 }).notNull(),
   imageUrl: text("image_url"),
   isAvailable: boolean("is_available").notNull().default(true),
+  // Admin-controlled draft/publish. When false, the item is hidden from shops
+  // and moderators entirely (only the admin sees it). Distinct from isAvailable
+  // (stock-out), which still shows the item but marks it unavailable.
+  isVisible: boolean("is_visible").notNull().default(true),
   // NULL = untracked / unlimited stock. When set, online orders decrement it
   // atomically and the item auto-goes "Stock Out" at 0.
   stockQuantity: integer("stock_quantity"),
