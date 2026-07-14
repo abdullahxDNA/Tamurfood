@@ -22,6 +22,8 @@ const menuItemSchema = z.object({
   category: z.string().min(1).max(50),
   imageUrl: z.string().url().optional().nullable(),
   sortOrder: z.number().int().optional(),
+  // Whether the item is shown to shops immediately (default true)
+  isVisible: z.boolean().optional(),
 });
 
 const updateMenuItemSchema = z.object({
@@ -71,6 +73,7 @@ export const menuRouter = new Hono<{ Variables: Variables }>()
       imageUrl: body.imageUrl ?? null,
       sortOrder: body.sortOrder ?? 0,
       isAvailable: true,
+      isVisible: body.isVisible ?? true,
       createdAt: new Date(),
     });
 
