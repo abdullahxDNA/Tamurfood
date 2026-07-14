@@ -23,6 +23,7 @@ import { Route as AuthenticatedShopProfileIndexRouteImport } from "./routes/_aut
 import { Route as AuthenticatedShopOrdersIndexRouteImport } from "./routes/_authenticated/shop/orders/index"
 import { Route as AuthenticatedShopKhataIndexRouteImport } from "./routes/_authenticated/shop/khata/index"
 import { Route as AuthenticatedAdminShopsIndexRouteImport } from "./routes/_authenticated/admin/shops/index"
+import { Route as AuthenticatedAdminRequestsIndexRouteImport } from "./routes/_authenticated/admin/requests/index"
 import { Route as AuthenticatedAdminPaymentsIndexRouteImport } from "./routes/_authenticated/admin/payments/index"
 import { Route as AuthenticatedAdminModeratorsIndexRouteImport } from "./routes/_authenticated/admin/moderators/index"
 import { Route as AuthenticatedAdminMenuIndexRouteImport } from "./routes/_authenticated/admin/menu/index"
@@ -103,6 +104,12 @@ const AuthenticatedAdminShopsIndexRoute =
     path: "/shops/",
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminRequestsIndexRoute =
+  AuthenticatedAdminRequestsIndexRouteImport.update({
+    id: "/requests/",
+    path: "/requests/",
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminPaymentsIndexRoute =
   AuthenticatedAdminPaymentsIndexRouteImport.update({
     id: "/payments/",
@@ -149,6 +156,7 @@ export interface FileRoutesByFullPath {
   "/admin/menu/": typeof AuthenticatedAdminMenuIndexRoute
   "/admin/moderators/": typeof AuthenticatedAdminModeratorsIndexRoute
   "/admin/payments/": typeof AuthenticatedAdminPaymentsIndexRoute
+  "/admin/requests/": typeof AuthenticatedAdminRequestsIndexRoute
   "/admin/shops/": typeof AuthenticatedAdminShopsIndexRoute
   "/shop/khata/": typeof AuthenticatedShopKhataIndexRoute
   "/shop/orders/": typeof AuthenticatedShopOrdersIndexRoute
@@ -167,6 +175,7 @@ export interface FileRoutesByTo {
   "/admin/menu": typeof AuthenticatedAdminMenuIndexRoute
   "/admin/moderators": typeof AuthenticatedAdminModeratorsIndexRoute
   "/admin/payments": typeof AuthenticatedAdminPaymentsIndexRoute
+  "/admin/requests": typeof AuthenticatedAdminRequestsIndexRoute
   "/admin/shops": typeof AuthenticatedAdminShopsIndexRoute
   "/shop/khata": typeof AuthenticatedShopKhataIndexRoute
   "/shop/orders": typeof AuthenticatedShopOrdersIndexRoute
@@ -189,6 +198,7 @@ export interface FileRoutesById {
   "/_authenticated/admin/menu/": typeof AuthenticatedAdminMenuIndexRoute
   "/_authenticated/admin/moderators/": typeof AuthenticatedAdminModeratorsIndexRoute
   "/_authenticated/admin/payments/": typeof AuthenticatedAdminPaymentsIndexRoute
+  "/_authenticated/admin/requests/": typeof AuthenticatedAdminRequestsIndexRoute
   "/_authenticated/admin/shops/": typeof AuthenticatedAdminShopsIndexRoute
   "/_authenticated/shop/khata/": typeof AuthenticatedShopKhataIndexRoute
   "/_authenticated/shop/orders/": typeof AuthenticatedShopOrdersIndexRoute
@@ -211,6 +221,7 @@ export interface FileRouteTypes {
     | "/admin/menu/"
     | "/admin/moderators/"
     | "/admin/payments/"
+    | "/admin/requests/"
     | "/admin/shops/"
     | "/shop/khata/"
     | "/shop/orders/"
@@ -229,6 +240,7 @@ export interface FileRouteTypes {
     | "/admin/menu"
     | "/admin/moderators"
     | "/admin/payments"
+    | "/admin/requests"
     | "/admin/shops"
     | "/shop/khata"
     | "/shop/orders"
@@ -250,6 +262,7 @@ export interface FileRouteTypes {
     | "/_authenticated/admin/menu/"
     | "/_authenticated/admin/moderators/"
     | "/_authenticated/admin/payments/"
+    | "/_authenticated/admin/requests/"
     | "/_authenticated/admin/shops/"
     | "/_authenticated/shop/khata/"
     | "/_authenticated/shop/orders/"
@@ -364,6 +377,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthenticatedAdminShopsIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    "/_authenticated/admin/requests/": {
+      id: "/_authenticated/admin/requests/"
+      path: "/requests"
+      fullPath: "/admin/requests/"
+      preLoaderRoute: typeof AuthenticatedAdminRequestsIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     "/_authenticated/admin/payments/": {
       id: "/_authenticated/admin/payments/"
       path: "/payments"
@@ -409,6 +429,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminMenuIndexRoute: typeof AuthenticatedAdminMenuIndexRoute
   AuthenticatedAdminModeratorsIndexRoute: typeof AuthenticatedAdminModeratorsIndexRoute
   AuthenticatedAdminPaymentsIndexRoute: typeof AuthenticatedAdminPaymentsIndexRoute
+  AuthenticatedAdminRequestsIndexRoute: typeof AuthenticatedAdminRequestsIndexRoute
   AuthenticatedAdminShopsIndexRoute: typeof AuthenticatedAdminShopsIndexRoute
 }
 
@@ -420,6 +441,7 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminModeratorsIndexRoute:
     AuthenticatedAdminModeratorsIndexRoute,
   AuthenticatedAdminPaymentsIndexRoute: AuthenticatedAdminPaymentsIndexRoute,
+  AuthenticatedAdminRequestsIndexRoute: AuthenticatedAdminRequestsIndexRoute,
   AuthenticatedAdminShopsIndexRoute: AuthenticatedAdminShopsIndexRoute,
 }
 
