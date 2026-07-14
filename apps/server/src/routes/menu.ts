@@ -313,6 +313,39 @@ export const menuRouter = new Hono<{ Variables: Variables }>()
       return c.json({ id }, 201);
     },
   )
+  // PATCH /:id/stock — set/edit/clear stock count (admin or moderator, instant)
+  // body: { quantity: number | null } — null clears tracking (unlimited again)
+  .patch(
+    "/:id/stock",
+    zValidator(
+      "json",
+      z.object({ quantity: z.number().int().min(0).nullable() }),
+    ),
+    async (c) => {
+      const err = requireModerator(c);
+      if (err) return err;
+
+      const id = c.req.param("id");
+      const { quantity } = c.req.valid("json");
+
+      const existing = await db
+        .select({ id: menuItems.id })
+        .from(menuItems)
+        .where(eq(menuItems.id, id))
+        .limit(1);
+
+      if (existing.length === 0) {
+        return c.json({ error: "Item not found" }, 404);
+      }
+
+      await db
+        .update(menuItems)
+        .set({ stockQuantity: quantity })
+        .where(eq(menuItems.id, id));
+
+      return c.json({ stockQuantity: quantity });
+    },
+  )
   // PATCH /:id/availability — toggle isAvailable (moderator can do this instantly)
   .patch("/:id/availability", async (c) => {
     const err = requireModerator(c);

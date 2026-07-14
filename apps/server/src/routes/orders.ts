@@ -12,6 +12,16 @@ import {
 import { requireSession, getShopForUser, type Variables } from "../lib/helpers";
 import { orderEvents, type NewOrderEvent } from "../lib/order-events";
 
+// Thrown inside the order transaction when a tracked item loses the race for
+// its last units, so the whole order rolls back and we report which item.
+class StockConflict extends Error {
+  itemId: string;
+  constructor(itemId: string) {
+    super("stock conflict");
+    this.itemId = itemId;
+  }
+}
+
 const placeOrderSchema = z.object({
   items: z
     .array(
@@ -46,17 +56,26 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
         name: menuItems.name,
         price: menuItems.price,
         isAvailable: menuItems.isAvailable,
+        stockQuantity: menuItems.stockQuantity,
       })
       .from(menuItems)
       .where(inArray(menuItems.id, menuItemIds));
 
-    // Check for missing or unavailable items
+    // Check for missing, unavailable, or insufficient-stock items
     const foundMap = new Map(foundItems.map((i) => [i.id, i]));
     const unavailableItems: string[] = [];
 
     for (const reqItem of body.items) {
       const found = foundMap.get(reqItem.menuItemId);
       if (!found || !found.isAvailable) {
+        unavailableItems.push(reqItem.menuItemId);
+        continue;
+      }
+      // Tracked stock: reject up front if fewer are left than requested.
+      if (
+        found.stockQuantity !== null &&
+        found.stockQuantity < reqItem.quantity
+      ) {
         unavailableItems.push(reqItem.menuItemId);
       }
     }
@@ -85,41 +104,71 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
     const orderId = crypto.randomUUID();
     const now = new Date();
 
-    // Insert order
-    const [inserted] = await db
-      .insert(orders)
-      .values({
-        id: orderId,
-        shopId: shop.id,
-        totalAmount,
-        note: body.note ?? null,
-        isDone: false,
-        placedAt: now,
-      })
-      .returning({ id: orders.id, orderNumber: orders.orderNumber });
-
-    // Insert order items (bulk)
-    await db.insert(orderItems).values(
-      lineItems.map((li) => ({
-        id: crypto.randomUUID(),
-        orderId,
-        menuItemId: li.menuItemId,
-        itemName: li.itemName,
-        itemPrice: li.itemPrice,
-        quantity: li.quantity,
-        lineTotal: li.lineTotal,
-        itemNote: null,
-      })),
+    // Items that track stock are decremented atomically inside the transaction,
+    // so concurrent orders can never oversell the last units. If a decrement
+    // finds too few left (another order won the race), the order rolls back.
+    const trackedItems = body.items.filter(
+      (reqItem) => foundMap.get(reqItem.menuItemId)!.stockQuantity !== null,
     );
 
-    // Analytics event
-    await db.insert(analyticsEvents).values({
-      id: crypto.randomUUID(),
-      eventType: "order_placed",
-      userId: session.user.id,
-      metadata: { orderId, shopId: shop.id, totalAmount },
-      createdAt: now,
-    });
+    let inserted: { id: string; orderNumber: number };
+    try {
+      inserted = await db.transaction(async (tx) => {
+        for (const reqItem of trackedItems) {
+          const rows = (await tx.execute(sql`
+            UPDATE "menu_items"
+            SET "stock_quantity" = "stock_quantity" - ${reqItem.quantity}
+            WHERE "id" = ${reqItem.menuItemId}
+              AND "stock_quantity" >= ${reqItem.quantity}
+            RETURNING "id"
+          `)) as unknown as unknown[];
+          if (rows.length === 0) throw new StockConflict(reqItem.menuItemId);
+        }
+
+        const [row] = await tx
+          .insert(orders)
+          .values({
+            id: orderId,
+            shopId: shop.id,
+            totalAmount,
+            note: body.note ?? null,
+            isDone: false,
+            placedAt: now,
+          })
+          .returning({ id: orders.id, orderNumber: orders.orderNumber });
+
+        await tx.insert(orderItems).values(
+          lineItems.map((li) => ({
+            id: crypto.randomUUID(),
+            orderId,
+            menuItemId: li.menuItemId,
+            itemName: li.itemName,
+            itemPrice: li.itemPrice,
+            quantity: li.quantity,
+            lineTotal: li.lineTotal,
+            itemNote: null,
+          })),
+        );
+
+        await tx.insert(analyticsEvents).values({
+          id: crypto.randomUUID(),
+          eventType: "order_placed",
+          userId: session.user.id,
+          metadata: { orderId, shopId: shop.id, totalAmount },
+          createdAt: now,
+        });
+
+        return row;
+      });
+    } catch (e) {
+      if (e instanceof StockConflict) {
+        return c.json(
+          { error: "Some items are unavailable", unavailableItems: [e.itemId] },
+          409,
+        );
+      }
+      throw e;
+    }
 
     // Emit SSE event for admin live feed
     orderEvents.emit("new_order", {
@@ -236,6 +285,7 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
         note: orders.note,
         isDone: orders.isDone,
         isCancelled: sql<boolean>`"orders"."is_cancelled"`,
+        cancelReason: orders.cancelReason,
         placedAt: orders.placedAt,
       })
       .from(orders)

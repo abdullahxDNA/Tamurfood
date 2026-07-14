@@ -64,6 +64,13 @@
       "when": 1752480000000,
       "tag": "0008_add_pending_menu_changes",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1752570000000,
+      "tag": "0009_add_stock_and_cancel_reason",
+      "breakpoints": true
     }
   ]
 }

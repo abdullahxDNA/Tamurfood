@@ -26,6 +26,7 @@ interface MenuItem {
   category: string;
   imageUrl: string | null;
   isAvailable: boolean;
+  stockQuantity: number | null;
   sortOrder: number;
   createdAt: string;
 }
@@ -313,12 +314,15 @@ function ShopMenu() {
   }
 
   // Proactively drop cart items that just went stock-out — detected by the 5s
-  // menu poll, so the shop is told immediately instead of at checkout.
+  // menu poll, so the shop is told immediately instead of at checkout. An item
+  // is out when it's toggled off OR its tracked stock hit 0.
   useEffect(() => {
     if (items.length === 0) return;
-    const availById = new Map(items.map((i) => [i.id, i.isAvailable]));
+    const outById = new Map(
+      items.map((i) => [i.id, !i.isAvailable || i.stockQuantity === 0]),
+    );
     const nowOut = Object.entries(cart).filter(
-      ([id]) => availById.get(id) === false,
+      ([id]) => outById.get(id) === true,
     );
     if (nowOut.length === 0) return;
     for (const [id, entry] of nowOut) {
@@ -540,10 +544,17 @@ function ShopMenu() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {catItems.map((item) => {
               const qty = cart[item.id]?.quantity ?? 0;
+              const soldOut = !item.isAvailable || item.stockQuantity === 0;
+              const lowStock =
+                item.stockQuantity !== null &&
+                item.stockQuantity > 0 &&
+                item.stockQuantity <= 5;
+              const atMax =
+                item.stockQuantity !== null && qty >= item.stockQuantity;
               return (
                 <div
                   key={item.id}
-                  className={`card-light flex flex-col overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md ${!item.isAvailable ? "opacity-50" : ""}`}
+                  className={`card-light flex flex-col overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md ${soldOut ? "opacity-50" : ""}`}
                 >
                   {/* Food photo — real upload if present, else a stock photo;
                       emoji shows through if the image fails to load. */}
@@ -575,19 +586,23 @@ function ShopMenu() {
                     <p className="line-clamp-1 flex-1 text-xs text-muted-foreground">
                       {hashPick(item.id, MOCK_TAGLINES)}
                     </p>
-                    {!item.isAvailable && (
+                    {soldOut ? (
                       <Badge
                         variant="destructive"
                         className="w-fit text-[10px]"
                       >
                         Stock Out
                       </Badge>
-                    )}
+                    ) : lowStock ? (
+                      <Badge className="w-fit border-amber-400 bg-amber-100 text-[10px] text-amber-800 hover:bg-amber-100">
+                        Only {item.stockQuantity} left
+                      </Badge>
+                    ) : null}
                     <div className="mt-1 flex items-center justify-between">
                       <span className="text-sm font-semibold">
                         ৳{item.price}
                       </span>
-                      {item.isAvailable &&
+                      {!soldOut &&
                         (qty === 0 ? (
                           <button
                             className="h-8 rounded-md bg-foreground px-3 text-sm font-medium text-background transition-colors hover:opacity-90"
@@ -618,7 +633,8 @@ function ShopMenu() {
                               {qty}
                             </span>
                             <button
-                              className="flex h-8 w-8 items-center justify-center rounded-md border text-lg font-medium transition-colors hover:bg-muted"
+                              className="flex h-8 w-8 items-center justify-center rounded-md border text-lg font-medium transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+                              disabled={atMax}
                               onClick={() =>
                                 setQty(item.id, item.name, item.price, qty + 1)
                               }

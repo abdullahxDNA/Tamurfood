@@ -39,6 +39,7 @@ interface Order {
   note: string | null;
   isDone: boolean;
   isCancelled: boolean;
+  cancelReason: string | null;
   placedAt: string;
   items: OrderItem[];
 }
@@ -276,6 +277,12 @@ function OrderHistory() {
             {order.note && (
               <p className="text-xs text-muted-foreground italic">
                 Note: {order.note}
+              </p>
+            )}
+
+            {order.isCancelled && order.cancelReason && (
+              <p className="rounded-md border border-destructive/40 bg-destructive/10 px-2.5 py-1.5 text-xs text-destructive">
+                Cancelled: {order.cancelReason}
               </p>
             )}
 
