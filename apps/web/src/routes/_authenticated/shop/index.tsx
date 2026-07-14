@@ -721,7 +721,13 @@ function ShopMenu() {
           }
         }}
       >
-        <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto">
+        <SheetContent
+          side="bottom"
+          className="max-h-[85vh] overflow-y-auto"
+          // Don't auto-focus the Note textarea on open — it pops the mobile
+          // keyboard for an optional field. Keep focus on the sheet itself.
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
           <SheetHeader>
             <SheetTitle>
               {successOrder ? "Order Placed!" : "Confirm Order"}
