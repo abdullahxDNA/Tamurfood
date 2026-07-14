@@ -30,6 +30,7 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
           total: sql<number>`coalesce(sum(${orders.totalAmount}), 0)::int`,
         })
         .from(orders)
+        .where(eq(orders.isCancelled, false))
         .groupBy(orders.shopId),
       db
         .select({
@@ -104,7 +105,7 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
             total: sql<number>`coalesce(sum(${orders.totalAmount}), 0)::int`,
           })
           .from(orders)
-          .where(eq(orders.shopId, shopId)),
+          .where(and(eq(orders.shopId, shopId), eq(orders.isCancelled, false))),
         db
           .select({
             total: sql<number>`coalesce(sum(${payments.amount}), 0)::int`,
@@ -122,7 +123,11 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
           })
           .from(orders)
           .where(
-            and(eq(orders.shopId, shopId), lt(orders.placedAt, monthStart)),
+            and(
+              eq(orders.shopId, shopId),
+              eq(orders.isCancelled, false),
+              lt(orders.placedAt, monthStart),
+            ),
           ),
         db
           .select({
@@ -155,6 +160,7 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
           .where(
             and(
               eq(orders.shopId, shopId),
+              eq(orders.isCancelled, false),
               gte(orders.placedAt, monthStart),
               lt(orders.placedAt, monthEnd),
             ),
