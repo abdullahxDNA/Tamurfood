@@ -300,7 +300,7 @@ function ShopMenu() {
       ...entry,
     }));
     clearCart();
-    toast("Cart cleared", {
+    const id = toast("Cart cleared", {
       duration: 5000,
       action: {
         label: "Undo",
@@ -308,9 +308,13 @@ function ShopMenu() {
           for (const item of snapshot) {
             setQty(item.id, item.name, item.price, item.quantity);
           }
+          toast.dismiss(id);
         },
       },
     });
+    // Failsafe: on touch devices, tapping the toast pauses sonner's auto-dismiss
+    // timer and it never resumes, leaving the bar stuck. Force it to close.
+    setTimeout(() => toast.dismiss(id), 5500);
   }
 
   // Proactively drop cart items that just went stock-out — detected by the 5s
