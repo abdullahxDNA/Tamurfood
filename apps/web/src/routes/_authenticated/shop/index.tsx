@@ -551,8 +551,11 @@ function ShopMenu() {
                       {hashPick(item.id, MOCK_TAGLINES)}
                     </p>
                     {!item.isAvailable && (
-                      <Badge variant="secondary" className="w-fit text-[10px]">
-                        Unavailable
+                      <Badge
+                        variant="destructive"
+                        className="w-fit text-[10px]"
+                      >
+                        Stock Out
                       </Badge>
                     )}
                     <div className="mt-1 flex items-center justify-between">
