@@ -99,6 +99,9 @@ export const orders = pgTable(
   {
     id: text("id").primaryKey(),
     orderNumber: serial("order_number"),
+    // Bakery-wide number that resets each day (Bangladesh time) — the friendly
+    // "Order #5 today". orderNumber stays as the permanent unique reference.
+    dailyNumber: integer("daily_number"),
     shopId: text("shop_id")
       .notNull()
       .references(() => shops.id, { onDelete: "restrict" }),
@@ -149,6 +152,13 @@ export const payments = pgTable(
   },
   (t) => [index("payments_shop_date_idx").on(t.shopId, t.paymentDate)],
 );
+
+// Atomic per-day counter that generates the resetting daily order number.
+// One row per day (in Bangladesh time); last_number is bumped on each order.
+export const orderDailyCounters = pgTable("order_daily_counters", {
+  orderDate: date("order_date").primaryKey(),
+  lastNumber: integer("last_number").notNull(),
+});
 
 export const menuCategories = pgTable("menu_categories", {
   id: text("id").primaryKey(),

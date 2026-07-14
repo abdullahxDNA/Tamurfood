@@ -90,6 +90,7 @@ async function placeOrder(body: {
   const data = (await res.json()) as {
     id?: string;
     orderNumber?: number;
+    dailyNumber?: number;
     totalAmount?: number;
     error?: string;
     unavailableItems?: string[];
@@ -99,7 +100,12 @@ async function placeOrder(body: {
       status: res.status,
       data,
     });
-  return data as { id: string; orderNumber: number; totalAmount: number };
+  return data as {
+    id: string;
+    orderNumber: number;
+    dailyNumber: number;
+    totalAmount: number;
+  };
 }
 
 // ─── Food visuals ─────────────────────────────────────────────────────────────
@@ -175,6 +181,7 @@ function ShopMenu() {
   const [note, setNote] = useState("");
   const [successOrder, setSuccessOrder] = useState<{
     orderNumber: number;
+    dailyNumber: number;
     totalAmount: number;
   } | null>(null);
   const [priceMismatch, setPriceMismatch] = useState<number | null>(null);
@@ -242,6 +249,7 @@ function ShopMenu() {
       }
       setSuccessOrder({
         orderNumber: data.orderNumber,
+        dailyNumber: data.dailyNumber,
         totalAmount: data.totalAmount,
       });
       clearCart();
@@ -743,7 +751,14 @@ function ShopMenu() {
               )}
               <div className="rounded-md border bg-muted/50 p-4 text-center space-y-1">
                 <p className="text-lg font-semibold">
-                  Order #{successOrder.orderNumber}
+                  Order #{successOrder.dailyNumber ?? successOrder.orderNumber}
+                  <span className="text-sm font-normal text-muted-foreground">
+                    {" "}
+                    · today
+                  </span>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Ref #{successOrder.orderNumber}
                 </p>
                 <p className="text-muted-foreground">
                   Total: ৳{successOrder.totalAmount}
