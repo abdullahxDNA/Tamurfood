@@ -55,24 +55,51 @@ function timeAgo(iso: string) {
   return `${Math.floor(sec / 3600)}h ago`;
 }
 
+// One shared AudioContext, reused across chimes. Browsers start it "suspended"
+// until a user gesture, so we resume it (see the unlock effect) — otherwise the
+// very first order could ring silently.
+let audioCtx: AudioContext | null = null;
+function getAudioCtx(): AudioContext | null {
+  if (typeof window === "undefined") return null;
+  if (!audioCtx) {
+    try {
+      audioCtx = new AudioContext();
+    } catch {
+      return null;
+    }
+  }
+  return audioCtx;
+}
+
+function unlockAudio() {
+  const ctx = getAudioCtx();
+  if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {});
+}
+
 function playChime(muted: boolean) {
   if (muted) return;
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  if (ctx.state === "suspended") ctx.resume().catch(() => {});
   try {
-    const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(880, ctx.currentTime);
-    osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.15);
-    gain.gain.setValueAtTime(0.35, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
-    osc.start(ctx.currentTime);
-    osc.stop(ctx.currentTime + 0.6);
-    osc.onended = () => ctx.close();
+    const beep = (start: number) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(880, start);
+      osc.frequency.setValueAtTime(1100, start + 0.15);
+      gain.gain.setValueAtTime(0.4, start);
+      gain.gain.exponentialRampToValueAtTime(0.001, start + 0.6);
+      osc.start(start);
+      osc.stop(start + 0.6);
+    };
+    // Two beeps so staff are more likely to notice.
+    beep(ctx.currentTime);
+    beep(ctx.currentTime + 0.7);
   } catch {
-    // browser may block AudioContext without user gesture — ignore
+    // ignore
   }
 }
 
@@ -251,12 +278,34 @@ function OrderCard({
 function AdminDashboard() {
   const queryClient = useQueryClient();
 
-  const [muted, setMuted] = useState(false);
+  const [muted, setMuted] = useState(
+    () =>
+      typeof localStorage !== "undefined" &&
+      localStorage.getItem("staff-alert-muted") === "true",
+  );
   const mutedRef = useRef(muted);
-  // Keep the ref in sync for reads inside async SSE callbacks (see playChime).
+  // Keep the ref in sync for reads inside async SSE callbacks (see playChime),
+  // and remember the choice on this device across reloads.
   useEffect(() => {
     mutedRef.current = muted;
+    if (typeof localStorage !== "undefined")
+      localStorage.setItem("staff-alert-muted", String(muted));
   }, [muted]);
+
+  // Unlock audio on the first user gesture so the first order still rings.
+  useEffect(() => {
+    const handler = () => {
+      unlockAudio();
+      window.removeEventListener("pointerdown", handler);
+      window.removeEventListener("keydown", handler);
+    };
+    window.addEventListener("pointerdown", handler);
+    window.addEventListener("keydown", handler);
+    return () => {
+      window.removeEventListener("pointerdown", handler);
+      window.removeEventListener("keydown", handler);
+    };
+  }, []);
 
   const [sseStatus, setSseStatus] = useState<"connected" | "reconnecting">(
     "connected",
