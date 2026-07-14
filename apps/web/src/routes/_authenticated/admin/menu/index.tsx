@@ -19,7 +19,7 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical, Clock, CheckCircle, XCircle } from "lucide-react";
+import { GripVertical, Clock, CheckCircle, XCircle, Check } from "lucide-react";
 import { api } from "@/lib/api";
 import { sessionQueryOptions } from "@/lib/session";
 import { Button } from "@/components/ui/button";
@@ -148,6 +148,8 @@ function SortableItem({
     setStockInput(stockAsText);
   }
 
+  const dirty = stockInput.trim() !== stockAsText;
+
   function commitStock() {
     const trimmed = stockInput.trim();
     const next =
@@ -184,7 +186,7 @@ function SortableItem({
         />
       </div>
 
-      {/* Stock control — blank = unlimited; a number starts auto-decrementing */}
+      {/* Stock control — blank = unlimited; type a number then press ✓ to save */}
       <div className="flex items-center gap-1.5">
         <span className="text-xs text-muted-foreground">Stock</span>
         <Input
@@ -192,15 +194,27 @@ function SortableItem({
           min={0}
           value={stockInput}
           onChange={(e) => setStockInput(e.target.value)}
-          onBlur={commitStock}
           onKeyDown={(e) => {
-            if (e.key === "Enter") e.currentTarget.blur();
+            if (e.key === "Enter" && dirty) commitStock();
+            if (e.key === "Escape") setStockInput(stockAsText);
           }}
           placeholder="∞"
           disabled={savingStock}
           className="h-7 w-16 text-xs"
         />
-        {item.stockQuantity !== null ? (
+        {dirty ? (
+          <Button
+            type="button"
+            size="sm"
+            className="h-7 px-2"
+            onClick={commitStock}
+            disabled={savingStock}
+            title="Save stock"
+            aria-label="Save stock"
+          >
+            <Check className="h-4 w-4" />
+          </Button>
+        ) : item.stockQuantity !== null ? (
           <Button
             type="button"
             variant="ghost"
@@ -617,7 +631,19 @@ function MenuPage() {
       });
       if (!res.ok) throw new Error("Failed to update stock");
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu"] }),
+    // Optimistic: reflect the new stock in the UI instantly, roll back on error.
+    onMutate: async ({ id, quantity }) => {
+      await queryClient.cancelQueries({ queryKey: ["menu"] });
+      const prev = queryClient.getQueryData<MenuItem[]>(["menu"]);
+      queryClient.setQueryData<MenuItem[]>(["menu"], (old) =>
+        old?.map((i) => (i.id === id ? { ...i, stockQuantity: quantity } : i)),
+      );
+      return { prev };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.prev) queryClient.setQueryData(["menu"], ctx.prev);
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["menu"] }),
   });
 
   const reorderCategoriesMutation = useMutation({
