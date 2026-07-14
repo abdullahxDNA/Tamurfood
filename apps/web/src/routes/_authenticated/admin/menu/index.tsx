@@ -172,8 +172,10 @@ function SortableItem({
     <div
       ref={setNodeRef}
       style={style}
-      className={`space-y-2 rounded-md border bg-card p-2.5 ${
-        !item.isVisible ? "opacity-60" : ""
+      className={`space-y-2 rounded-md border p-2.5 ${
+        item.isVisible
+          ? "bg-card"
+          : "border-amber-400 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/30"
       }`}
     >
       <div className="flex items-start justify-between gap-1.5">
