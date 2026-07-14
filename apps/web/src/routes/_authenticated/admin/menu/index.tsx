@@ -1142,9 +1142,6 @@ function MenuItemDialog({
     item?.category ?? categories[0]?.name ?? "",
   );
   const [imageUrl, setImageUrl] = useState(item?.imageUrl ?? "");
-  const [sortOrder, setSortOrder] = useState(
-    item?.sortOrder?.toString() ?? "0",
-  );
   // New items: choose whether they go live immediately or start hidden.
   const [visible, setVisible] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -1209,7 +1206,6 @@ function MenuItemDialog({
       price: parseInt(price, 10),
       category,
       imageUrl: imageUrl || null,
-      sortOrder: parseInt(sortOrder, 10) || 0,
       // Only meaningful when an admin adds a new item.
       ...(mode === "add" && !isModerator ? { isVisible: visible } : {}),
     });
@@ -1381,17 +1377,6 @@ function MenuItemDialog({
               <p className="text-sm text-destructive">{uploadError}</p>
             )}
           </div>
-          {!isModerator && (
-            <div className="space-y-2">
-              <Label htmlFor="sortOrder">Sort Order</Label>
-              <Input
-                id="sortOrder"
-                type="number"
-                value={sortOrder}
-                onChange={(e) => setSortOrder(e.target.value)}
-              />
-            </div>
-          )}
           {mode === "add" && !isModerator && (
             <div className="flex items-center justify-between rounded-md border p-2.5">
               <div className="space-y-0.5">
