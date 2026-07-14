@@ -60,6 +60,7 @@ interface MenuItem {
   category: string;
   imageUrl: string | null;
   isAvailable: boolean;
+  stockQuantity: number | null;
   sortOrder: number;
   createdAt: string;
 }
@@ -107,16 +108,20 @@ function SortableItem({
   onEdit,
   onDelete,
   onToggle,
+  onSetStock,
   toggling,
   deleting,
+  savingStock,
 }: {
   item: MenuItem;
   isModerator: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onToggle: () => void;
+  onSetStock: (quantity: number | null) => void;
   toggling: boolean;
   deleting: boolean;
+  savingStock: boolean;
 }) {
   const {
     attributes,
@@ -131,6 +136,26 @@ function SortableItem({
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
+
+  // Local input mirrors the item's stock; empty string = untracked (unlimited).
+  // Re-sync to the latest server value without an effect (adjust-on-render).
+  const stockAsText =
+    item.stockQuantity === null ? "" : String(item.stockQuantity);
+  const [stockInput, setStockInput] = useState(stockAsText);
+  const [prevStock, setPrevStock] = useState(item.stockQuantity);
+  if (item.stockQuantity !== prevStock) {
+    setPrevStock(item.stockQuantity);
+    setStockInput(stockAsText);
+  }
+
+  function commitStock() {
+    const trimmed = stockInput.trim();
+    const next =
+      trimmed === "" ? null : Math.max(0, parseInt(trimmed, 10) || 0);
+    if (next === item.stockQuantity) return;
+    onSetStock(next);
+  }
+
   return (
     <div
       ref={setNodeRef}
@@ -158,6 +183,43 @@ function SortableItem({
           disabled={toggling}
         />
       </div>
+
+      {/* Stock control — blank = unlimited; a number starts auto-decrementing */}
+      <div className="flex items-center gap-1.5">
+        <span className="text-xs text-muted-foreground">Stock</span>
+        <Input
+          type="number"
+          min={0}
+          value={stockInput}
+          onChange={(e) => setStockInput(e.target.value)}
+          onBlur={commitStock}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") e.currentTarget.blur();
+          }}
+          placeholder="∞"
+          disabled={savingStock}
+          className="h-7 w-16 text-xs"
+        />
+        {item.stockQuantity !== null ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 px-2 text-xs text-muted-foreground"
+            onClick={() => {
+              setStockInput("");
+              onSetStock(null);
+            }}
+            disabled={savingStock}
+            title="Stop tracking stock (unlimited)"
+          >
+            Clear
+          </Button>
+        ) : (
+          <span className="text-xs text-muted-foreground">unlimited</span>
+        )}
+      </div>
+
       <div className="flex gap-1.5">
         <Button
           variant="outline"
@@ -541,6 +603,23 @@ function MenuPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu"] }),
   });
 
+  const setStockMutation = useMutation({
+    mutationFn: async ({
+      id,
+      quantity,
+    }: {
+      id: string;
+      quantity: number | null;
+    }) => {
+      const res = await api.api.v1.menu[":id"].stock.$patch({
+        param: { id },
+        json: { quantity },
+      });
+      if (!res.ok) throw new Error("Failed to update stock");
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu"] }),
+  });
+
   const reorderCategoriesMutation = useMutation({
     mutationFn: async (ids: string[]) => {
       const res = await api.api.v1.menu.categories.reorder.$patch({
@@ -796,6 +875,9 @@ function MenuPage() {
                           onToggle={() =>
                             toggleAvailabilityMutation.mutate(item.id)
                           }
+                          onSetStock={(quantity) =>
+                            setStockMutation.mutate({ id: item.id, quantity })
+                          }
                           toggling={
                             toggleAvailabilityMutation.isPending &&
                             toggleAvailabilityMutation.variables === item.id
@@ -806,6 +888,10 @@ function MenuPage() {
                             (submitPendingMutation.isPending &&
                               submitPendingMutation.variables?.menuItemId ===
                                 item.id)
+                          }
+                          savingStock={
+                            setStockMutation.isPending &&
+                            setStockMutation.variables?.id === item.id
                           }
                         />
                       ))}

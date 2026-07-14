@@ -87,6 +87,9 @@ export const menuItems = pgTable("menu_items", {
   category: varchar("category", { length: 50 }).notNull(),
   imageUrl: text("image_url"),
   isAvailable: boolean("is_available").notNull().default(true),
+  // NULL = untracked / unlimited stock. When set, online orders decrement it
+  // atomically and the item auto-goes "Stock Out" at 0.
+  stockQuantity: integer("stock_quantity"),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").notNull(),
 });
@@ -103,6 +106,7 @@ export const orders = pgTable(
     note: varchar("note", { length: 500 }),
     isDone: boolean("is_done").notNull().default(false),
     isCancelled: boolean("is_cancelled").notNull().default(false),
+    cancelReason: varchar("cancel_reason", { length: 300 }),
     placedAt: timestamp("placed_at").notNull(),
     doneAt: timestamp("done_at"),
     cancelledAt: timestamp("cancelled_at"),

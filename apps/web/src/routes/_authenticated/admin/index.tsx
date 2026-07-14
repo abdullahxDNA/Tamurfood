@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Sheet,
   SheetContent,
@@ -261,6 +262,7 @@ function AdminDashboard() {
   const [doneOpen, setDoneOpen] = useState(false);
   const [confirmDoneId, setConfirmDoneId] = useState<string | null>(null);
   const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
   const [shopHistory, setShopHistory] = useState<{
     id: string;
     name: string;
@@ -404,9 +406,10 @@ function AdminDashboard() {
   });
 
   const cancelMutation = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ id, reason }: { id: string; reason?: string }) => {
       const res = await api.api.v1.admin.orders[":id"].cancel.$patch({
         param: { id },
+        json: reason ? { reason } : {},
       });
       if (!res.ok) throw new Error("Failed to cancel order");
       return res.json();
@@ -415,6 +418,7 @@ function AdminDashboard() {
       queryClient.invalidateQueries({ queryKey: ["admin/orders"] });
       toast.success("Order cancelled.");
       setConfirmCancelId(null);
+      setCancelReason("");
     },
     onError: (err) => toast.error((err as Error).message),
   });
@@ -653,7 +657,10 @@ function AdminDashboard() {
       <Dialog
         open={confirmCancelId !== null}
         onOpenChange={(open) => {
-          if (!open && !cancelMutation.isPending) setConfirmCancelId(null);
+          if (!open && !cancelMutation.isPending) {
+            setConfirmCancelId(null);
+            setCancelReason("");
+          }
         }}
       >
         <DialogContent>
@@ -663,10 +670,28 @@ function AdminDashboard() {
           <p className="text-sm text-muted-foreground">
             The order will be moved to Completed as Cancelled.
           </p>
+          <div className="space-y-1.5">
+            <label className="text-sm font-medium">
+              Reason for the shop (optional)
+            </label>
+            <Textarea
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="e.g. Sorry, stock out"
+              rows={2}
+              maxLength={300}
+            />
+            <p className="text-xs text-muted-foreground">
+              The shop sees this on the order in their history.
+            </p>
+          </div>
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setConfirmCancelId(null)}
+              onClick={() => {
+                setConfirmCancelId(null);
+                setCancelReason("");
+              }}
               disabled={cancelMutation.isPending}
             >
               Keep Order
@@ -674,7 +699,11 @@ function AdminDashboard() {
             <Button
               variant="destructive"
               onClick={() =>
-                confirmCancelId && cancelMutation.mutate(confirmCancelId)
+                confirmCancelId &&
+                cancelMutation.mutate({
+                  id: confirmCancelId,
+                  reason: cancelReason.trim() || undefined,
+                })
               }
               disabled={cancelMutation.isPending}
             >

@@ -449,32 +449,47 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
       })),
     });
   })
-  // PATCH /orders/:id/cancel — cancel any pending order
-  .patch("/orders/:id/cancel", async (c) => {
-    const authErr = requireModerator(c);
-    if (authErr) return authErr;
+  // PATCH /orders/:id/cancel — cancel any pending order, with an optional reason
+  // the shop sees in their order history (e.g. "Sorry, stock out")
+  .patch(
+    "/orders/:id/cancel",
+    zValidator(
+      "json",
+      z.object({ reason: z.string().max(300).optional() }).optional(),
+    ),
+    async (c) => {
+      const authErr = requireModerator(c);
+      if (authErr) return authErr;
 
-    const id = c.req.param("id");
-    const [existing] = await db
-      .select({
-        isDone: orders.isDone,
-        isCancelled: sql<boolean>`"orders"."is_cancelled"`,
-      })
-      .from(orders)
-      .where(eq(orders.id, id))
-      .limit(1);
+      const id = c.req.param("id");
+      const reason = c.req.valid("json")?.reason ?? null;
 
-    if (!existing) return c.json({ error: "Not found" }, 404);
-    if (existing.isDone) return c.json({ error: "Order already done" }, 409);
-    if (existing.isCancelled)
-      return c.json({ error: "Order already cancelled" }, 409);
+      const [existing] = await db
+        .select({
+          isDone: orders.isDone,
+          isCancelled: sql<boolean>`"orders"."is_cancelled"`,
+        })
+        .from(orders)
+        .where(eq(orders.id, id))
+        .limit(1);
 
-    await db.execute(
-      sql`UPDATE "orders" SET "is_cancelled" = true, "cancelled_at" = NOW() WHERE "id" = ${id}`,
-    );
+      if (!existing) return c.json({ error: "Not found" }, 404);
+      if (existing.isDone) return c.json({ error: "Order already done" }, 409);
+      if (existing.isCancelled)
+        return c.json({ error: "Order already cancelled" }, 409);
 
-    return c.json({ isCancelled: true });
-  })
+      await db
+        .update(orders)
+        .set({
+          isCancelled: true,
+          cancelReason: reason,
+          cancelledAt: new Date(),
+        })
+        .where(eq(orders.id, id));
+
+      return c.json({ isCancelled: true });
+    },
+  )
   // GET /pending-changes/count — badge count for nav (moderator+admin)
   .get("/pending-changes/count", async (c) => {
     const authErr = requireModerator(c);
