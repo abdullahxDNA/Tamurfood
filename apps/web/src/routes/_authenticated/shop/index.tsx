@@ -593,10 +593,19 @@ function ShopMenu() {
                       >
                         Stock Out
                       </Badge>
-                    ) : lowStock ? (
-                      <Badge className="w-fit border-amber-400 bg-amber-100 text-[10px] text-amber-800 hover:bg-amber-100">
-                        Only {item.stockQuantity} left
-                      </Badge>
+                    ) : item.stockQuantity !== null ? (
+                      lowStock ? (
+                        <Badge className="w-fit border-amber-400 bg-amber-100 text-[10px] text-amber-800 hover:bg-amber-100">
+                          Only {item.stockQuantity} left
+                        </Badge>
+                      ) : (
+                        <Badge
+                          variant="secondary"
+                          className="w-fit text-[10px]"
+                        >
+                          {item.stockQuantity} left
+                        </Badge>
+                      )
                     ) : null}
                     <div className="mt-1 flex items-center justify-between">
                       <span className="text-sm font-semibold">
