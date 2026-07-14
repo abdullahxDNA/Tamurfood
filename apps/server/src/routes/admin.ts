@@ -145,6 +145,7 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
       const [existing] = await db
         .select({
           isDone: orders.isDone,
+          isCancelled: sql<boolean>`"orders"."is_cancelled"`,
           shopId: orders.shopId,
           placedAt: orders.placedAt,
           totalAmount: orders.totalAmount,
@@ -156,6 +157,12 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
 
       if (!existing) {
         return c.json({ error: "Not found" }, 404);
+      }
+      if (existing.isCancelled) {
+        return c.json(
+          { error: "Order was cancelled and can't be accepted" },
+          409,
+        );
       }
       if (existing.isDone) {
         return c.json({ error: "Order already marked as done" }, 409);

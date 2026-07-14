@@ -296,6 +296,10 @@ function AdminDashboard() {
   const { data: ordersData, isLoading } = useQuery({
     queryKey: ["admin/orders", date],
     queryFn: () => fetchAdminOrders(date),
+    // Poll so shop-side changes (e.g. a customer cancelling) drop out of the
+    // pending list promptly instead of lingering until a manual refresh.
+    refetchInterval: 15_000,
+    refetchOnWindowFocus: true,
   });
 
   const { data: shopOrdersData } = useQuery({
@@ -389,7 +393,10 @@ function AdminDashboard() {
         param: { id },
         json: { paid },
       });
-      if (!res.ok) throw new Error("Failed to mark done");
+      if (!res.ok) {
+        const d = (await res.json()) as { error?: string };
+        throw new Error(d.error ?? "Failed to mark done");
+      }
       return res.json();
     },
     onSuccess: (data) => {
@@ -402,7 +409,13 @@ function AdminDashboard() {
       );
       setConfirmDoneId(null);
     },
-    onError: (err) => toast.error((err as Error).message),
+    onError: (err) => {
+      // Surface the server message (e.g. cancelled/already done) and refresh so
+      // the stale order updates instead of sitting in the pending list.
+      toast.error((err as Error).message);
+      queryClient.invalidateQueries({ queryKey: ["admin/orders"] });
+      setConfirmDoneId(null);
+    },
   });
 
   const cancelMutation = useMutation({
