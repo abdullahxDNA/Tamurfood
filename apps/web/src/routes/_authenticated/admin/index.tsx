@@ -446,43 +446,20 @@ function AdminDashboard() {
         </div>
       </div>
 
-      {/* Analytics strip */}
-      {analytics && isToday && (
-        <p className="text-sm text-muted-foreground">
-          Today:{" "}
-          <span className="font-medium text-foreground">
-            {analytics.today.count} orders
-          </span>
-          {" · "}
-          <span className="font-medium text-foreground">
-            ৳{analytics.today.revenue.toLocaleString()}
-          </span>
-        </p>
-      )}
-
-      {/* Full stat cards (weekly/monthly) */}
-      {analytics && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <StatCard title="Today" stats={analytics.today} />
-          <StatCard title="This Week" stats={analytics.week} />
-          <StatCard title="This Month" stats={analytics.month} />
-        </div>
-      )}
-
-      {/* Pending orders */}
+      {/* ── Pending orders (top priority) ── */}
       <div>
-        <h2 className="text-base font-semibold mb-3">
-          Pending
+        <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+          Pending Orders
           {pending.length > 0 && (
-            <span className="ml-2 text-muted-foreground">
-              ({pending.length})
+            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
+              {pending.length}
             </span>
           )}
         </h2>
         {isLoading && <p className="text-muted-foreground text-sm">Loading…</p>}
         {!isLoading && pending.length === 0 && (
           <p className="text-muted-foreground text-sm">
-            No pending orders. Waiting for shops to order…
+            No pending orders for this date.
           </p>
         )}
         <div className="space-y-3">
@@ -499,7 +476,7 @@ function AdminDashboard() {
         </div>
       </div>
 
-      {/* Done section (collapsed by default) */}
+      {/* ── Completed orders (collapsible) ── */}
       {done.length > 0 && (
         <div>
           <button
@@ -524,6 +501,20 @@ function AdminDashboard() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Analytics summary (below orders) ── */}
+      {analytics && (
+        <div className="pt-2 border-t">
+          <h2 className="text-base font-semibold mb-3 text-muted-foreground">
+            Analytics
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <StatCard title="Today" stats={analytics.today} />
+            <StatCard title="This Week" stats={analytics.week} />
+            <StatCard title="This Month" stats={analytics.month} />
+          </div>
         </div>
       )}
 
