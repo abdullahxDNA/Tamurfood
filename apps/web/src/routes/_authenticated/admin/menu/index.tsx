@@ -19,8 +19,9 @@ import {
   useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react";
+import { GripVertical, Clock, CheckCircle, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
+import { sessionQueryOptions } from "@/lib/session";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,6 +40,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/_authenticated/admin/menu/")({
   component: MenuPage,
@@ -62,6 +64,22 @@ interface MenuItem {
   createdAt: string;
 }
 
+interface PendingChange {
+  id: string;
+  type: "create" | "update" | "delete";
+  proposedByName: string;
+  menuItemId: string | null;
+  proposedData: {
+    name?: string;
+    price?: number;
+    category?: string;
+    imageUrl?: string | null;
+    sortOrder?: number;
+  } | null;
+  status: string;
+  createdAt: string;
+}
+
 async function fetchMenu(): Promise<MenuItem[]> {
   const res = await api.api.v1.menu.$get();
   if (!res.ok) throw new Error("Failed to fetch menu");
@@ -74,11 +92,18 @@ async function fetchCategories(): Promise<MenuCategory[]> {
   return res.json() as Promise<MenuCategory[]>;
 }
 
+async function fetchPendingChanges(): Promise<PendingChange[]> {
+  const res = await api.api.v1.admin["pending-changes"].$get();
+  if (!res.ok) throw new Error("Failed to fetch pending changes");
+  return res.json() as Promise<PendingChange[]>;
+}
+
 type DialogMode = { type: "add" } | { type: "edit"; item: MenuItem } | null;
 
 // ─── Draggable item card ──────────────────────────────────────────────────────
 function SortableItem({
   item,
+  isModerator,
   onEdit,
   onDelete,
   onToggle,
@@ -86,6 +111,7 @@ function SortableItem({
   deleting,
 }: {
   item: MenuItem;
+  isModerator: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onToggle: () => void;
@@ -112,14 +138,16 @@ function SortableItem({
       className="space-y-2 rounded-md border bg-card p-2.5"
     >
       <div className="flex items-start justify-between gap-1.5">
-        <button
-          {...attributes}
-          {...listeners}
-          className="mt-0.5 cursor-grab touch-none text-muted-foreground active:cursor-grabbing"
-          aria-label="Drag to reorder item"
-        >
-          <GripVertical className="h-4 w-4" />
-        </button>
+        {!isModerator && (
+          <button
+            {...attributes}
+            {...listeners}
+            className="mt-0.5 cursor-grab touch-none text-muted-foreground active:cursor-grabbing"
+            aria-label="Drag to reorder item"
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+        )}
         <div className="min-w-0 flex-1">
           <span className="text-sm font-medium">{item.name}</span>
           <p className="mt-0.5 text-sm font-medium">৳{item.price}</p>
@@ -146,7 +174,7 @@ function SortableItem({
           onClick={onDelete}
           disabled={deleting}
         >
-          Delete
+          {isModerator ? "Request Delete" : "Delete"}
         </Button>
       </div>
     </div>
@@ -209,11 +237,209 @@ function SortableColumn({
   );
 }
 
+// ─── Pending changes panel (admin only) ──────────────────────────────────────
+function PendingChangesPanel() {
+  const queryClient = useQueryClient();
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [rejectNote, setRejectNote] = useState("");
+
+  const { data: pending = [], isLoading } = useQuery({
+    queryKey: ["pending-changes"],
+    queryFn: fetchPendingChanges,
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.api.v1.admin["pending-changes"][
+        ":id"
+      ].approve.$patch({
+        param: { id },
+      });
+      if (!res.ok) throw new Error("Failed to approve");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pending-changes"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-changes-count"] });
+      queryClient.invalidateQueries({ queryKey: ["menu"] });
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async ({ id, note }: { id: string; note?: string }) => {
+      const res = await api.api.v1.admin["pending-changes"][
+        ":id"
+      ].reject.$patch({
+        param: { id },
+        json: { note },
+      });
+      if (!res.ok) throw new Error("Failed to reject");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pending-changes"] });
+      queryClient.invalidateQueries({ queryKey: ["pending-changes-count"] });
+      setRejectingId(null);
+      setRejectNote("");
+    },
+  });
+
+  if (isLoading) return null;
+  if (pending.length === 0) return null;
+
+  function typeLabel(type: string) {
+    if (type === "create") return "New Item";
+    if (type === "update") return "Edit Item";
+    return "Delete Item";
+  }
+
+  function typeBadgeVariant(
+    type: string,
+  ): "default" | "secondary" | "destructive" {
+    if (type === "create") return "default";
+    if (type === "update") return "secondary";
+    return "destructive";
+  }
+
+  return (
+    <div className="rounded-lg border border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/20 p-4 space-y-3">
+      <div className="flex items-center gap-2">
+        <Clock className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+        <h2 className="font-semibold text-sm text-amber-900 dark:text-amber-200">
+          Pending Requests ({pending.length})
+        </h2>
+      </div>
+      <div className="space-y-2">
+        {pending.map((change) => (
+          <div
+            key={change.id}
+            className="rounded-md border bg-background p-3 space-y-2"
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="space-y-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant={typeBadgeVariant(change.type)}>
+                    {typeLabel(change.type)}
+                  </Badge>
+                  <span className="text-xs text-muted-foreground">
+                    by {change.proposedByName}
+                  </span>
+                </div>
+                {change.proposedData && (
+                  <div className="text-sm space-y-0.5">
+                    {change.proposedData.name && (
+                      <p>
+                        <span className="text-muted-foreground">Name:</span>{" "}
+                        <span className="font-medium">
+                          {change.proposedData.name}
+                        </span>
+                      </p>
+                    )}
+                    {change.proposedData.price && (
+                      <p>
+                        <span className="text-muted-foreground">Price:</span>{" "}
+                        <span className="font-medium">
+                          ৳{change.proposedData.price}
+                        </span>
+                      </p>
+                    )}
+                    {change.proposedData.category && (
+                      <p>
+                        <span className="text-muted-foreground">Category:</span>{" "}
+                        {change.proposedData.category}
+                      </p>
+                    )}
+                    {change.proposedData.imageUrl && (
+                      <img
+                        src={change.proposedData.imageUrl}
+                        alt="Proposed"
+                        className="h-12 w-12 rounded border object-cover"
+                      />
+                    )}
+                  </div>
+                )}
+                {change.type === "delete" && (
+                  <p className="text-sm text-muted-foreground">
+                    Requests deletion of item{" "}
+                    {change.menuItemId
+                      ? `(ID: ${change.menuItemId.slice(0, 8)}…)`
+                      : ""}
+                  </p>
+                )}
+              </div>
+            </div>
+            {rejectingId === change.id ? (
+              <div className="space-y-2">
+                <Input
+                  placeholder="Rejection reason (optional)"
+                  value={rejectNote}
+                  onChange={(e) => setRejectNote(e.target.value)}
+                  className="h-8 text-sm"
+                />
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="h-7 text-xs"
+                    disabled={rejectMutation.isPending}
+                    onClick={() =>
+                      rejectMutation.mutate({
+                        id: change.id,
+                        note: rejectNote || undefined,
+                      })
+                    }
+                  >
+                    {rejectMutation.isPending ? "Rejecting…" : "Confirm Reject"}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 text-xs"
+                    onClick={() => {
+                      setRejectingId(null);
+                      setRejectNote("");
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  className="h-7 text-xs gap-1"
+                  disabled={approveMutation.isPending}
+                  onClick={() => approveMutation.mutate(change.id)}
+                >
+                  <CheckCircle className="h-3 w-3" />
+                  Approve
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs gap-1"
+                  onClick={() => setRejectingId(change.id)}
+                >
+                  <XCircle className="h-3 w-3" />
+                  Reject
+                </Button>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function MenuPage() {
   const queryClient = useQueryClient();
   const [dialog, setDialog] = useState<DialogMode>(null);
   const [manageCatsOpen, setManageCatsOpen] = useState(false);
   const [search, setSearch] = useState("");
+
+  const { data: session } = useQuery(sessionQueryOptions);
+  const isModerator = session?.role === "moderator";
+  const isAdmin = session?.role === "admin";
 
   const {
     data: items = [],
@@ -281,6 +507,30 @@ function MenuPage() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu"] }),
   });
 
+  // Moderator: submit change to pending queue
+  const submitPendingMutation = useMutation({
+    mutationFn: async (body: {
+      type: "create" | "update" | "delete";
+      menuItemId?: string;
+      data?: object;
+    }) => {
+      const res = await fetch("/api/v1/menu/pending", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) {
+        const d = (await res.json()) as { error?: string };
+        throw new Error(d.error ?? "Failed to submit for review");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pending-changes-count"] });
+      setDialog(null);
+    },
+  });
+
   const toggleAvailabilityMutation = useMutation({
     mutationFn: async (id: string) => {
       const res = await api.api.v1.menu[":id"].availability.$patch({
@@ -324,8 +574,6 @@ function MenuPage() {
     const overId = String(over.id);
     const dbCatNames = categories.map((c) => c.name);
 
-    // Category column drag. The drop target may be another column OR an item
-    // inside it — resolve either to a category.
     if (dbCatNames.includes(activeId)) {
       const overCat = dbCatNames.includes(overId)
         ? overId
@@ -340,7 +588,6 @@ function MenuPage() {
       return;
     }
 
-    // Item drag — reorder within the same category.
     const activeItem = items.find((i) => i.id === activeId);
     const overItem = items.find((i) => i.id === overId);
     if (activeItem && overItem && activeItem.category === overItem.category) {
@@ -350,14 +597,11 @@ function MenuPage() {
       const to = catItems.findIndex((i) => i.id === overId);
       const reordered = arrayMove(catItems, from, to);
       const others = items.filter((i) => i.category !== cat);
-      // Display re-groups by category, so relative order within the category is
-      // all that matters.
       queryClient.setQueryData(["menu"], [...others, ...reordered]);
       reorderItemsMutation.mutate(reordered.map((i) => i.id));
     }
   }
 
-  // Column-wise grouping: DB-ordered categories first, then any uncategorized
   const catNames = categories.map((c) => c.name);
   const grouped: [string, MenuItem[]][] = [];
   for (const cat of catNames) {
@@ -377,9 +621,7 @@ function MenuPage() {
   const filtered: [string, MenuItem[]][] = q
     ? grouped
         .map(([cat, catItems]): [string, MenuItem[]] => {
-          // category name matches → show all its items
           if (cat.toLowerCase().includes(q)) return [cat, catItems];
-          // otherwise filter items by name
           return [
             cat,
             catItems.filter((i) => i.name.toLowerCase().includes(q)),
@@ -389,11 +631,64 @@ function MenuPage() {
     : grouped;
 
   function handleDelete(id: string, name: string) {
-    if (confirm(`Delete "${name}"?`)) deleteMutation.mutate(id);
+    if (isModerator) {
+      if (confirm(`Request deletion of "${name}"? Admin will review.`)) {
+        submitPendingMutation.mutate({ type: "delete", menuItemId: id });
+      }
+    } else {
+      if (confirm(`Delete "${name}"?`)) deleteMutation.mutate(id);
+    }
   }
+
+  function handleDialogSubmit(data: {
+    name: string;
+    price: number;
+    category: string;
+    imageUrl?: string | null;
+    sortOrder?: number;
+  }) {
+    if (isModerator) {
+      if (dialog?.type === "add") {
+        submitPendingMutation.mutate({ type: "create", data });
+      } else if (dialog?.type === "edit") {
+        submitPendingMutation.mutate({
+          type: "update",
+          menuItemId: dialog.item.id,
+          data,
+        });
+      }
+    } else {
+      if (dialog?.type === "add") {
+        createMutation.mutate(data);
+      } else if (dialog?.type === "edit") {
+        updateMutation.mutate({ id: dialog.item.id, ...data });
+      }
+    }
+  }
+
+  const isDialogPending = isModerator
+    ? submitPendingMutation.isPending
+    : createMutation.isPending || updateMutation.isPending;
+
+  const dialogError = isModerator
+    ? ((submitPendingMutation.error as Error | null)?.message ?? null)
+    : ((createMutation.error as Error | null)?.message ??
+      (updateMutation.error as Error | null)?.message ??
+      null);
 
   return (
     <div className="space-y-4">
+      {/* Moderator info banner */}
+      {isModerator && (
+        <div className="rounded-md border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/20 px-4 py-2.5 text-sm text-blue-800 dark:text-blue-200">
+          Add / Edit / Delete requests go to admin for approval. Availability
+          toggle is instant.
+        </div>
+      )}
+
+      {/* Pending requests (admin only) */}
+      {isAdmin && <PendingChangesPanel />}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Menu</h1>
@@ -404,10 +699,14 @@ function MenuPage() {
           )}
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" onClick={() => setManageCatsOpen(true)}>
-            Categories
+          {isAdmin && (
+            <Button variant="outline" onClick={() => setManageCatsOpen(true)}>
+              Categories
+            </Button>
+          )}
+          <Button onClick={() => setDialog({ type: "add" })}>
+            {isModerator ? "Propose Item" : "Add Item"}
           </Button>
-          <Button onClick={() => setDialog({ type: "add" })}>Add Item</Button>
         </div>
       </div>
 
@@ -445,22 +744,20 @@ function MenuPage() {
         </p>
       )}
 
-      {/* No results */}
       {q && filtered.length === 0 && (
         <p className="text-sm text-muted-foreground">
           No items found for "{search}".
         </p>
       )}
 
-      {/* Drag to reorder hint */}
-      {filtered.length > 0 && !q && (
+      {filtered.length > 0 && !q && !isModerator && (
         <p className="text-xs text-muted-foreground">
           Drag the ⠿ handles to reorder categories and items — the shop shows
           them in this order.
         </p>
       )}
 
-      {/* Column layout (drag-and-drop) */}
+      {/* Column layout */}
       {filtered.length > 0 && (
         <DndContext
           sensors={sensors}
@@ -477,25 +774,33 @@ function MenuPage() {
                   key={category}
                   id={category}
                   count={catItems.length}
-                  disabled={!!q || !categories.some((c) => c.name === category)}
+                  disabled={
+                    !!q ||
+                    isModerator ||
+                    !categories.some((c) => c.name === category)
+                  }
                 >
                   <SortableContext
                     items={catItems.map((i) => i.id)}
                     strategy={verticalListSortingStrategy}
-                    disabled={!!q}
+                    disabled={!!q || isModerator}
                   >
                     <div className="space-y-2">
                       {catItems.map((item) => (
                         <SortableItem
                           key={item.id}
                           item={item}
+                          isModerator={!!isModerator}
                           onEdit={() => setDialog({ type: "edit", item })}
                           onDelete={() => handleDelete(item.id, item.name)}
                           onToggle={() =>
                             toggleAvailabilityMutation.mutate(item.id)
                           }
                           toggling={toggleAvailabilityMutation.isPending}
-                          deleting={deleteMutation.isPending}
+                          deleting={
+                            deleteMutation.isPending ||
+                            submitPendingMutation.isPending
+                          }
                         />
                       ))}
                     </div>
@@ -507,12 +812,14 @@ function MenuPage() {
         </DndContext>
       )}
 
-      {/* Manage categories dialog */}
-      <CategoriesDialog
-        open={manageCatsOpen}
-        onClose={() => setManageCatsOpen(false)}
-        categories={categories}
-      />
+      {/* Manage categories dialog (admin only) */}
+      {isAdmin && (
+        <CategoriesDialog
+          open={manageCatsOpen}
+          onClose={() => setManageCatsOpen(false)}
+          categories={categories}
+        />
+      )}
 
       {/* Item dialog */}
       {(dialog?.type === "add" || dialog?.type === "edit") && (
@@ -520,20 +827,11 @@ function MenuPage() {
           mode={dialog.type}
           item={dialog.type === "edit" ? dialog.item : undefined}
           categories={categories}
+          isModerator={!!isModerator}
           onClose={() => setDialog(null)}
-          onSubmit={(data) => {
-            if (dialog.type === "add") {
-              createMutation.mutate(data);
-            } else {
-              updateMutation.mutate({ id: dialog.item.id, ...data });
-            }
-          }}
-          isPending={createMutation.isPending || updateMutation.isPending}
-          error={
-            (createMutation.error as Error | null)?.message ??
-            (updateMutation.error as Error | null)?.message ??
-            null
-          }
+          onSubmit={handleDialogSubmit}
+          isPending={isDialogPending}
+          error={dialogError}
         />
       )}
     </div>
@@ -546,6 +844,7 @@ function MenuItemDialog({
   mode,
   item,
   categories,
+  isModerator,
   onClose,
   onSubmit,
   isPending,
@@ -554,6 +853,7 @@ function MenuItemDialog({
   mode: "add" | "edit";
   item?: MenuItem;
   categories: MenuCategory[];
+  isModerator: boolean;
   onClose: () => void;
   onSubmit: (data: {
     name: string;
@@ -579,7 +879,6 @@ function MenuItemDialog({
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Inline new category state
   const [newCatMode, setNewCatMode] = useState(false);
   const [newCatInput, setNewCatInput] = useState("");
   const [newCatError, setNewCatError] = useState<string | null>(null);
@@ -642,13 +941,29 @@ function MenuItemDialog({
     });
   }
 
+  const title = isModerator
+    ? mode === "add"
+      ? "Propose New Item"
+      : "Propose Edit"
+    : mode === "add"
+      ? "Add Menu Item"
+      : "Edit Menu Item";
+
+  const submitLabel = isModerator
+    ? isPending
+      ? "Submitting…"
+      : "Submit for Review"
+    : isPending
+      ? "Saving…"
+      : mode === "add"
+        ? "Add Item"
+        : "Save";
+
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>
-            {mode === "add" ? "Add Menu Item" : "Edit Menu Item"}
-          </DialogTitle>
+          <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -734,12 +1049,14 @@ function MenuItemDialog({
                       {cat.name}
                     </SelectItem>
                   ))}
-                  <SelectItem
-                    value="__new__"
-                    className="text-primary font-medium"
-                  >
-                    + New category
-                  </SelectItem>
+                  {!isModerator && (
+                    <SelectItem
+                      value="__new__"
+                      className="text-primary font-medium"
+                    >
+                      + New category
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             )}
@@ -790,15 +1107,17 @@ function MenuItemDialog({
               <p className="text-sm text-destructive">{uploadError}</p>
             )}
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="sortOrder">Sort Order</Label>
-            <Input
-              id="sortOrder"
-              type="number"
-              value={sortOrder}
-              onChange={(e) => setSortOrder(e.target.value)}
-            />
-          </div>
+          {!isModerator && (
+            <div className="space-y-2">
+              <Label htmlFor="sortOrder">Sort Order</Label>
+              <Input
+                id="sortOrder"
+                type="number"
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value)}
+              />
+            </div>
+          )}
           {error && <p className="text-sm text-destructive">{error}</p>}
           <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
@@ -808,7 +1127,7 @@ function MenuItemDialog({
               type="submit"
               disabled={isPending || uploading || newCatMode}
             >
-              {isPending ? "Saving..." : mode === "add" ? "Add Item" : "Save"}
+              {submitLabel}
             </Button>
           </DialogFooter>
         </form>
@@ -819,7 +1138,6 @@ function MenuItemDialog({
 
 // ─── Manage categories dialog ─────────────────────────────────────────────────
 
-// ─── Draggable category row (in the Manage Categories dialog) ─────────────────
 function SortableCatRow({
   id,
   children,

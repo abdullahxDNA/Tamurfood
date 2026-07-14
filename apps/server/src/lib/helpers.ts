@@ -33,3 +33,14 @@ export function requireAdmin(c: Context<{ Variables: Variables }>) {
   }
   return null;
 }
+
+export function requireModerator(c: Context<{ Variables: Variables }>) {
+  const session = c.get("session");
+  if (!session) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+  if (session.user.role !== "admin" && session.user.role !== "moderator") {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+  return null;
+}

@@ -24,6 +24,7 @@ import { Route as AuthenticatedShopOrdersIndexRouteImport } from "./routes/_auth
 import { Route as AuthenticatedShopKhataIndexRouteImport } from "./routes/_authenticated/shop/khata/index"
 import { Route as AuthenticatedAdminShopsIndexRouteImport } from "./routes/_authenticated/admin/shops/index"
 import { Route as AuthenticatedAdminPaymentsIndexRouteImport } from "./routes/_authenticated/admin/payments/index"
+import { Route as AuthenticatedAdminModeratorsIndexRouteImport } from "./routes/_authenticated/admin/moderators/index"
 import { Route as AuthenticatedAdminMenuIndexRouteImport } from "./routes/_authenticated/admin/menu/index"
 import { Route as AuthenticatedAdminKhataIndexRouteImport } from "./routes/_authenticated/admin/khata/index"
 import { Route as AuthenticatedAdminBannerIndexRouteImport } from "./routes/_authenticated/admin/banner/index"
@@ -108,6 +109,12 @@ const AuthenticatedAdminPaymentsIndexRoute =
     path: "/payments/",
     getParentRoute: () => AuthenticatedAdminRoute,
   } as any)
+const AuthenticatedAdminModeratorsIndexRoute =
+  AuthenticatedAdminModeratorsIndexRouteImport.update({
+    id: "/moderators/",
+    path: "/moderators/",
+    getParentRoute: () => AuthenticatedAdminRoute,
+  } as any)
 const AuthenticatedAdminMenuIndexRoute =
   AuthenticatedAdminMenuIndexRouteImport.update({
     id: "/menu/",
@@ -140,6 +147,7 @@ export interface FileRoutesByFullPath {
   "/admin/banner/": typeof AuthenticatedAdminBannerIndexRoute
   "/admin/khata/": typeof AuthenticatedAdminKhataIndexRoute
   "/admin/menu/": typeof AuthenticatedAdminMenuIndexRoute
+  "/admin/moderators/": typeof AuthenticatedAdminModeratorsIndexRoute
   "/admin/payments/": typeof AuthenticatedAdminPaymentsIndexRoute
   "/admin/shops/": typeof AuthenticatedAdminShopsIndexRoute
   "/shop/khata/": typeof AuthenticatedShopKhataIndexRoute
@@ -157,6 +165,7 @@ export interface FileRoutesByTo {
   "/admin/banner": typeof AuthenticatedAdminBannerIndexRoute
   "/admin/khata": typeof AuthenticatedAdminKhataIndexRoute
   "/admin/menu": typeof AuthenticatedAdminMenuIndexRoute
+  "/admin/moderators": typeof AuthenticatedAdminModeratorsIndexRoute
   "/admin/payments": typeof AuthenticatedAdminPaymentsIndexRoute
   "/admin/shops": typeof AuthenticatedAdminShopsIndexRoute
   "/shop/khata": typeof AuthenticatedShopKhataIndexRoute
@@ -178,6 +187,7 @@ export interface FileRoutesById {
   "/_authenticated/admin/banner/": typeof AuthenticatedAdminBannerIndexRoute
   "/_authenticated/admin/khata/": typeof AuthenticatedAdminKhataIndexRoute
   "/_authenticated/admin/menu/": typeof AuthenticatedAdminMenuIndexRoute
+  "/_authenticated/admin/moderators/": typeof AuthenticatedAdminModeratorsIndexRoute
   "/_authenticated/admin/payments/": typeof AuthenticatedAdminPaymentsIndexRoute
   "/_authenticated/admin/shops/": typeof AuthenticatedAdminShopsIndexRoute
   "/_authenticated/shop/khata/": typeof AuthenticatedShopKhataIndexRoute
@@ -199,6 +209,7 @@ export interface FileRouteTypes {
     | "/admin/banner/"
     | "/admin/khata/"
     | "/admin/menu/"
+    | "/admin/moderators/"
     | "/admin/payments/"
     | "/admin/shops/"
     | "/shop/khata/"
@@ -216,6 +227,7 @@ export interface FileRouteTypes {
     | "/admin/banner"
     | "/admin/khata"
     | "/admin/menu"
+    | "/admin/moderators"
     | "/admin/payments"
     | "/admin/shops"
     | "/shop/khata"
@@ -236,6 +248,7 @@ export interface FileRouteTypes {
     | "/_authenticated/admin/banner/"
     | "/_authenticated/admin/khata/"
     | "/_authenticated/admin/menu/"
+    | "/_authenticated/admin/moderators/"
     | "/_authenticated/admin/payments/"
     | "/_authenticated/admin/shops/"
     | "/_authenticated/shop/khata/"
@@ -358,6 +371,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthenticatedAdminPaymentsIndexRouteImport
       parentRoute: typeof AuthenticatedAdminRoute
     }
+    "/_authenticated/admin/moderators/": {
+      id: "/_authenticated/admin/moderators/"
+      path: "/moderators"
+      fullPath: "/admin/moderators/"
+      preLoaderRoute: typeof AuthenticatedAdminModeratorsIndexRouteImport
+      parentRoute: typeof AuthenticatedAdminRoute
+    }
     "/_authenticated/admin/menu/": {
       id: "/_authenticated/admin/menu/"
       path: "/menu"
@@ -387,6 +407,7 @@ interface AuthenticatedAdminRouteChildren {
   AuthenticatedAdminBannerIndexRoute: typeof AuthenticatedAdminBannerIndexRoute
   AuthenticatedAdminKhataIndexRoute: typeof AuthenticatedAdminKhataIndexRoute
   AuthenticatedAdminMenuIndexRoute: typeof AuthenticatedAdminMenuIndexRoute
+  AuthenticatedAdminModeratorsIndexRoute: typeof AuthenticatedAdminModeratorsIndexRoute
   AuthenticatedAdminPaymentsIndexRoute: typeof AuthenticatedAdminPaymentsIndexRoute
   AuthenticatedAdminShopsIndexRoute: typeof AuthenticatedAdminShopsIndexRoute
 }
@@ -396,6 +417,8 @@ const AuthenticatedAdminRouteChildren: AuthenticatedAdminRouteChildren = {
   AuthenticatedAdminBannerIndexRoute: AuthenticatedAdminBannerIndexRoute,
   AuthenticatedAdminKhataIndexRoute: AuthenticatedAdminKhataIndexRoute,
   AuthenticatedAdminMenuIndexRoute: AuthenticatedAdminMenuIndexRoute,
+  AuthenticatedAdminModeratorsIndexRoute:
+    AuthenticatedAdminModeratorsIndexRoute,
   AuthenticatedAdminPaymentsIndexRoute: AuthenticatedAdminPaymentsIndexRoute,
   AuthenticatedAdminShopsIndexRoute: AuthenticatedAdminShopsIndexRoute,
 }

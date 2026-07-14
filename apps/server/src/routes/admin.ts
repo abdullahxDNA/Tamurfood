@@ -10,9 +10,14 @@ import {
   shops,
   payments,
   user,
+  session as sessionTable,
+  account,
   analyticsEvents,
+  pendingMenuChanges,
+  menuItems,
 } from "@tamurfood/db/schema";
-import { requireAdmin, type Variables } from "../lib/helpers";
+import { auth } from "../auth";
+import { requireAdmin, requireModerator, type Variables } from "../lib/helpers";
 import { orderEvents, type NewOrderEvent } from "../lib/order-events";
 
 const paymentSchema = z.object({
@@ -25,7 +30,7 @@ const paymentSchema = z.object({
 export const adminRouter = new Hono<{ Variables: Variables }>()
   // GET /orders — all orders with shopName (page, date, isDone)
   .get("/orders", async (c) => {
-    const authErr = requireAdmin(c);
+    const authErr = requireModerator(c);
     if (authErr) return authErr;
 
     const page = Math.max(1, Number(c.req.query("page") ?? "1"));
@@ -105,7 +110,7 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
   })
   // GET /orders/stream — SSE stream for new orders (kept as raw EventSource on client)
   .get("/orders/stream", async (c) => {
-    const authErr = requireAdmin(c);
+    const authErr = requireModerator(c);
     if (authErr) return authErr;
 
     return streamSSE(c, async (stream) => {
@@ -130,7 +135,7 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
     "/orders/:id/done",
     zValidator("json", z.object({ paid: z.boolean() })),
     async (c) => {
-      const authErr = requireAdmin(c);
+      const authErr = requireModerator(c);
       if (authErr) return authErr;
 
       const session = c.get("session")!;
@@ -193,7 +198,7 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
   )
   // GET /analytics — today/week/month stats + top 5 shops
   .get("/analytics", async (c) => {
-    const authErr = requireAdmin(c);
+    const authErr = requireModerator(c);
     if (authErr) return authErr;
 
     const now = new Date();
@@ -261,7 +266,7 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
       z.object({ from: z.string().date(), to: z.string().date() }),
     ),
     async (c) => {
-      const authErr = requireAdmin(c);
+      const authErr = requireModerator(c);
       if (authErr) return authErr;
 
       const { from, to } = c.req.valid("query");
@@ -380,9 +385,9 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
     await db.delete(payments).where(eq(payments.id, id));
     return c.json({ success: true });
   })
-  // GET /shops/:shopId/orders — full order history for one shop (admin view)
+  // GET /shops/:shopId/orders — full order history for one shop (admin/moderator view)
   .get("/shops/:shopId/orders", async (c) => {
-    const authErr = requireAdmin(c);
+    const authErr = requireModerator(c);
     if (authErr) return authErr;
 
     const shopId = c.req.param("shopId");
@@ -444,9 +449,9 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
       })),
     });
   })
-  // PATCH /orders/:id/cancel — admin cancels any pending order
+  // PATCH /orders/:id/cancel — cancel any pending order
   .patch("/orders/:id/cancel", async (c) => {
-    const authErr = requireAdmin(c);
+    const authErr = requireModerator(c);
     if (authErr) return authErr;
 
     const id = c.req.param("id");
@@ -469,4 +474,277 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
     );
 
     return c.json({ isCancelled: true });
-  });
+  })
+  // GET /pending-changes/count — badge count for nav (moderator+admin)
+  .get("/pending-changes/count", async (c) => {
+    const authErr = requireModerator(c);
+    if (authErr) return authErr;
+
+    const [{ count }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(pendingMenuChanges)
+      .where(eq(pendingMenuChanges.status, "pending"));
+
+    return c.json({ count });
+  })
+  // GET /pending-changes — list all pending changes with proposer name (admin only)
+  .get("/pending-changes", async (c) => {
+    const authErr = requireAdmin(c);
+    if (authErr) return authErr;
+
+    const rows = await db
+      .select({
+        id: pendingMenuChanges.id,
+        type: pendingMenuChanges.type,
+        proposedBy: pendingMenuChanges.proposedBy,
+        proposedByName: user.name,
+        menuItemId: pendingMenuChanges.menuItemId,
+        proposedData: pendingMenuChanges.proposedData,
+        status: pendingMenuChanges.status,
+        createdAt: pendingMenuChanges.createdAt,
+      })
+      .from(pendingMenuChanges)
+      .innerJoin(user, eq(pendingMenuChanges.proposedBy, user.id))
+      .where(eq(pendingMenuChanges.status, "pending"))
+      .orderBy(desc(pendingMenuChanges.createdAt));
+
+    return c.json(rows);
+  })
+  // PATCH /pending-changes/:id/approve — apply the change (admin only)
+  .patch("/pending-changes/:id/approve", async (c) => {
+    const authErr = requireAdmin(c);
+    if (authErr) return authErr;
+
+    const session = c.get("session")!;
+    const id = c.req.param("id");
+
+    const [change] = await db
+      .select()
+      .from(pendingMenuChanges)
+      .where(
+        and(
+          eq(pendingMenuChanges.id, id),
+          eq(pendingMenuChanges.status, "pending"),
+        ),
+      )
+      .limit(1);
+
+    if (!change) return c.json({ error: "Not found or already reviewed" }, 404);
+
+    const now = new Date();
+
+    if (change.type === "create") {
+      const data = change.proposedData as {
+        name: string;
+        price: number;
+        category: string;
+        imageUrl?: string | null;
+        sortOrder?: number;
+      };
+      await db.insert(menuItems).values({
+        id: crypto.randomUUID(),
+        name: data.name,
+        price: data.price,
+        category: data.category,
+        imageUrl: data.imageUrl ?? null,
+        sortOrder: data.sortOrder ?? 0,
+        isAvailable: true,
+        createdAt: now,
+      });
+    } else if (change.type === "update" && change.menuItemId) {
+      const data = change.proposedData as Partial<{
+        name: string;
+        price: number;
+        category: string;
+        imageUrl: string | null;
+        sortOrder: number;
+      }>;
+      await db
+        .update(menuItems)
+        .set(data)
+        .where(eq(menuItems.id, change.menuItemId));
+    } else if (change.type === "delete" && change.menuItemId) {
+      await db.delete(menuItems).where(eq(menuItems.id, change.menuItemId));
+    }
+
+    await db
+      .update(pendingMenuChanges)
+      .set({ status: "approved", reviewedAt: now, reviewedBy: session.user.id })
+      .where(eq(pendingMenuChanges.id, id));
+
+    return c.json({ success: true });
+  })
+  // PATCH /pending-changes/:id/reject — reject with optional note (admin only)
+  .patch(
+    "/pending-changes/:id/reject",
+    zValidator("json", z.object({ note: z.string().max(300).optional() })),
+    async (c) => {
+      const authErr = requireAdmin(c);
+      if (authErr) return authErr;
+
+      const session = c.get("session")!;
+      const id = c.req.param("id");
+      const { note } = c.req.valid("json");
+
+      const [change] = await db
+        .select({ id: pendingMenuChanges.id })
+        .from(pendingMenuChanges)
+        .where(
+          and(
+            eq(pendingMenuChanges.id, id),
+            eq(pendingMenuChanges.status, "pending"),
+          ),
+        )
+        .limit(1);
+
+      if (!change)
+        return c.json({ error: "Not found or already reviewed" }, 404);
+
+      await db
+        .update(pendingMenuChanges)
+        .set({
+          status: "rejected",
+          reviewNote: note ?? null,
+          reviewedAt: new Date(),
+          reviewedBy: session.user.id,
+        })
+        .where(eq(pendingMenuChanges.id, id));
+
+      return c.json({ success: true });
+    },
+  )
+  // GET /moderators — list all moderator accounts (admin only)
+  .get("/moderators", async (c) => {
+    const authErr = requireAdmin(c);
+    if (authErr) return authErr;
+
+    const rows = await db
+      .select({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        phone: user.phoneNumber,
+        isActive: user.isActive,
+        createdAt: user.createdAt,
+      })
+      .from(user)
+      .where(eq(user.role, "moderator"))
+      .orderBy(user.createdAt);
+
+    return c.json(rows);
+  })
+  // POST /moderators — create a moderator account (admin only)
+  .post(
+    "/moderators",
+    zValidator(
+      "json",
+      z.object({
+        name: z.string().min(1).max(100),
+        phone: z.string().min(5).max(20),
+        email: z.string().email().optional().nullable(),
+        password: z.string().min(6),
+      }),
+    ),
+    async (c) => {
+      const authErr = requireAdmin(c);
+      if (authErr) return authErr;
+
+      const body = c.req.valid("json");
+
+      const existing = await db
+        .select({ id: user.id })
+        .from(user)
+        .where(eq(user.phoneNumber, body.phone))
+        .limit(1);
+
+      if (existing.length > 0) {
+        return c.json({ error: "Phone number already in use" }, 409);
+      }
+
+      const email = body.email ?? `mod-${body.phone}@tamurfood.local`;
+
+      const ctx = await auth.$context;
+      const newUser = await ctx.internalAdapter.createUser({
+        email,
+        name: body.name,
+        role: "moderator",
+        phoneNumber: body.phone,
+        isActive: true,
+      });
+
+      if (!newUser) return c.json({ error: "Failed to create user" }, 500);
+
+      const hash = await ctx.password.hash(body.password);
+      await ctx.internalAdapter.linkAccount({
+        accountId: newUser.id,
+        providerId: "credential",
+        password: hash,
+        userId: newUser.id,
+      });
+
+      return c.json({ id: newUser.id }, 201);
+    },
+  )
+  // PATCH /moderators/:id/status — toggle moderator isActive (admin only)
+  .patch("/moderators/:id/status", async (c) => {
+    const authErr = requireAdmin(c);
+    if (authErr) return authErr;
+
+    const id = c.req.param("id");
+
+    const [mod] = await db
+      .select({ isActive: user.isActive, role: user.role })
+      .from(user)
+      .where(eq(user.id, id))
+      .limit(1);
+
+    if (!mod || mod.role !== "moderator") {
+      return c.json({ error: "Moderator not found" }, 404);
+    }
+
+    const newStatus = !mod.isActive;
+    await db
+      .update(user)
+      .set({ isActive: newStatus, updatedAt: new Date() })
+      .where(eq(user.id, id));
+
+    if (!newStatus) {
+      await db.delete(sessionTable).where(eq(sessionTable.userId, id));
+    }
+
+    return c.json({ isActive: newStatus });
+  })
+  // POST /moderators/:id/reset-password — admin resets moderator password (admin only)
+  .post(
+    "/moderators/:id/reset-password",
+    zValidator("json", z.object({ newPassword: z.string().min(6) })),
+    async (c) => {
+      const authErr = requireAdmin(c);
+      if (authErr) return authErr;
+
+      const id = c.req.param("id");
+      const { newPassword } = c.req.valid("json");
+
+      const [mod] = await db
+        .select({ id: user.id, role: user.role })
+        .from(user)
+        .where(eq(user.id, id))
+        .limit(1);
+
+      if (!mod || mod.role !== "moderator") {
+        return c.json({ error: "Moderator not found" }, 404);
+      }
+
+      const ctx = await auth.$context;
+      const hash = await ctx.password.hash(newPassword);
+
+      await db
+        .update(account)
+        .set({ password: hash, updatedAt: new Date() })
+        .where(eq(account.userId, id));
+
+      await db.delete(sessionTable).where(eq(sessionTable.userId, id));
+
+      return c.json({ success: true });
+    },
+  );

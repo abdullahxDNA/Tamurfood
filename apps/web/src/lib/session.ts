@@ -6,7 +6,7 @@ export type SessionUser = {
   name: string;
   email: string | null;
   phoneNumber: string | null;
-  role: "admin" | "shop";
+  role: "admin" | "shop" | "moderator";
   isActive: boolean;
 };
 

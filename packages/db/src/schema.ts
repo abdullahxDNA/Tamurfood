@@ -165,6 +165,23 @@ export const analyticsEvents = pgTable(
   (t) => [index("analytics_event_type_idx").on(t.eventType, t.createdAt)],
 );
 
+export const pendingMenuChanges = pgTable("pending_menu_changes", {
+  id: text("id").primaryKey(),
+  type: varchar("type", { length: 10 }).notNull(), // "create" | "update" | "delete"
+  proposedBy: text("proposed_by")
+    .notNull()
+    .references(() => user.id, { onDelete: "cascade" }),
+  menuItemId: text("menu_item_id"), // null for create
+  proposedData: jsonb("proposed_data"), // item fields for create/update, null for delete
+  status: varchar("status", { length: 10 }).notNull().default("pending"),
+  reviewNote: text("review_note"),
+  createdAt: timestamp("created_at").notNull(),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedBy: text("reviewed_by").references(() => user.id, {
+    onDelete: "set null",
+  }),
+});
+
 // Singleton row (id = "default") holding the shop hero banner, editable by admin.
 export const banner = pgTable("banner", {
   id: text("id").primaryKey(),

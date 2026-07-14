@@ -3,8 +3,17 @@ import { z } from "zod";
 import { zValidator } from "../lib/validator";
 import { eq, asc } from "drizzle-orm";
 import { db } from "@tamurfood/db";
-import { menuItems, menuCategories } from "@tamurfood/db/schema";
-import { requireAdmin, requireSession, type Variables } from "../lib/helpers";
+import {
+  menuItems,
+  menuCategories,
+  pendingMenuChanges,
+} from "@tamurfood/db/schema";
+import {
+  requireAdmin,
+  requireModerator,
+  requireSession,
+  type Variables,
+} from "../lib/helpers";
 import { env } from "../env";
 
 const menuItemSchema = z.object({
@@ -262,9 +271,51 @@ export const menuRouter = new Hono<{ Variables: Variables }>()
 
     return c.json({ success: true });
   })
-  // PATCH /:id/availability — toggle isAvailable
+  // POST /pending — moderator submits a menu change for admin approval
+  .post(
+    "/pending",
+    zValidator(
+      "json",
+      z.discriminatedUnion("type", [
+        z.object({
+          type: z.literal("create"),
+          data: menuItemSchema,
+        }),
+        z.object({
+          type: z.literal("update"),
+          menuItemId: z.string().min(1),
+          data: updateMenuItemSchema,
+        }),
+        z.object({
+          type: z.literal("delete"),
+          menuItemId: z.string().min(1),
+        }),
+      ]),
+    ),
+    async (c) => {
+      const err = requireModerator(c);
+      if (err) return err;
+
+      const session = c.get("session")!;
+      const body = c.req.valid("json");
+      const id = crypto.randomUUID();
+
+      await db.insert(pendingMenuChanges).values({
+        id,
+        type: body.type,
+        proposedBy: session.user.id,
+        menuItemId: body.type !== "create" ? body.menuItemId : null,
+        proposedData: body.type !== "delete" ? body.data : null,
+        status: "pending",
+        createdAt: new Date(),
+      });
+
+      return c.json({ id }, 201);
+    },
+  )
+  // PATCH /:id/availability — toggle isAvailable (moderator can do this instantly)
   .patch("/:id/availability", async (c) => {
-    const err = requireAdmin(c);
+    const err = requireModerator(c);
     if (err) return err;
 
     const id = c.req.param("id");
