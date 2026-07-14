@@ -17,7 +17,8 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   component: () => (
     <div className="min-h-screen bg-background text-foreground">
       <Outlet />
-      <Toaster richColors closeButton />
+      {/* top-center so toasts never cover the shop's bottom nav bar */}
+      <Toaster richColors closeButton position="top-center" />
     </div>
   ),
 });
