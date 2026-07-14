@@ -78,6 +78,13 @@
       "when": 1783000120000,
       "tag": "0010_add_daily_order_number",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1783000180000,
+      "tag": "0011_add_menu_item_visibility",
+      "breakpoints": true
     }
   ]
 }

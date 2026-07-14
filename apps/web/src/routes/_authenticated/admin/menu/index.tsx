@@ -60,6 +60,7 @@ interface MenuItem {
   category: string;
   imageUrl: string | null;
   isAvailable: boolean;
+  isVisible: boolean;
   stockQuantity: number | null;
   sortOrder: number;
   createdAt: string;
@@ -114,9 +115,11 @@ function SortableItem({
   onDelete,
   onToggle,
   onSetStock,
+  onToggleVisibility,
   toggling,
   deleting,
   savingStock,
+  togglingVisibility,
 }: {
   item: MenuItem;
   isModerator: boolean;
@@ -124,9 +127,11 @@ function SortableItem({
   onDelete: () => void;
   onToggle: () => void;
   onSetStock: (quantity: number | null) => void;
+  onToggleVisibility: () => void;
   toggling: boolean;
   deleting: boolean;
   savingStock: boolean;
+  togglingVisibility: boolean;
 }) {
   const {
     attributes,
@@ -167,7 +172,9 @@ function SortableItem({
     <div
       ref={setNodeRef}
       style={style}
-      className="space-y-2 rounded-md border bg-card p-2.5"
+      className={`space-y-2 rounded-md border bg-card p-2.5 ${
+        !item.isVisible ? "opacity-60" : ""
+      }`}
     >
       <div className="flex items-start justify-between gap-1.5">
         {!isModerator && (
@@ -182,6 +189,11 @@ function SortableItem({
         )}
         <div className="min-w-0 flex-1">
           <span className="text-sm font-medium">{item.name}</span>
+          {!item.isVisible && (
+            <Badge variant="secondary" className="ml-1.5 text-[10px]">
+              Hidden
+            </Badge>
+          )}
           <p className="mt-0.5 text-sm font-medium">৳{item.price}</p>
         </div>
         <Switch
@@ -258,6 +270,19 @@ function SortableItem({
           {isModerator ? "Request Delete" : "Delete"}
         </Button>
       </div>
+
+      {/* Hide/Show — admin only. Hidden items don't appear for shops/moderators */}
+      {!isModerator && (
+        <Button
+          variant="outline"
+          size="sm"
+          className="h-7 w-full text-xs"
+          onClick={onToggleVisibility}
+          disabled={togglingVisibility}
+        >
+          {item.isVisible ? "Hide from shops" : "Show to shops"}
+        </Button>
+      )}
     </div>
   );
 }
@@ -751,6 +776,16 @@ function MenuPage() {
     onSettled: () => queryClient.invalidateQueries({ queryKey: ["menu"] }),
   });
 
+  const toggleVisibilityMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.api.v1.menu[":id"].visibility.$patch({
+        param: { id },
+      });
+      if (!res.ok) throw new Error("Failed to change visibility");
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["menu"] }),
+  });
+
   const reorderCategoriesMutation = useMutation({
     mutationFn: async (ids: string[]) => {
       const res = await api.api.v1.menu.categories.reorder.$patch({
@@ -1008,6 +1043,13 @@ function MenuPage() {
                           }
                           onSetStock={(quantity) =>
                             setStockMutation.mutate({ id: item.id, quantity })
+                          }
+                          onToggleVisibility={() =>
+                            toggleVisibilityMutation.mutate(item.id)
+                          }
+                          togglingVisibility={
+                            toggleVisibilityMutation.isPending &&
+                            toggleVisibilityMutation.variables === item.id
                           }
                           toggling={
                             toggleAvailabilityMutation.isPending &&
