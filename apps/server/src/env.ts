@@ -20,8 +20,8 @@ export const env = createEnv({
       .default("development"),
     PORT: z.coerce.number().default(3000),
 
-    // Resend (password-reset emails)
-    RESEND_API_KEY: z.string().min(1),
+    // Resend (password-reset emails) — optional in local dev
+    RESEND_API_KEY: z.string().min(1).optional(),
 
     // Supabase Storage (server-side image uploads via service role)
     SUPABASE_URL: z.string().url(),

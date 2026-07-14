@@ -253,6 +253,58 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
       topShops,
     });
   })
+  // GET /analytics/range?from=YYYY-MM-DD&to=YYYY-MM-DD
+  .get(
+    "/analytics/range",
+    zValidator(
+      "query",
+      z.object({ from: z.string().date(), to: z.string().date() }),
+    ),
+    async (c) => {
+      const authErr = requireAdmin(c);
+      if (authErr) return authErr;
+
+      const { from, to } = c.req.valid("query");
+      const fromDate = new Date(from);
+      const toDate = new Date(to);
+      toDate.setDate(toDate.getDate() + 1); // inclusive end
+
+      const [stats] = await db
+        .select({
+          count: sql<number>`count(*)::int`,
+          revenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)::int`,
+        })
+        .from(orders)
+        .where(
+          and(
+            gte(orders.placedAt, fromDate),
+            lt(orders.placedAt, toDate),
+            eq(orders.isCancelled, false),
+          ),
+        );
+
+      const topShops = await db
+        .select({
+          shopName: shops.shopName,
+          revenue: sql<number>`sum(${orders.totalAmount})::int`,
+          orderCount: sql<number>`count(*)::int`,
+        })
+        .from(orders)
+        .innerJoin(shops, eq(orders.shopId, shops.id))
+        .where(
+          and(
+            gte(orders.placedAt, fromDate),
+            lt(orders.placedAt, toDate),
+            eq(orders.isCancelled, false),
+          ),
+        )
+        .groupBy(shops.shopName)
+        .orderBy(desc(sql`sum(${orders.totalAmount})`))
+        .limit(5);
+
+      return c.json({ from, to, ...stats, topShops });
+    },
+  )
   // GET /payments — list payments with shopName + recorder name
   .get("/payments", async (c) => {
     const authErr = requireAdmin(c);

@@ -21,6 +21,12 @@ export const auth = betterAuth({
     sendResetPassword: async ({ user: u, url }) => {
       console.log(`[reset-password] sending to ${u.email}`);
       try {
+        if (!env.RESEND_API_KEY) {
+          console.warn(
+            "[reset-password] RESEND_API_KEY not set, skipping email",
+          );
+          return;
+        }
         const resend = new Resend(env.RESEND_API_KEY);
         const { error } = await resend.emails.send({
           from: "Tamurfood <onboarding@resend.dev>",

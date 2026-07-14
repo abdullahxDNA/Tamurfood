@@ -119,6 +119,20 @@ async function fetchAnalytics() {
   if (!res.ok) throw new Error("Failed to fetch analytics");
   return res.json() as Promise<AnalyticsData>;
 }
+async function fetchAnalyticsRange(from: string, to: string) {
+  const res = await api.api.v1.admin.analytics.range.$get({
+    query: { from, to },
+  });
+  if (!res.ok) throw new Error("Failed to fetch range analytics");
+  return res.json() as Promise<{
+    from: string;
+    to: string;
+    count: number;
+    revenue: number;
+    topShops: { shopName: string; revenue: number; orderCount: number }[];
+  }>;
+}
+
 async function fetchShopOrders(shopId: string) {
   const res = await api.api.v1.admin.shops[":shopId"].orders.$get({
     param: { shopId },
@@ -251,6 +265,16 @@ function AdminDashboard() {
     id: string;
     name: string;
   } | null>(null);
+
+  const [rangeFrom, setRangeFrom] = useState("");
+  const [rangeTo, setRangeTo] = useState("");
+  const rangeEnabled = !!rangeFrom && !!rangeTo && rangeFrom <= rangeTo;
+
+  const { data: rangeData, isFetching: rangeFetching } = useQuery({
+    queryKey: ["admin/analytics/range", rangeFrom, rangeTo],
+    queryFn: () => fetchAnalyticsRange(rangeFrom, rangeTo),
+    enabled: rangeEnabled,
+  });
   // live "time ago" tick
   const [, setTick] = useState(0);
 
@@ -506,14 +530,78 @@ function AdminDashboard() {
 
       {/* ── Analytics summary (below orders) ── */}
       {analytics && (
-        <div className="pt-2 border-t">
-          <h2 className="text-base font-semibold mb-3 text-muted-foreground">
+        <div className="pt-2 border-t space-y-4">
+          <h2 className="text-base font-semibold text-muted-foreground">
             Analytics
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <StatCard title="Today" stats={analytics.today} />
             <StatCard title="This Week" stats={analytics.week} />
             <StatCard title="This Month" stats={analytics.month} />
+          </div>
+
+          {/* Date range picker */}
+          <div className="border rounded-lg p-4 space-y-3">
+            <p className="text-sm font-medium">Custom Date Range</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="date"
+                value={rangeFrom}
+                onChange={(e) => setRangeFrom(e.target.value)}
+                className="border rounded px-2 py-1.5 text-sm bg-background"
+              />
+              <span className="text-muted-foreground text-sm">to</span>
+              <input
+                type="date"
+                value={rangeTo}
+                onChange={(e) => setRangeTo(e.target.value)}
+                className="border rounded px-2 py-1.5 text-sm bg-background"
+              />
+            </div>
+            {rangeEnabled && (
+              <div>
+                {rangeFetching ? (
+                  <p className="text-sm text-muted-foreground">Loading…</p>
+                ) : rangeData ? (
+                  <div className="space-y-2">
+                    <div className="flex gap-6">
+                      <div>
+                        <p className="text-2xl font-bold">
+                          {rangeData.count} orders
+                        </p>
+                        <p className="text-sm text-muted-foreground">
+                          ৳{rangeData.revenue.toLocaleString()} revenue
+                        </p>
+                      </div>
+                    </div>
+                    {rangeData.topShops.length > 0 && (
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground font-medium">
+                          Top shops
+                        </p>
+                        {rangeData.topShops.map((s) => (
+                          <div
+                            key={s.shopName}
+                            className="flex justify-between text-sm"
+                          >
+                            <span>{s.shopName}</span>
+                            <span className="text-muted-foreground">
+                              ৳{s.revenue.toLocaleString()} · {s.orderCount}{" "}
+                              orders
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            )}
+            {rangeFrom && rangeTo && rangeFrom > rangeTo && (
+              <p className="text-sm text-destructive">
+                Start date must be before end date.
+              </p>
+            )}
           </div>
         </div>
       )}
