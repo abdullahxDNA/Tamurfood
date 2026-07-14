@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "../lib/validator";
-import { eq, asc } from "drizzle-orm";
+import { eq, asc, desc } from "drizzle-orm";
 import { db } from "@tamurfood/db";
 import {
   menuItems,
@@ -313,6 +313,33 @@ export const menuRouter = new Hono<{ Variables: Variables }>()
       return c.json({ id }, 201);
     },
   )
+  // GET /pending/mine — moderator sees the status of their own requests
+  .get("/pending/mine", async (c) => {
+    const err = requireModerator(c);
+    if (err) return err;
+
+    const session = c.get("session")!;
+    const rows = await db
+      .select({
+        id: pendingMenuChanges.id,
+        type: pendingMenuChanges.type,
+        menuItemId: pendingMenuChanges.menuItemId,
+        proposedData: pendingMenuChanges.proposedData,
+        status: pendingMenuChanges.status,
+        reviewNote: pendingMenuChanges.reviewNote,
+        createdAt: pendingMenuChanges.createdAt,
+        reviewedAt: pendingMenuChanges.reviewedAt,
+        // Name of the existing item (for update/delete); create uses proposedData
+        currentName: menuItems.name,
+      })
+      .from(pendingMenuChanges)
+      .leftJoin(menuItems, eq(pendingMenuChanges.menuItemId, menuItems.id))
+      .where(eq(pendingMenuChanges.proposedBy, session.user.id))
+      .orderBy(desc(pendingMenuChanges.createdAt))
+      .limit(50);
+
+    return c.json(rows);
+  })
   // PATCH /:id/stock — set/edit/clear stock count (admin or moderator, instant)
   // body: { quantity: number | null } — null clears tracking (unlimited again)
   .patch(
