@@ -71,6 +71,13 @@
       "when": 1783000060000,
       "tag": "0009_add_stock_and_cancel_reason",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1783000120000,
+      "tag": "0010_add_daily_order_number",
+      "breakpoints": true
     }
   ]
 }

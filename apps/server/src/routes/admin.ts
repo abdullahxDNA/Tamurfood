@@ -63,6 +63,7 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
       .select({
         id: orders.id,
         orderNumber: orders.orderNumber,
+        dailyNumber: orders.dailyNumber,
         shopId: orders.shopId,
         shopName: shops.shopName,
         totalAmount: orders.totalAmount,
@@ -412,6 +413,7 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
       .select({
         id: orders.id,
         orderNumber: orders.orderNumber,
+        dailyNumber: orders.dailyNumber,
         shopId: orders.shopId,
         shopName: shops.shopName,
         totalAmount: orders.totalAmount,

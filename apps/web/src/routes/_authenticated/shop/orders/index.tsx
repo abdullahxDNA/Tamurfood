@@ -35,6 +35,7 @@ interface OrderItem {
 interface Order {
   id: string;
   orderNumber: number;
+  dailyNumber: number | null;
   totalAmount: number;
   note: string | null;
   isDone: boolean;
@@ -240,7 +241,10 @@ function OrderHistory() {
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="font-semibold text-sm">
-                  #{order.orderNumber}
+                  #{order.dailyNumber ?? order.orderNumber}
+                </span>
+                <span className="text-[10px] text-muted-foreground">
+                  Ref #{order.orderNumber}
                 </span>
                 <span className="text-xs text-muted-foreground">
                   {new Date(order.placedAt).toLocaleDateString("en-GB", {

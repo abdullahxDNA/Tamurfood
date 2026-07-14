@@ -103,6 +103,11 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
 
     const orderId = crypto.randomUUID();
     const now = new Date();
+    // Bakery-local day (Asia/Dhaka), so the daily number resets at local
+    // midnight rather than UTC midnight.
+    const bdDate = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Asia/Dhaka",
+    }).format(now); // YYYY-MM-DD
 
     // Items that track stock are decremented atomically inside the transaction,
     // so concurrent orders can never oversell the last units. If a decrement
@@ -111,7 +116,7 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
       (reqItem) => foundMap.get(reqItem.menuItemId)!.stockQuantity !== null,
     );
 
-    let inserted: { id: string; orderNumber: number };
+    let inserted: { id: string; orderNumber: number; dailyNumber: number };
     try {
       inserted = await db.transaction(async (tx) => {
         for (const reqItem of trackedItems) {
@@ -125,6 +130,17 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
           if (rows.length === 0) throw new StockConflict(reqItem.menuItemId);
         }
 
+        // Atomic next daily number for today (row-locks the day's counter, so
+        // concurrent orders get distinct numbers). Rolls back with the order.
+        const counterRows = (await tx.execute(sql`
+          INSERT INTO "order_daily_counters" ("order_date", "last_number")
+          VALUES (${bdDate}, 1)
+          ON CONFLICT ("order_date")
+          DO UPDATE SET "last_number" = "order_daily_counters"."last_number" + 1
+          RETURNING "last_number"
+        `)) as unknown as { last_number: number }[];
+        const dailyNumber = counterRows[0].last_number;
+
         const [row] = await tx
           .insert(orders)
           .values({
@@ -134,6 +150,7 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
             note: body.note ?? null,
             isDone: false,
             placedAt: now,
+            dailyNumber,
           })
           .returning({ id: orders.id, orderNumber: orders.orderNumber });
 
@@ -158,7 +175,7 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
           createdAt: now,
         });
 
-        return row;
+        return { ...row, dailyNumber };
       });
     } catch (e) {
       if (e instanceof StockConflict) {
@@ -181,7 +198,12 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
     } satisfies NewOrderEvent);
 
     return c.json(
-      { id: inserted.id, orderNumber: inserted.orderNumber, totalAmount },
+      {
+        id: inserted.id,
+        orderNumber: inserted.orderNumber,
+        dailyNumber: inserted.dailyNumber,
+        totalAmount,
+      },
       201,
     );
   })
@@ -200,6 +222,7 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
       .select({
         id: orders.id,
         orderNumber: orders.orderNumber,
+        dailyNumber: orders.dailyNumber,
         totalAmount: orders.totalAmount,
         isCancelled: sql<boolean>`"orders"."is_cancelled"`,
         placedAt: orders.placedAt,
@@ -281,6 +304,7 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
       .select({
         id: orders.id,
         orderNumber: orders.orderNumber,
+        dailyNumber: orders.dailyNumber,
         totalAmount: orders.totalAmount,
         note: orders.note,
         isDone: orders.isDone,

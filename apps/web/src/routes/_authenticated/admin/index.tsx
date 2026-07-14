@@ -87,6 +87,7 @@ interface OrderItem {
 interface AdminOrder {
   id: string;
   orderNumber: number;
+  dailyNumber: number | null;
   shopId: string;
   shopName: string;
   totalAmount: number;
@@ -190,8 +191,11 @@ function OrderCard({
           >
             {order.shopName}
           </button>
-          <span className="text-muted-foreground text-sm">
-            #{order.orderNumber}
+          <span className="text-sm font-medium">
+            #{order.dailyNumber ?? order.orderNumber}
+          </span>
+          <span className="text-[10px] text-muted-foreground">
+            Ref #{order.orderNumber}
           </span>
           {order.isCancelled ? (
             <Badge variant="destructive">Cancelled</Badge>
@@ -749,7 +753,10 @@ function AdminDashboard() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-sm">
-                      #{order.orderNumber}
+                      #{order.dailyNumber ?? order.orderNumber}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      Ref #{order.orderNumber}
                     </span>
                     <Badge
                       variant={order.isDone ? "secondary" : "default"}
