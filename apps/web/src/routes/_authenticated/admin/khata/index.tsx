@@ -168,7 +168,7 @@ function LedgerSheet({
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Paid this month</span>
-              <span className="font-medium text-green-600">
+              <span className="font-medium text-green-600 dark:text-green-400">
                 ৳{data.monthPaid.toLocaleString()}
               </span>
             </div>
@@ -178,7 +178,7 @@ function LedgerSheet({
                 className={
                   data.outstandingBalance > 0
                     ? "text-destructive"
-                    : "text-green-600"
+                    : "text-green-600 dark:text-green-400"
                 }
               >
                 {data.outstandingBalance > 0 ? "+" : ""}৳
@@ -215,8 +215,8 @@ function LedgerSheet({
                   <span
                     className={`text-xs font-medium px-1.5 py-0.5 rounded ${
                       entry.type === "order"
-                        ? "bg-orange-100 text-orange-700"
-                        : "bg-green-100 text-green-700"
+                        ? "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300"
+                        : "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300"
                     }`}
                   >
                     {entry.type === "order"
@@ -238,7 +238,7 @@ function LedgerSheet({
                   className={
                     entry.type === "order"
                       ? "text-destructive font-medium"
-                      : "text-green-600 font-medium"
+                      : "text-green-600 dark:text-green-400 font-medium"
                   }
                 >
                   {entry.type === "order"

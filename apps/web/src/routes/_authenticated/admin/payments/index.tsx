@@ -260,6 +260,7 @@ function RecordPaymentDialog({
               value={paymentDate}
               onChange={(e) => setPaymentDate(e.target.value)}
               required
+              className="dark:[color-scheme:dark]"
             />
           </div>
           <div className="space-y-2">

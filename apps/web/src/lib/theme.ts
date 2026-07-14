@@ -28,12 +28,6 @@ export function useTheme() {
     }
   }, [theme]);
 
-  // Dark mode is scoped to the shop side. When this layout unmounts (e.g. the
-  // user navigates to an admin page), remove the class so admin stays light.
-  useEffect(() => {
-    return () => document.documentElement.classList.remove("dark");
-  }, []);
-
   const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
 
   return { theme, toggleTheme };
