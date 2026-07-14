@@ -796,10 +796,16 @@ function MenuPage() {
                           onToggle={() =>
                             toggleAvailabilityMutation.mutate(item.id)
                           }
-                          toggling={toggleAvailabilityMutation.isPending}
+                          toggling={
+                            toggleAvailabilityMutation.isPending &&
+                            toggleAvailabilityMutation.variables === item.id
+                          }
                           deleting={
-                            deleteMutation.isPending ||
-                            submitPendingMutation.isPending
+                            (deleteMutation.isPending &&
+                              deleteMutation.variables === item.id) ||
+                            (submitPendingMutation.isPending &&
+                              submitPendingMutation.variables?.menuItemId ===
+                                item.id)
                           }
                         />
                       ))}
