@@ -496,7 +496,7 @@ function AdminDashboard() {
     <div className="space-y-5">
       {/* Reconnect banner */}
       {sseStatus === "reconnecting" && (
-        <div className="rounded-md bg-yellow-50 border border-yellow-200 px-4 py-2 text-sm text-yellow-800">
+        <div className="rounded-md bg-yellow-50 border border-yellow-200 px-4 py-2 text-sm text-yellow-800 dark:bg-yellow-950/30 dark:border-yellow-900 dark:text-yellow-200">
           Lost connection to server. Trying to reconnect… Orders refresh every
           10s.
         </div>
@@ -524,7 +524,7 @@ function AdminDashboard() {
               type="date"
               value={!isToday && !isYesterday ? date : ""}
               onChange={(e) => e.target.value && setDate(e.target.value)}
-              className="px-2 py-1.5 border-l bg-transparent text-xs w-36 cursor-pointer"
+              className="px-2 py-1.5 border-l bg-transparent text-xs w-36 cursor-pointer dark:[color-scheme:dark]"
               placeholder="Pick date"
             />
           </div>
@@ -618,14 +618,14 @@ function AdminDashboard() {
                 type="date"
                 value={rangeFrom}
                 onChange={(e) => setRangeFrom(e.target.value)}
-                className="border rounded px-2 py-1.5 text-sm bg-background"
+                className="border rounded px-2 py-1.5 text-sm bg-background dark:[color-scheme:dark]"
               />
               <span className="text-muted-foreground text-sm">to</span>
               <input
                 type="date"
                 value={rangeTo}
                 onChange={(e) => setRangeTo(e.target.value)}
-                className="border rounded px-2 py-1.5 text-sm bg-background"
+                className="border rounded px-2 py-1.5 text-sm bg-background dark:[color-scheme:dark]"
               />
             </div>
             {rangeEnabled && (

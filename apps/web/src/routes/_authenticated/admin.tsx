@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu } from "lucide-react";
 import { api } from "@/lib/api";
+import { useTheme } from "@/lib/theme";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   beforeLoad: ({ context }) => {
@@ -82,6 +83,7 @@ function AdminLayout() {
   const queryClient = useQueryClient();
   const [sheetOpen, setSheetOpen] = useState(false);
   const { session } = Route.useRouteContext();
+  const { theme, toggleTheme } = useTheme();
   const isAdmin = session.role === "admin";
 
   const { data: pendingData } = useQuery({
@@ -135,6 +137,16 @@ function AdminLayout() {
           >
             Change Password
           </Link>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleTheme}
+            aria-label={
+              theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
+            }
+          >
+            {theme === "dark" ? "☀️" : "🌙"}
+          </Button>
           <Button variant="outline" size="sm" onClick={handleLogout}>
             Logout
           </Button>
