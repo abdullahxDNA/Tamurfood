@@ -86,24 +86,6 @@ interface PendingChange {
   currentImageUrl: string | null;
 }
 
-// A moderator's own request + its review status
-interface MyRequest {
-  id: string;
-  type: "create" | "update" | "delete";
-  menuItemId: string | null;
-  proposedData: { name?: string; price?: number; category?: string } | null;
-  status: "pending" | "approved" | "rejected";
-  reviewNote: string | null;
-  createdAt: string;
-  currentName: string | null;
-}
-
-async function fetchMyRequests(): Promise<MyRequest[]> {
-  const res = await api.api.v1.menu.pending.mine.$get();
-  if (!res.ok) throw new Error("Failed to fetch your requests");
-  return res.json() as Promise<MyRequest[]>;
-}
-
 async function fetchMenu(): Promise<MenuItem[]> {
   const res = await api.api.v1.menu.$get();
   if (!res.ok) throw new Error("Failed to fetch menu");
@@ -361,67 +343,6 @@ function FieldDiff({
         {after}
       </span>
     </p>
-  );
-}
-
-// ─── Moderator's own request status ───────────────────────────────────────────
-function MyRequestsPanel() {
-  const { data: requests = [], isLoading } = useQuery({
-    queryKey: ["my-requests"],
-    queryFn: fetchMyRequests,
-    refetchInterval: 30_000,
-  });
-
-  if (isLoading || requests.length === 0) return null;
-
-  function typeLabel(type: string) {
-    if (type === "create") return "New item";
-    if (type === "update") return "Edit";
-    return "Delete";
-  }
-
-  function statusBadge(status: string) {
-    if (status === "approved")
-      return (
-        <Badge className="border-green-400 bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-950/40 dark:text-green-300">
-          Approved
-        </Badge>
-      );
-    if (status === "rejected")
-      return <Badge variant="destructive">Rejected</Badge>;
-    return <Badge variant="secondary">Pending</Badge>;
-  }
-
-  return (
-    <div className="space-y-2 rounded-lg border p-4">
-      <h2 className="text-sm font-semibold">My Requests</h2>
-      <div className="space-y-2">
-        {requests.map((r) => {
-          const name = r.proposedData?.name ?? r.currentName ?? "item";
-          return (
-            <div
-              key={r.id}
-              className="flex items-start justify-between gap-2 rounded-md border bg-background p-2.5"
-            >
-              <div className="min-w-0 space-y-1">
-                <div className="flex flex-wrap items-center gap-2 text-sm">
-                  <span className="text-muted-foreground">
-                    {typeLabel(r.type)}:
-                  </span>
-                  <span className="font-medium">{name}</span>
-                </div>
-                {r.status === "rejected" && r.reviewNote && (
-                  <p className="text-xs text-destructive">
-                    Reason: {r.reviewNote}
-                  </p>
-                )}
-              </div>
-              {statusBadge(r.status)}
-            </div>
-          );
-        })}
-      </div>
-    </div>
   );
 }
 
@@ -974,9 +895,6 @@ function MenuPage() {
           toggle is instant.
         </div>
       )}
-
-      {/* Moderator: status of their own requests */}
-      {isModerator && <MyRequestsPanel />}
 
       {/* Pending requests (admin only) */}
       {isAdmin && <PendingChangesPanel />}

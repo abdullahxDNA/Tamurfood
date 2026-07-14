@@ -42,6 +42,7 @@ const ADMIN_NAV = [
 const MODERATOR_NAV = [
   { label: "Orders", to: "/admin" as const },
   { label: "Menu", to: "/admin/menu" as const },
+  { label: "My Requests", to: "/admin/requests" as const },
 ];
 
 function NavLinks({
