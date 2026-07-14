@@ -79,6 +79,29 @@ interface PendingChange {
   } | null;
   status: string;
   createdAt: string;
+  // Current values of the item being edited/deleted (null for a create)
+  currentName: string | null;
+  currentPrice: number | null;
+  currentCategory: string | null;
+  currentImageUrl: string | null;
+}
+
+// A moderator's own request + its review status
+interface MyRequest {
+  id: string;
+  type: "create" | "update" | "delete";
+  menuItemId: string | null;
+  proposedData: { name?: string; price?: number; category?: string } | null;
+  status: "pending" | "approved" | "rejected";
+  reviewNote: string | null;
+  createdAt: string;
+  currentName: string | null;
+}
+
+async function fetchMyRequests(): Promise<MyRequest[]> {
+  const res = await api.api.v1.menu.pending.mine.$get();
+  if (!res.ok) throw new Error("Failed to fetch your requests");
+  return res.json() as Promise<MyRequest[]>;
 }
 
 async function fetchMenu(): Promise<MenuItem[]> {
@@ -313,6 +336,95 @@ function SortableColumn({
   );
 }
 
+// One "before → after" row; highlights the change only when the value differs.
+function FieldDiff({
+  label,
+  before,
+  after,
+}: {
+  label: string;
+  before: string | number | null;
+  after: string | number | null | undefined;
+}) {
+  if (after == null || after === "") return null;
+  const changed = String(before ?? "") !== String(after);
+  return (
+    <p className="flex flex-wrap items-center gap-1.5 text-sm">
+      <span className="text-xs text-muted-foreground">{label}:</span>
+      {changed && before != null && before !== "" && (
+        <>
+          <span className="text-muted-foreground line-through">{before}</span>
+          <span className="text-muted-foreground">→</span>
+        </>
+      )}
+      <span className={changed ? "font-medium" : "text-muted-foreground"}>
+        {after}
+      </span>
+    </p>
+  );
+}
+
+// ─── Moderator's own request status ───────────────────────────────────────────
+function MyRequestsPanel() {
+  const { data: requests = [], isLoading } = useQuery({
+    queryKey: ["my-requests"],
+    queryFn: fetchMyRequests,
+    refetchInterval: 30_000,
+  });
+
+  if (isLoading || requests.length === 0) return null;
+
+  function typeLabel(type: string) {
+    if (type === "create") return "New item";
+    if (type === "update") return "Edit";
+    return "Delete";
+  }
+
+  function statusBadge(status: string) {
+    if (status === "approved")
+      return (
+        <Badge className="border-green-400 bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-950/40 dark:text-green-300">
+          Approved
+        </Badge>
+      );
+    if (status === "rejected")
+      return <Badge variant="destructive">Rejected</Badge>;
+    return <Badge variant="secondary">Pending</Badge>;
+  }
+
+  return (
+    <div className="space-y-2 rounded-lg border p-4">
+      <h2 className="text-sm font-semibold">My Requests</h2>
+      <div className="space-y-2">
+        {requests.map((r) => {
+          const name = r.proposedData?.name ?? r.currentName ?? "item";
+          return (
+            <div
+              key={r.id}
+              className="flex items-start justify-between gap-2 rounded-md border bg-background p-2.5"
+            >
+              <div className="min-w-0 space-y-1">
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="text-muted-foreground">
+                    {typeLabel(r.type)}:
+                  </span>
+                  <span className="font-medium">{name}</span>
+                </div>
+                {r.status === "rejected" && r.reviewNote && (
+                  <p className="text-xs text-destructive">
+                    Reason: {r.reviewNote}
+                  </p>
+                )}
+              </div>
+              {statusBadge(r.status)}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Pending changes panel (admin only) ──────────────────────────────────────
 function PendingChangesPanel() {
   const queryClient = useQueryClient();
@@ -399,22 +511,19 @@ function PendingChangesPanel() {
                     by {change.proposedByName}
                   </span>
                 </div>
-                {change.proposedData && (
+                {/* Create → just the new item */}
+                {change.type === "create" && change.proposedData && (
                   <div className="text-sm space-y-0.5">
-                    {change.proposedData.name && (
+                    <p>
+                      <span className="text-muted-foreground">New item:</span>{" "}
+                      <span className="font-medium">
+                        {change.proposedData.name}
+                      </span>
+                    </p>
+                    {change.proposedData.price != null && (
                       <p>
-                        <span className="text-muted-foreground">Name:</span>{" "}
-                        <span className="font-medium">
-                          {change.proposedData.name}
-                        </span>
-                      </p>
-                    )}
-                    {change.proposedData.price && (
-                      <p>
-                        <span className="text-muted-foreground">Price:</span>{" "}
-                        <span className="font-medium">
-                          ৳{change.proposedData.price}
-                        </span>
+                        <span className="text-muted-foreground">Price:</span> ৳
+                        {change.proposedData.price}
                       </p>
                     )}
                     {change.proposedData.category && (
@@ -426,18 +535,92 @@ function PendingChangesPanel() {
                     {change.proposedData.imageUrl && (
                       <img
                         src={change.proposedData.imageUrl}
-                        alt="Proposed"
+                        alt="New"
                         className="h-12 w-12 rounded border object-cover"
                       />
                     )}
                   </div>
                 )}
+
+                {/* Update → before → after */}
+                {change.type === "update" && change.proposedData && (
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">
+                      Editing{" "}
+                      <span className="font-medium text-foreground">
+                        {change.currentName ?? "item"}
+                      </span>
+                    </p>
+                    <FieldDiff
+                      label="Name"
+                      before={change.currentName}
+                      after={change.proposedData.name}
+                    />
+                    <FieldDiff
+                      label="Price"
+                      before={
+                        change.currentPrice != null
+                          ? `৳${change.currentPrice}`
+                          : null
+                      }
+                      after={
+                        change.proposedData.price != null
+                          ? `৳${change.proposedData.price}`
+                          : null
+                      }
+                    />
+                    <FieldDiff
+                      label="Category"
+                      before={change.currentCategory}
+                      after={change.proposedData.category}
+                    />
+                    {(change.currentImageUrl ||
+                      change.proposedData.imageUrl) && (
+                      <div className="flex items-center gap-2 pt-0.5">
+                        <span className="text-xs text-muted-foreground">
+                          Image:
+                        </span>
+                        {change.currentImageUrl ? (
+                          <img
+                            src={change.currentImageUrl}
+                            alt="Current"
+                            className="h-10 w-10 rounded border object-cover opacity-60"
+                          />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            none
+                          </span>
+                        )}
+                        <span className="text-muted-foreground">→</span>
+                        {change.proposedData.imageUrl ? (
+                          <img
+                            src={change.proposedData.imageUrl}
+                            alt="Proposed"
+                            className="h-10 w-10 rounded border object-cover"
+                          />
+                        ) : (
+                          <span className="text-xs text-muted-foreground">
+                            none
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Delete → the item being removed */}
                 {change.type === "delete" && (
-                  <p className="text-sm text-muted-foreground">
-                    Requests deletion of item{" "}
-                    {change.menuItemId
-                      ? `(ID: ${change.menuItemId.slice(0, 8)}…)`
-                      : ""}
+                  <p className="text-sm">
+                    <span className="text-muted-foreground">Delete:</span>{" "}
+                    <span className="font-medium">
+                      {change.currentName ?? "item"}
+                    </span>
+                    {change.currentPrice != null && (
+                      <span className="text-muted-foreground">
+                        {" "}
+                        (৳{change.currentPrice})
+                      </span>
+                    )}
                   </p>
                 )}
               </div>
@@ -603,6 +786,7 @@ function MenuPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pending-changes-count"] });
+      queryClient.invalidateQueries({ queryKey: ["my-requests"] });
       setDialog(null);
     },
   });
@@ -790,6 +974,9 @@ function MenuPage() {
           toggle is instant.
         </div>
       )}
+
+      {/* Moderator: status of their own requests */}
+      {isModerator && <MyRequestsPanel />}
 
       {/* Pending requests (admin only) */}
       {isAdmin && <PendingChangesPanel />}

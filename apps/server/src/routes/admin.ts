@@ -526,9 +526,16 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
         proposedData: pendingMenuChanges.proposedData,
         status: pendingMenuChanges.status,
         createdAt: pendingMenuChanges.createdAt,
+        // Current values of the item being edited/deleted, so the admin can
+        // see before → after. Null for a create (no existing item).
+        currentName: menuItems.name,
+        currentPrice: menuItems.price,
+        currentCategory: menuItems.category,
+        currentImageUrl: menuItems.imageUrl,
       })
       .from(pendingMenuChanges)
       .innerJoin(user, eq(pendingMenuChanges.proposedBy, user.id))
+      .leftJoin(menuItems, eq(pendingMenuChanges.menuItemId, menuItems.id))
       .where(eq(pendingMenuChanges.status, "pending"))
       .orderBy(desc(pendingMenuChanges.createdAt));
 
