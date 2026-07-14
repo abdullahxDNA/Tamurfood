@@ -199,7 +199,13 @@ function ShopMenu() {
   } = useQuery({
     queryKey: ["menu"],
     queryFn: fetchMenu,
-    staleTime: 5 * 60 * 1000,
+    // Near-real-time stock updates: poll every 5s while the tab is open
+    // (React Query auto-pauses this when the tab is backgrounded) and refetch
+    // immediately when the shop returns to the tab, so a stock-out toggled by
+    // admin/moderator shows up within ~5s without a manual refresh.
+    staleTime: 0,
+    refetchInterval: 5000,
+    refetchOnWindowFocus: true,
   });
 
   const { data: categories = [] } = useQuery({
@@ -222,7 +228,10 @@ function ShopMenu() {
 
   const mutation = useMutation({
     mutationFn: placeOrder,
-    retry: 3,
+    // Retry transient failures, but never a 409 (stock-out) — that's a
+    // definitive answer the shop needs to see instantly, not after 3 retries.
+    retry: (failureCount, error) =>
+      (error as { status?: number })?.status === 409 ? false : failureCount < 3,
     onSuccess: (data) => {
       // Check for server-side price recalculation
       if (data.totalAmount !== totalAmount) {
@@ -302,6 +311,21 @@ function ShopMenu() {
       },
     });
   }
+
+  // Proactively drop cart items that just went stock-out — detected by the 5s
+  // menu poll, so the shop is told immediately instead of at checkout.
+  useEffect(() => {
+    if (items.length === 0) return;
+    const availById = new Map(items.map((i) => [i.id, i.isAvailable]));
+    const nowOut = Object.entries(cart).filter(
+      ([id]) => availById.get(id) === false,
+    );
+    if (nowOut.length === 0) return;
+    for (const [id, entry] of nowOut) {
+      setQty(id, "", 0, 0);
+      toast(`${entry.name} is now stock out — removed from your cart`);
+    }
+  }, [items, cart, setQty]);
 
   // Filter by search query
   const q = search.trim().toLowerCase();
@@ -481,10 +505,11 @@ function ShopMenu() {
         </div>
       )}
 
-      {/* Unavailable warning after server 409 */}
+      {/* Stock-out warning after server 409 */}
       {unavailableWarning.length > 0 && (
         <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-          Removed unavailable items: {unavailableWarning.join(", ")}
+          Stock out — removed from your cart: {unavailableWarning.join(", ")}.
+          Please choose another.
           <button
             className="ml-2 underline"
             onClick={() => setUnavailableWarning([])}
@@ -730,7 +755,7 @@ function ShopMenu() {
                 <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
                   {(mutation.error as Error & { status?: number })?.status ===
                   409
-                    ? "Some items are no longer available and have been removed from your cart."
+                    ? "Some items just went stock out and were removed from your cart. Please review and try again."
                     : "Failed to place order. Please try again."}
                 </div>
               )}
