@@ -107,6 +107,52 @@ async function fetchPendingChanges(): Promise<PendingChange[]> {
 
 type DialogMode = { type: "add" } | { type: "edit"; item: MenuItem } | null;
 
+// Small "#N" box to set an item's/category's position by number (1-based).
+// Committing on Enter/blur; ignores invalid or unchanged values.
+function PositionInput({
+  position,
+  max,
+  onSet,
+}: {
+  position: number;
+  max: number;
+  onSet: (n: number) => void;
+}) {
+  const [val, setVal] = useState(String(position));
+  const [prev, setPrev] = useState(position);
+  if (position !== prev) {
+    setPrev(position);
+    setVal(String(position));
+  }
+  function commit() {
+    const n = parseInt(val, 10);
+    if (!n || n < 1 || n > max || n === position) {
+      setVal(String(position));
+      return;
+    }
+    onSet(n);
+  }
+  return (
+    <input
+      type="number"
+      min={1}
+      max={max}
+      value={val}
+      onChange={(e) => setVal(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+        if (e.key === "Escape") setVal(String(position));
+      }}
+      // Stop the drag sensor from hijacking clicks on the input.
+      onPointerDown={(e) => e.stopPropagation()}
+      className="h-6 w-9 rounded border bg-background text-center text-xs tabular-nums"
+      title="Type a position to move it here"
+      aria-label="Set position"
+    />
+  );
+}
+
 // ─── Draggable item card ──────────────────────────────────────────────────────
 function SortableItem({
   item,
@@ -120,6 +166,10 @@ function SortableItem({
   deleting,
   savingStock,
   togglingVisibility,
+  canReorder,
+  position,
+  positionMax,
+  onSetPosition,
 }: {
   item: MenuItem;
   isModerator: boolean;
@@ -132,6 +182,10 @@ function SortableItem({
   deleting: boolean;
   savingStock: boolean;
   togglingVisibility: boolean;
+  canReorder: boolean;
+  position: number;
+  positionMax: number;
+  onSetPosition: (n: number) => void;
 }) {
   const {
     attributes,
@@ -179,15 +233,22 @@ function SortableItem({
       }`}
     >
       <div className="flex items-start justify-between gap-1.5">
-        {!isModerator && (
-          <button
-            {...attributes}
-            {...listeners}
-            className="mt-0.5 cursor-grab touch-none text-muted-foreground active:cursor-grabbing"
-            aria-label="Drag to reorder item"
-          >
-            <GripVertical className="h-4 w-4" />
-          </button>
+        {!isModerator && canReorder && (
+          <div className="flex items-center gap-1">
+            <button
+              {...attributes}
+              {...listeners}
+              className="mt-0.5 cursor-grab touch-none text-muted-foreground active:cursor-grabbing"
+              aria-label="Drag to reorder item"
+            >
+              <GripVertical className="h-4 w-4" />
+            </button>
+            <PositionInput
+              position={position}
+              max={positionMax}
+              onSet={onSetPosition}
+            />
+          </div>
         )}
         <div className="min-w-0 flex-1">
           <span className="text-sm font-medium">{item.name}</span>
@@ -295,11 +356,17 @@ function SortableColumn({
   count,
   disabled,
   children,
+  position,
+  positionMax,
+  onSetPosition,
 }: {
   id: string;
   count: number;
   disabled: boolean;
   children: ReactNode;
+  position: number;
+  positionMax: number;
+  onSetPosition: (n: number) => void;
 }) {
   const {
     attributes,
@@ -323,14 +390,21 @@ function SortableColumn({
       <div className="mb-2 flex items-center justify-between border-b pb-1.5">
         <div className="flex min-w-0 items-center gap-1.5">
           {!disabled && (
-            <button
-              {...attributes}
-              {...listeners}
-              className="cursor-grab touch-none text-muted-foreground active:cursor-grabbing"
-              aria-label="Drag to reorder category"
-            >
-              <GripVertical className="h-4 w-4" />
-            </button>
+            <>
+              <button
+                {...attributes}
+                {...listeners}
+                className="cursor-grab touch-none text-muted-foreground active:cursor-grabbing"
+                aria-label="Drag to reorder category"
+              >
+                <GripVertical className="h-4 w-4" />
+              </button>
+              <PositionInput
+                position={position}
+                max={positionMax}
+                onSet={onSetPosition}
+              />
+            </>
           )}
           <h2 className="truncate text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             {id}
@@ -850,6 +924,29 @@ function MenuPage() {
     }
   }
 
+  // Move an item to a typed position (1-based) within its category — same
+  // effect as dragging, but handy for long lists.
+  function setItemPosition(catItems: MenuItem[], id: string, newPos: number) {
+    const from = catItems.findIndex((i) => i.id === id);
+    const to = Math.max(0, Math.min(catItems.length - 1, newPos - 1));
+    if (from === -1 || from === to) return;
+    const cat = catItems[from].category;
+    const reordered = arrayMove(catItems, from, to);
+    const others = items.filter((i) => i.category !== cat);
+    queryClient.setQueryData(["menu"], [...others, ...reordered]);
+    reorderItemsMutation.mutate(reordered.map((i) => i.id));
+  }
+
+  // Move a category to a typed position (1-based).
+  function setCategoryPosition(catId: string, newPos: number) {
+    const from = categories.findIndex((c) => c.id === catId);
+    const to = Math.max(0, Math.min(categories.length - 1, newPos - 1));
+    if (from === -1 || from === to) return;
+    const newCats = arrayMove(categories, from, to);
+    queryClient.setQueryData(["menu-categories"], newCats);
+    reorderCategoriesMutation.mutate(newCats.map((c) => c.id));
+  }
+
   const catNames = categories.map((c) => c.name);
   const grouped: [string, MenuItem[]][] = [];
   for (const cat of catNames) {
@@ -1028,6 +1125,14 @@ function MenuPage() {
                     isModerator ||
                     !categories.some((c) => c.name === category)
                   }
+                  position={
+                    categories.findIndex((c) => c.name === category) + 1
+                  }
+                  positionMax={categories.length}
+                  onSetPosition={(n) => {
+                    const cat = categories.find((c) => c.name === category);
+                    if (cat) setCategoryPosition(cat.id, n);
+                  }}
                 >
                   <SortableContext
                     items={catItems.map((i) => i.id)}
@@ -1035,11 +1140,17 @@ function MenuPage() {
                     disabled={!!q || isModerator}
                   >
                     <div className="space-y-2">
-                      {catItems.map((item) => (
+                      {catItems.map((item, idx) => (
                         <SortableItem
                           key={item.id}
                           item={item}
                           isModerator={!!isModerator}
+                          canReorder={!q}
+                          position={idx + 1}
+                          positionMax={catItems.length}
+                          onSetPosition={(n) =>
+                            setItemPosition(catItems, item.id, n)
+                          }
                           onEdit={() => setDialog({ type: "edit", item })}
                           onDelete={() => handleDelete(item.id, item.name)}
                           onToggle={() =>
