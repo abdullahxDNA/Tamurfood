@@ -276,22 +276,21 @@ function LedgerSheet({
           </div>
         )}
 
-        {/* Unpaid orders (any date) — settle them from here */}
+        {/* Unpaid orders (any date) — one boxed section with a red marker;
+            settle them from here */}
         {data && data.unpaidOrders.length > 0 && (
-          <div className="mt-4 space-y-2">
-            <h3 className="text-sm font-semibold">
+          <div className="mt-4 rounded-lg border border-red-200 dark:border-red-900">
+            <h3 className="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold">
+              <span aria-hidden className="h-2.5 w-2.5 rounded-sm bg-red-500" />
               Unpaid orders ({data.unpaidOrders.length})
             </h3>
-            <div className="space-y-2">
+            <div className="space-y-2 border-t border-red-200 p-3 dark:border-red-900">
               {data.unpaidOrders.map((o) => (
                 <div
                   key={o.id}
-                  className="flex items-center justify-between gap-2 rounded-md border border-amber-300 bg-amber-50 p-2.5 dark:border-amber-800 dark:bg-amber-950/20"
+                  className="flex items-center justify-between gap-2 rounded-md border p-2.5"
                 >
                   <div className="min-w-0 text-sm">
-                    <span className="mr-1.5 inline-block rounded bg-red-500 px-1.5 py-0.5 align-middle text-[10px] font-semibold leading-none text-white">
-                      Unpaid
-                    </span>
                     <OrderRef
                       dailyNumber={o.dailyNumber}
                       orderNumber={o.orderNumber}

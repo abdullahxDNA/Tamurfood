@@ -287,15 +287,17 @@ function ShopKhataPage() {
         </div>
       )}
 
-      {/* Unpaid orders (all-time) — collapsible; tap a row to see its items */}
+      {/* Unpaid orders (all-time) — one boxed section with a red marker;
+          collapsible, tap a row to see its items */}
       {data && data.unpaidOrders.length > 0 && (
-        <div className="space-y-2">
+        <div className="rounded-lg border border-red-200 dark:border-red-900">
           <button
             type="button"
             onClick={() => setUnpaidOpen((v) => !v)}
-            className="flex w-full items-center gap-2 text-left"
+            className="flex w-full items-center gap-2 px-4 py-2.5 text-left"
           >
             <Chevron open={unpaidOpen} />
+            <span aria-hidden className="h-2.5 w-2.5 rounded-sm bg-red-500" />
             <h2 className="text-sm font-semibold">Unpaid orders</h2>
             <span className="ml-auto text-xs text-muted-foreground">
               {data.unpaidOrders.length} order
@@ -307,14 +309,11 @@ function ShopKhataPage() {
           </button>
 
           {unpaidOpen && (
-            <div className="space-y-2">
+            <div className="space-y-2 border-t border-red-200 p-3 dark:border-red-900">
               {data.unpaidOrders.map((o) => {
                 const expanded = expandedOrders.has(o.id);
                 return (
-                  <div
-                    key={o.id}
-                    className="overflow-hidden rounded-lg border border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/20"
-                  >
+                  <div key={o.id} className="overflow-hidden rounded-lg border">
                     <button
                       type="button"
                       onClick={() => toggleOrder(o.id)}
@@ -323,17 +322,12 @@ function ShopKhataPage() {
                       <div className="flex items-center gap-2">
                         <Chevron open={expanded} />
                         <div>
-                          <div className="flex items-center gap-1.5">
-                            <OrderRef
-                              className="text-sm"
-                              withLabel
-                              dailyNumber={o.dailyNumber}
-                              orderNumber={o.orderNumber}
-                            />
-                            <span className="rounded bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
-                              Unpaid
-                            </span>
-                          </div>
+                          <OrderRef
+                            className="text-sm"
+                            withLabel
+                            dailyNumber={o.dailyNumber}
+                            orderNumber={o.orderNumber}
+                          />
                           <p className="text-xs text-muted-foreground">
                             {new Date(o.placedAt).toLocaleDateString("en-BD", {
                               day: "numeric",
@@ -343,13 +337,13 @@ function ShopKhataPage() {
                           </p>
                         </div>
                       </div>
-                      <span className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                      <span className="text-sm font-semibold">
                         ৳{o.amount.toLocaleString()}
                       </span>
                     </button>
 
                     {expanded && (
-                      <div className="space-y-1 border-t border-amber-200 px-4 py-2.5 dark:border-amber-900">
+                      <div className="space-y-1 border-t px-4 py-2.5">
                         {o.items.map((it, i) => (
                           <div
                             key={i}
