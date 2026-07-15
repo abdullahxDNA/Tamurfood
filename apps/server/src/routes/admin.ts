@@ -248,9 +248,10 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
       return c.json({ error: "Order already marked paid" }, 409);
 
     const now = new Date();
+    const paymentId = crypto.randomUUID();
     await db.update(orders).set({ isPaid: true }).where(eq(orders.id, id));
     await db.insert(payments).values({
-      id: crypto.randomUUID(),
+      id: paymentId,
       shopId: existing.shopId,
       amount: existing.totalAmount,
       paymentDate: now.toISOString().slice(0, 10),
@@ -262,6 +263,7 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
     // Notify the shop's Khata badge that a payment was recorded.
     orderEvents.emit("payment_recorded", {
       shopId: existing.shopId,
+      paymentId,
     } satisfies PaymentEvent);
 
     return c.json({ isPaid: true });
@@ -463,6 +465,7 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
     // Notify the shop's Khata badge that a payment was recorded.
     orderEvents.emit("payment_recorded", {
       shopId: body.shopId,
+      paymentId: inserted.id,
     } satisfies PaymentEvent);
 
     return c.json({ id: inserted.id }, 201);
