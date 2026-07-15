@@ -349,6 +349,7 @@ function AdminDashboard() {
   const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [confirmDoneId, setConfirmDoneId] = useState<string | null>(null);
   const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
+  const [confirmPaidId, setConfirmPaidId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState("");
   const [shopHistory, setShopHistory] = useState<{
     id: string;
@@ -529,10 +530,12 @@ function AdminDashboard() {
       queryClient.invalidateQueries({ queryKey: ["admin/payments"] });
       queryClient.invalidateQueries({ queryKey: ["admin/shop-orders"] });
       toast.success("Marked as paid — payment recorded.");
+      setConfirmPaidId(null);
     },
     onError: (err) => {
       toast.error((err as Error).message);
       queryClient.invalidateQueries({ queryKey: ["admin/orders"] });
+      setConfirmPaidId(null);
     },
   });
 
@@ -553,6 +556,10 @@ function AdminDashboard() {
     },
     onError: (err) => toast.error((err as Error).message),
   });
+
+  const paidOrder = (ordersData?.orders ?? []).find(
+    (o) => o.id === confirmPaidId,
+  );
 
   const isToday = date === todayDate();
   const isYesterday = date === yesterdayDate();
@@ -693,7 +700,7 @@ function AdminDashboard() {
                 isNew={false}
                 onMarkPaid={
                   isTodayDhaka(order.placedAt)
-                    ? (id) => markPaidMutation.mutate(id)
+                    ? (id) => setConfirmPaidId(id)
                     : undefined
                 }
                 onShopClick={(id, name) => setShopHistory({ id, name })}
@@ -730,7 +737,7 @@ function AdminDashboard() {
                   // settled from the shop's Khata.
                   onMarkPaid={
                     isTodayDhaka(order.placedAt)
-                      ? (id) => markPaidMutation.mutate(id)
+                      ? (id) => setConfirmPaidId(id)
                       : undefined
                   }
                   onShopClick={(id, name) => setShopHistory({ id, name })}
@@ -868,6 +875,42 @@ function AdminDashboard() {
               disabled={markDoneMutation.isPending}
             >
               {markDoneMutation.isPending ? "Saving…" : "Done + Paid"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm mark-paid dialog */}
+      <Dialog
+        open={confirmPaidId !== null}
+        onOpenChange={(open) => {
+          if (!open && !markPaidMutation.isPending) setConfirmPaidId(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Mark this order as paid?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {paidOrder
+              ? `This records a payment of ৳${paidOrder.totalAmount.toLocaleString()} from ${paidOrder.shopName} for order #${paidOrder.dailyNumber ?? paidOrder.orderNumber}.`
+              : "This records a payment for the order."}
+          </p>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmPaidId(null)}
+              disabled={markPaidMutation.isPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() =>
+                confirmPaidId && markPaidMutation.mutate(confirmPaidId)
+              }
+              disabled={markPaidMutation.isPending}
+            >
+              {markPaidMutation.isPending ? "Saving…" : "Yes, mark paid"}
             </Button>
           </DialogFooter>
         </DialogContent>
