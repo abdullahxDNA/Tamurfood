@@ -386,6 +386,32 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
 
     return c.json(rows);
   })
+  // GET /collections?date=YYYY-MM-DD — how much each staff/admin collected that
+  // day (by when it was recorded), so cash can be reconciled against staff.
+  .get(
+    "/collections",
+    zValidator("query", z.object({ date: z.string().date() })),
+    async (c) => {
+      const authErr = requireAdmin(c);
+      if (authErr) return authErr;
+
+      const { date } = c.req.valid("query");
+      const rows = await db
+        .select({
+          staffId: payments.recordedBy,
+          staffName: user.name,
+          total: sql<number>`sum(${payments.amount})::int`,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(payments)
+        .innerJoin(user, eq(payments.recordedBy, user.id))
+        .where(sql`${payments.createdAt}::date = ${date}::date`)
+        .groupBy(payments.recordedBy, user.name)
+        .orderBy(desc(sql`sum(${payments.amount})`));
+
+      return c.json(rows);
+    },
+  )
   // POST /payments — record a payment
   .post("/payments", zValidator("json", paymentSchema), async (c) => {
     const authErr = requireAdmin(c);

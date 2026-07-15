@@ -84,6 +84,19 @@ async function fetchLedger(shopId: string, month: string): Promise<ShopLedger> {
   return res.json() as Promise<ShopLedger>;
 }
 
+interface Collection {
+  staffId: string;
+  staffName: string;
+  total: number;
+  count: number;
+}
+
+async function fetchCollections(date: string): Promise<Collection[]> {
+  const res = await api.api.v1.admin.collections.$get({ query: { date } });
+  if (!res.ok) throw new Error("Failed to fetch collections");
+  return res.json() as Promise<Collection[]>;
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function currentMonth() {
@@ -515,6 +528,63 @@ function LedgerSheet({
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
+// Cash reconciliation: how much each person collected on a given day, so you
+// can check it against the cash they hand you.
+function CollectionsSummary() {
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const { data: rows = [] } = useQuery({
+    queryKey: ["khata/collections", date],
+    queryFn: () => fetchCollections(date),
+    refetchInterval: 60_000,
+  });
+  const total = rows.reduce((s, r) => s + r.total, 0);
+
+  return (
+    <div className="rounded-lg border p-4 space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-sm font-semibold">Collections</h2>
+        <Input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="h-8 w-40 text-sm dark:[color-scheme:dark]"
+        />
+      </div>
+      {rows.length === 0 ? (
+        <p className="text-sm text-muted-foreground">
+          No payments recorded on this day.
+        </p>
+      ) : (
+        <>
+          <div className="space-y-1">
+            {rows.map((r) => (
+              <div
+                key={r.staffId}
+                className="flex items-center justify-between text-sm"
+              >
+                <span>
+                  {r.staffName}{" "}
+                  <span className="text-xs text-muted-foreground">
+                    ({r.count})
+                  </span>
+                </span>
+                <span className="font-medium">৳{r.total.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center justify-between border-t pt-1 text-sm font-semibold">
+            <span>Total collected</span>
+            <span>৳{total.toLocaleString()}</span>
+          </div>
+        </>
+      )}
+      <p className="text-xs text-muted-foreground">
+        Check this against the cash each person hands you.
+      </p>
+    </div>
+  );
+}
+
 function KhataPage() {
   const [selectedShop, setSelectedShop] = useState<{
     id: string;
@@ -534,6 +604,8 @@ function KhataPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-bold">Khata</h1>
+
+      <CollectionsSummary />
 
       {isLoading && <p className="text-muted-foreground">Loading…</p>}
       {isError && <p className="text-destructive">Failed to load khata.</p>}
