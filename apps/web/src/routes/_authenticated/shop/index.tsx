@@ -301,6 +301,18 @@ function ShopMenu() {
     setConfirmOpen(false);
   }
 
+  // Radix locks interaction by setting `pointer-events: none` on <body> while a
+  // Sheet/Dialog is open, and on touch devices it can linger for a beat after
+  // close — swallowing the next tap (e.g. the first tap on the bottom nav after
+  // placing an order). Clear it once the confirmation sheet is closed.
+  useEffect(() => {
+    if (confirmOpen) return;
+    const t = setTimeout(() => {
+      document.body.style.pointerEvents = "";
+    }, 150);
+    return () => clearTimeout(t);
+  }, [confirmOpen]);
+
   function handleClearCart() {
     // Snapshot the cart so it can be restored if the clear was accidental.
     const snapshot = Object.entries(cart).map(([id, entry]) => ({
