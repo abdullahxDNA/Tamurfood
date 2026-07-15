@@ -4,7 +4,7 @@ import {
   useMutation,
   useQueryClient,
 } from "@tanstack/react-query";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -170,6 +170,11 @@ function OrderStatusTracker({
   );
 }
 
+// Must match the key the shop layout writes to (see shop.tsx). Holds IDs of
+// orders that changed while the shop was away, so they can be flashed as "NEW".
+const NEW_ORDERS_KEY = "shop-new-orders";
+const NEW_MARKER_MS = 5000;
+
 function OrderHistory() {
   const { setQty } = useCart();
   const navigate = useNavigate();
@@ -211,16 +216,77 @@ function OrderHistory() {
   // Derived from the cache — always in sync, even when returning to a filter.
   const allOrders = data?.pages.flatMap((p) => p.orders) ?? [];
 
+  // Orders that changed recently get a "NEW" marker for a few seconds. The timer
+  // starts when the shop actually sees it — either the moment a live event
+  // arrives while on this page, or when the page opens for events stashed by the
+  // layout while the shop was on another tab.
+  const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
+  const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+    new Map(),
+  );
+  const markNew = useCallback((id: string) => {
+    setHighlightedIds((prev) => new Set(prev).add(id));
+    const timers = timersRef.current;
+    const existing = timers.get(id);
+    if (existing) clearTimeout(existing);
+    timers.set(
+      id,
+      setTimeout(() => {
+        setHighlightedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+        timers.delete(id);
+      }, NEW_MARKER_MS),
+    );
+  }, []);
+
+  // Clear pending timers on unmount.
+  useEffect(() => {
+    const timers = timersRef.current;
+    return () => {
+      timers.forEach((t) => clearTimeout(t));
+      timers.clear();
+    };
+  }, []);
+
+  // On open, flash anything that changed while the shop was on another tab.
+  useEffect(() => {
+    let ids: string[] = [];
+    try {
+      const raw = localStorage.getItem(NEW_ORDERS_KEY);
+      if (!raw) return;
+      localStorage.removeItem(NEW_ORDERS_KEY);
+      ids = JSON.parse(raw) as string[];
+    } catch {
+      return;
+    }
+    // Defer so we're not calling setState synchronously inside the effect.
+    const t = setTimeout(() => {
+      for (const id of ids) markNew(id);
+    }, 0);
+    return () => clearTimeout(t);
+  }, [markNew]);
+
   // Live status via SSE: refetch the instant staff accept/cancel an order for
-  // this shop, so the tracker flips with no polling delay. EventSource
-  // auto-reconnects on drop; the poll above covers any gap.
+  // this shop, so the tracker flips with no polling delay, and flash the changed
+  // order as NEW. EventSource auto-reconnects; the poll above covers any gap.
   useEffect(() => {
     const source = new EventSource("/api/v1/orders/stream");
-    source.addEventListener("order_status", () => {
+    source.addEventListener("order_status", (e) => {
       queryClient.invalidateQueries({ queryKey: ["orders"] });
+      try {
+        const { orderId } = JSON.parse((e as MessageEvent).data) as {
+          orderId?: string;
+        };
+        if (orderId) markNew(orderId);
+      } catch {
+        /* ignore */
+      }
     });
     return () => source.close();
-  }, [queryClient]);
+  }, [queryClient, markNew]);
 
   // Toast when an order transitions from pending → done
   useEffect(() => {
@@ -338,11 +404,23 @@ function OrderHistory() {
 
       <div className="space-y-3">
         {filteredOrders.map((order) => (
-          <div key={order.id} className="rounded-lg border p-4 space-y-3">
+          <div
+            key={order.id}
+            className={`rounded-lg border p-4 space-y-3 transition-all ${
+              highlightedIds.has(order.id)
+                ? "ring-2 ring-primary bg-primary/5"
+                : ""
+            }`}
+          >
             <div className="flex items-center gap-2">
               <span className="font-semibold text-sm">
                 #{order.dailyNumber ?? order.orderNumber}
               </span>
+              {highlightedIds.has(order.id) && (
+                <span className="animate-pulse rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-none text-primary-foreground">
+                  NEW
+                </span>
+              )}
               <span className="text-[10px] text-muted-foreground">
                 Ref #{order.orderNumber}
               </span>
