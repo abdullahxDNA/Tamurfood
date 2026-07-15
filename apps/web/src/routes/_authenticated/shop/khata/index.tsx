@@ -33,6 +33,7 @@ interface UnpaidOrder {
   dailyNumber: number | null;
   amount: number;
   placedAt: string;
+  items: { itemName: string; quantity: number; lineTotal: number }[];
 }
 
 interface ShopLedger {
@@ -104,8 +105,39 @@ function fmtEntryWhen(entry: LedgerEntry) {
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
+// Chevron that points right when closed and down when open.
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={`shrink-0 transition-transform ${open ? "rotate-90" : ""}`}
+    >
+      <polyline points="9 18 15 12 9 6" />
+    </svg>
+  );
+}
+
 function ShopKhataPage() {
   const [month, setMonth] = useState(currentMonth);
+  const [unpaidOpen, setUnpaidOpen] = useState(true);
+  const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
+
+  function toggleOrder(id: string) {
+    setExpandedOrders((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
   const cur = currentMonth();
 
   const { data: myShop } = useQuery({
@@ -253,41 +285,81 @@ function ShopKhataPage() {
         </div>
       )}
 
-      {/* Unpaid orders (all-time) — which specific orders still need paying */}
+      {/* Unpaid orders (all-time) — collapsible; tap a row to see its items */}
       {data && data.unpaidOrders.length > 0 && (
         <div className="space-y-2">
-          <div className="flex items-baseline justify-between">
+          <button
+            type="button"
+            onClick={() => setUnpaidOpen((v) => !v)}
+            className="flex w-full items-center gap-2 text-left"
+          >
+            <Chevron open={unpaidOpen} />
             <h2 className="text-sm font-semibold">Unpaid orders</h2>
-            <span className="text-xs text-muted-foreground">
+            <span className="ml-auto text-xs text-muted-foreground">
               {data.unpaidOrders.length} order
               {data.unpaidOrders.length === 1 ? "" : "s"} · ৳
               {data.unpaidOrders
                 .reduce((s, o) => s + o.amount, 0)
                 .toLocaleString()}
             </span>
-          </div>
-          {data.unpaidOrders.map((o) => (
-            <div
-              key={o.id}
-              className="flex items-center justify-between rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-900 dark:bg-amber-950/20"
-            >
-              <div>
-                <p className="text-sm font-medium">
-                  Order #{o.dailyNumber ?? o.orderNumber}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {new Date(o.placedAt).toLocaleDateString("en-BD", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </p>
-              </div>
-              <span className="text-sm font-semibold text-amber-700 dark:text-amber-300">
-                ৳{o.amount.toLocaleString()}
-              </span>
+          </button>
+
+          {unpaidOpen && (
+            <div className="space-y-2">
+              {data.unpaidOrders.map((o) => {
+                const expanded = expandedOrders.has(o.id);
+                return (
+                  <div
+                    key={o.id}
+                    className="overflow-hidden rounded-lg border border-amber-300 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/20"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => toggleOrder(o.id)}
+                      className="flex w-full items-center justify-between px-4 py-3 text-left"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Chevron open={expanded} />
+                        <div>
+                          <p className="text-sm font-medium">
+                            Order #{o.dailyNumber ?? o.orderNumber}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(o.placedAt).toLocaleDateString("en-BD", {
+                              day: "numeric",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                        ৳{o.amount.toLocaleString()}
+                      </span>
+                    </button>
+
+                    {expanded && (
+                      <div className="space-y-1 border-t border-amber-200 px-4 py-2.5 dark:border-amber-900">
+                        {o.items.map((it, i) => (
+                          <div
+                            key={i}
+                            className="flex items-center justify-between text-sm"
+                          >
+                            <span className="text-muted-foreground">
+                              {it.quantity}× {it.itemName}
+                            </span>
+                            <span className="tabular-nums">
+                              ৳{it.lineTotal.toLocaleString()}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          ))}
+          )}
         </div>
       )}
 
