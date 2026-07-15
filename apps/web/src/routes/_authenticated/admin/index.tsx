@@ -394,14 +394,23 @@ function AdminDashboard() {
     enabled: !!shopHistory,
   });
 
-  // Split + sort
+  // Split + sort. Three buckets: to accept → to collect → done.
+  // Cancelled orders are not "orders" here — they only appear as done/cancelled.
   const pending = (ordersData?.orders ?? [])
     .filter((o) => !o.isDone && !o.isCancelled)
     .sort(
       (a, b) => new Date(a.placedAt).getTime() - new Date(b.placedAt).getTime(),
     ); // oldest first
+  // Accepted but not yet paid (and not cancelled) — collect these during the day.
+  const unpaid = (ordersData?.orders ?? [])
+    .filter((o) => o.isDone && !o.isPaid && !o.isCancelled)
+    .sort(
+      (a, b) => new Date(a.placedAt).getTime() - new Date(b.placedAt).getTime(),
+    );
+  const unpaidTotal = unpaid.reduce((s, o) => s + o.totalAmount, 0);
+  // Fully done: paid, or cancelled.
   const done = (ordersData?.orders ?? [])
-    .filter((o) => o.isDone || o.isCancelled)
+    .filter((o) => (o.isDone && o.isPaid) || o.isCancelled)
     .sort(
       (a, b) =>
         new Date(b.doneAt ?? b.placedAt).getTime() -
@@ -624,6 +633,36 @@ function AdminDashboard() {
           ))}
         </div>
       </div>
+
+      {/* ── Unpaid (to collect today) ── */}
+      {unpaid.length > 0 && (
+        <div>
+          <div className="mb-3 flex items-center gap-2 text-base font-semibold text-amber-600 dark:text-amber-400">
+            <span>Unpaid — to collect</span>
+            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-xs font-medium text-white">
+              {unpaid.length}
+            </span>
+            <span className="text-sm font-normal text-muted-foreground">
+              ৳{unpaidTotal.toLocaleString()} outstanding
+            </span>
+          </div>
+          <div className="space-y-3">
+            {unpaid.map((order) => (
+              <OrderCard
+                key={order.id}
+                order={order}
+                isNew={false}
+                onMarkPaid={
+                  isTodayDhaka(order.placedAt)
+                    ? (id) => markPaidMutation.mutate(id)
+                    : undefined
+                }
+                onShopClick={(id, name) => setShopHistory({ id, name })}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* ── Completed orders (collapsible) ── */}
       {done.length > 0 && (
