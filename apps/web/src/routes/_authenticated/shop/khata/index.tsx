@@ -27,6 +27,14 @@ interface LedgerEntry {
   createdAt?: string | null;
 }
 
+interface UnpaidOrder {
+  id: string;
+  orderNumber: number;
+  dailyNumber: number | null;
+  amount: number;
+  placedAt: string;
+}
+
 interface ShopLedger {
   shopId: string;
   shopName: string;
@@ -36,6 +44,7 @@ interface ShopLedger {
   monthOrdered: number;
   monthPaid: number;
   entries: LedgerEntry[];
+  unpaidOrders: UnpaidOrder[];
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -241,6 +250,44 @@ function ShopKhataPage() {
                 ? "overpaid — credit in your favour"
                 : "all settled ✓"}
           </p>
+        </div>
+      )}
+
+      {/* Unpaid orders (all-time) — which specific orders still need paying */}
+      {data && data.unpaidOrders.length > 0 && (
+        <div className="space-y-2">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-sm font-semibold">Unpaid orders</h2>
+            <span className="text-xs text-muted-foreground">
+              {data.unpaidOrders.length} order
+              {data.unpaidOrders.length === 1 ? "" : "s"} · ৳
+              {data.unpaidOrders
+                .reduce((s, o) => s + o.amount, 0)
+                .toLocaleString()}
+            </span>
+          </div>
+          {data.unpaidOrders.map((o) => (
+            <div
+              key={o.id}
+              className="flex items-center justify-between rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-900 dark:bg-amber-950/20"
+            >
+              <div>
+                <p className="text-sm font-medium">
+                  Order #{o.dailyNumber ?? o.orderNumber}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {new Date(o.placedAt).toLocaleDateString("en-BD", {
+                    day: "numeric",
+                    month: "short",
+                    year: "numeric",
+                  })}
+                </p>
+              </div>
+              <span className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+                ৳{o.amount.toLocaleString()}
+              </span>
+            </div>
+          ))}
         </div>
       )}
 
