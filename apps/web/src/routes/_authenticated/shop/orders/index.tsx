@@ -8,6 +8,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { OrderRef } from "@/components/order-ref";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -414,17 +415,16 @@ function OrderHistory() {
             }`}
           >
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-sm">
-                #{order.dailyNumber ?? order.orderNumber}
-              </span>
+              <OrderRef
+                className="text-sm"
+                dailyNumber={order.dailyNumber}
+                orderNumber={order.orderNumber}
+              />
               {highlightedIds.has(order.id) && (
                 <span className="animate-pulse rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-none text-primary-foreground">
                   NEW
                 </span>
               )}
-              <span className="text-[10px] text-muted-foreground">
-                Ref #{order.orderNumber}
-              </span>
               <span className="text-xs text-muted-foreground">
                 {new Date(order.placedAt).toLocaleDateString("en-GB", {
                   day: "numeric",

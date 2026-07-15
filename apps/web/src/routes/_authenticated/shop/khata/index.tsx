@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { OrderRef } from "@/components/order-ref";
 
 export const Route = createFileRoute("/_authenticated/shop/khata/")({
   component: ShopKhataPage,
@@ -23,6 +24,7 @@ interface LedgerEntry {
   credit: number | null;
   balance: number;
   orderNumber?: number;
+  dailyNumber?: number | null;
   note: string | null;
   createdAt?: string | null;
 }
@@ -321,9 +323,12 @@ function ShopKhataPage() {
                       <div className="flex items-center gap-2">
                         <Chevron open={expanded} />
                         <div>
-                          <p className="text-sm font-medium">
-                            Order #{o.dailyNumber ?? o.orderNumber}
-                          </p>
+                          <OrderRef
+                            className="text-sm"
+                            withLabel
+                            dailyNumber={o.dailyNumber}
+                            orderNumber={o.orderNumber}
+                          />
                           <p className="text-xs text-muted-foreground">
                             {new Date(o.placedAt).toLocaleDateString("en-BD", {
                               day: "numeric",
@@ -438,9 +443,14 @@ function ShopKhataPage() {
                     }`}
                   >
                     {entry.type === "order"
-                      ? `Order #${entry.orderNumber}`
+                      ? `Order #${entry.dailyNumber ?? entry.orderNumber}`
                       : "Payment received"}
                   </span>
+                  {entry.type === "order" && entry.dailyNumber != null && (
+                    <span className="text-[10px] text-muted-foreground">
+                      Ref #{entry.orderNumber}
+                    </span>
+                  )}
                   {highlightedIds.has(entry.id) && (
                     <span className="animate-pulse rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-none text-primary-foreground">
                       NEW
