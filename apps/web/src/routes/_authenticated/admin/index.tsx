@@ -346,6 +346,7 @@ function AdminDashboard() {
   const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
   const [date, setDate] = useState(todayDate);
   const [doneOpen, setDoneOpen] = useState(false);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const [confirmDoneId, setConfirmDoneId] = useState<string | null>(null);
   const [confirmCancelId, setConfirmCancelId] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState("");
@@ -604,23 +605,59 @@ function AdminDashboard() {
         </div>
       </div>
 
-      {/* ── Pending orders (top priority) ── */}
-      <div>
-        <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-          Pending Orders
+      {/* ── At-a-glance summary strip ── */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="rounded-lg border bg-card p-3">
+          <p className="text-xs text-muted-foreground">Pending</p>
+          <p className="mt-0.5 text-2xl font-bold leading-none">
+            {pending.length}
+          </p>
+          <p className="mt-1 text-[11px] text-muted-foreground">to accept</p>
+        </div>
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/20">
+          <p className="text-xs text-amber-700 dark:text-amber-400">
+            To collect
+          </p>
+          <p className="mt-0.5 text-2xl font-bold leading-none text-amber-700 dark:text-amber-300">
+            ৳{unpaidTotal.toLocaleString()}
+          </p>
+          <p className="mt-1 text-[11px] text-amber-700/70 dark:text-amber-400/70">
+            {unpaid.length} unpaid
+          </p>
+        </div>
+        <div className="rounded-lg border bg-card p-3">
+          <p className="text-xs text-muted-foreground">Completed</p>
+          <p className="mt-0.5 text-2xl font-bold leading-none">
+            {done.length}
+          </p>
+          <p className="mt-1 text-[11px] text-muted-foreground">
+            paid / cancelled
+          </p>
+        </div>
+      </div>
+
+      {/* ── Pending (needs action) ── */}
+      <section className="rounded-lg border">
+        <div className="flex items-center gap-2 border-b bg-muted/40 px-4 py-2.5">
+          <h2 className="text-sm font-semibold">Pending</h2>
           {pending.length > 0 && (
-            <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary text-primary-foreground text-xs font-bold">
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-bold text-primary-foreground">
               {pending.length}
             </span>
           )}
-        </h2>
-        {isLoading && <p className="text-muted-foreground text-sm">Loading…</p>}
-        {!isLoading && pending.length === 0 && (
-          <p className="text-muted-foreground text-sm">
-            No pending orders for this date.
-          </p>
-        )}
-        <div className="space-y-3">
+          <span className="ml-auto text-xs text-muted-foreground">
+            Mark Done to accept
+          </span>
+        </div>
+        <div className="space-y-3 p-3">
+          {isLoading && (
+            <p className="text-muted-foreground text-sm">Loading…</p>
+          )}
+          {!isLoading && pending.length === 0 && (
+            <p className="text-muted-foreground text-sm">
+              No pending orders for this date.
+            </p>
+          )}
           {pending.map((order) => (
             <OrderCard
               key={order.id}
@@ -632,21 +669,23 @@ function AdminDashboard() {
             />
           ))}
         </div>
-      </div>
+      </section>
 
       {/* ── Unpaid (to collect today) ── */}
       {unpaid.length > 0 && (
-        <div>
-          <div className="mb-3 flex items-center gap-2 text-base font-semibold text-amber-600 dark:text-amber-400">
-            <span>Unpaid — to collect</span>
-            <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-xs font-medium text-white">
+        <section className="rounded-lg border border-amber-200 dark:border-amber-900">
+          <div className="flex items-center gap-2 border-b border-amber-200 bg-amber-50 px-4 py-2.5 dark:border-amber-900 dark:bg-amber-950/20">
+            <h2 className="text-sm font-semibold text-amber-700 dark:text-amber-300">
+              To collect
+            </h2>
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1.5 text-xs font-bold text-white">
               {unpaid.length}
             </span>
-            <span className="text-sm font-normal text-muted-foreground">
+            <span className="ml-auto text-xs font-medium text-amber-700 dark:text-amber-400">
               ৳{unpaidTotal.toLocaleString()} outstanding
             </span>
           </div>
-          <div className="space-y-3">
+          <div className="space-y-3 p-3">
             {unpaid.map((order) => (
               <OrderCard
                 key={order.id}
@@ -661,24 +700,27 @@ function AdminDashboard() {
               />
             ))}
           </div>
-        </div>
+        </section>
       )}
 
-      {/* ── Completed orders (collapsible) ── */}
+      {/* ── Completed (collapsible) ── */}
       {done.length > 0 && (
-        <div>
+        <section className="rounded-lg border">
           <button
             type="button"
-            className="flex items-center gap-2 text-base font-semibold mb-3 hover:text-primary"
+            className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-semibold hover:bg-muted/40"
             onClick={() => setDoneOpen((o) => !o)}
           >
-            <span>Completed ({done.length})</span>
-            <span className="text-muted-foreground text-sm">
-              {doneOpen ? "▲" : "▼"}
+            <span>Completed</span>
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-muted px-1.5 text-xs font-medium text-muted-foreground">
+              {done.length}
+            </span>
+            <span className="ml-auto text-muted-foreground text-xs">
+              {doneOpen ? "▲ Hide" : "▼ Show"}
             </span>
           </button>
           {doneOpen && (
-            <div className="space-y-3">
+            <div className="space-y-3 border-t p-3">
               {done.map((order) => (
                 <OrderCard
                   key={order.id}
@@ -696,85 +738,96 @@ function AdminDashboard() {
               ))}
             </div>
           )}
-        </div>
+        </section>
       )}
 
-      {/* ── Analytics summary (below orders) ── */}
+      {/* ── Sales & analytics (separate from the live queue, collapsible) ── */}
       {analytics && (
-        <div className="pt-2 border-t space-y-4">
-          <h2 className="text-base font-semibold text-muted-foreground">
-            Analytics
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <StatCard title="Today" stats={analytics.today} />
-            <StatCard title="This Week" stats={analytics.week} />
-            <StatCard title="This Month" stats={analytics.month} />
-          </div>
-
-          {/* Date range picker */}
-          <div className="border rounded-lg p-4 space-y-3">
-            <p className="text-sm font-medium">Custom Date Range</p>
-            <div className="flex flex-wrap items-center gap-2">
-              <input
-                type="date"
-                value={rangeFrom}
-                onChange={(e) => setRangeFrom(e.target.value)}
-                className="border rounded px-2 py-1.5 text-sm bg-background dark:[color-scheme:dark]"
-              />
-              <span className="text-muted-foreground text-sm">to</span>
-              <input
-                type="date"
-                value={rangeTo}
-                onChange={(e) => setRangeTo(e.target.value)}
-                className="border rounded px-2 py-1.5 text-sm bg-background dark:[color-scheme:dark]"
-              />
-            </div>
-            {rangeEnabled && (
-              <div>
-                {rangeFetching ? (
-                  <p className="text-sm text-muted-foreground">Loading…</p>
-                ) : rangeData ? (
-                  <div className="space-y-2">
-                    <div className="flex gap-6">
-                      <div>
-                        <p className="text-2xl font-bold">
-                          {rangeData.count} orders
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          ৳{rangeData.revenue.toLocaleString()} revenue
-                        </p>
-                      </div>
-                    </div>
-                    {rangeData.topShops.length > 0 && (
-                      <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground font-medium">
-                          Top shops
-                        </p>
-                        {rangeData.topShops.map((s) => (
-                          <div
-                            key={s.shopName}
-                            className="flex justify-between text-sm"
-                          >
-                            <span>{s.shopName}</span>
-                            <span className="text-muted-foreground">
-                              ৳{s.revenue.toLocaleString()} · {s.orderCount}{" "}
-                              orders
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ) : null}
+        <section className="rounded-lg border">
+          <button
+            type="button"
+            className="flex w-full items-center gap-2 px-4 py-2.5 text-sm font-semibold hover:bg-muted/40"
+            onClick={() => setAnalyticsOpen((o) => !o)}
+          >
+            <span>Sales &amp; Analytics</span>
+            <span className="ml-auto text-muted-foreground text-xs">
+              {analyticsOpen ? "▲ Hide" : "▼ Show"}
+            </span>
+          </button>
+          {analyticsOpen && (
+            <div className="space-y-4 border-t p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <StatCard title="Today" stats={analytics.today} />
+                <StatCard title="This Week" stats={analytics.week} />
+                <StatCard title="This Month" stats={analytics.month} />
               </div>
-            )}
-            {rangeFrom && rangeTo && rangeFrom > rangeTo && (
-              <p className="text-sm text-destructive">
-                Start date must be before end date.
-              </p>
-            )}
-          </div>
-        </div>
+
+              {/* Date range picker */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <p className="text-sm font-medium">Custom Date Range</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="date"
+                    value={rangeFrom}
+                    onChange={(e) => setRangeFrom(e.target.value)}
+                    className="border rounded px-2 py-1.5 text-sm bg-background dark:[color-scheme:dark]"
+                  />
+                  <span className="text-muted-foreground text-sm">to</span>
+                  <input
+                    type="date"
+                    value={rangeTo}
+                    onChange={(e) => setRangeTo(e.target.value)}
+                    className="border rounded px-2 py-1.5 text-sm bg-background dark:[color-scheme:dark]"
+                  />
+                </div>
+                {rangeEnabled && (
+                  <div>
+                    {rangeFetching ? (
+                      <p className="text-sm text-muted-foreground">Loading…</p>
+                    ) : rangeData ? (
+                      <div className="space-y-2">
+                        <div className="flex gap-6">
+                          <div>
+                            <p className="text-2xl font-bold">
+                              {rangeData.count} orders
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              ৳{rangeData.revenue.toLocaleString()} revenue
+                            </p>
+                          </div>
+                        </div>
+                        {rangeData.topShops.length > 0 && (
+                          <div className="space-y-1">
+                            <p className="text-xs text-muted-foreground font-medium">
+                              Top shops
+                            </p>
+                            {rangeData.topShops.map((s) => (
+                              <div
+                                key={s.shopName}
+                                className="flex justify-between text-sm"
+                              >
+                                <span>{s.shopName}</span>
+                                <span className="text-muted-foreground">
+                                  ৳{s.revenue.toLocaleString()} · {s.orderCount}{" "}
+                                  orders
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ) : null}
+                  </div>
+                )}
+                {rangeFrom && rangeTo && rangeFrom > rangeTo && (
+                  <p className="text-sm text-destructive">
+                    Start date must be before end date.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </section>
       )}
 
       {/* Confirm mark-done dialog */}
