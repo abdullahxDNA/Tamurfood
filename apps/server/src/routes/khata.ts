@@ -211,6 +211,9 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
         balance: number;
         orderNumber?: number;
         note: string | null;
+        // When a payment was recorded (has a time-of-day, unlike the date-only
+        // paymentDate) — lets the shop ledger show the payment's time.
+        createdAt?: string;
       };
 
       // sortAt is the precise moment used to order the ledger — orders use their
@@ -238,6 +241,7 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
           debit: null,
           credit: p.amount,
           note: p.note,
+          createdAt: new Date(p.createdAt).toISOString(),
           sortAt: new Date(p.createdAt).getTime(),
         })),
       ].sort((a, b) => a.sortAt - b.sortAt);
@@ -257,6 +261,7 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
             credit: e.credit,
             orderNumber: e.orderNumber,
             note: e.note,
+            createdAt: e.createdAt,
             balance: running,
           };
         })

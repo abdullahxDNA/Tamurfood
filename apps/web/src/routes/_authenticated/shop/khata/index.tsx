@@ -18,6 +18,7 @@ interface LedgerEntry {
   balance: number;
   orderNumber?: number;
   note: string | null;
+  createdAt?: string | null;
 }
 
 interface ShopLedger {
@@ -58,12 +59,12 @@ function fmtMonthLabel(month: string) {
   });
 }
 
-// When a transaction happened. Orders carry a real timestamp, so show the time
-// too; payments are recorded against a day, so show just the date.
+// When a transaction happened. Orders carry a full timestamp. Payments have a
+// date-only business date plus a recorded-at time (createdAt) — show the date
+// from the business date and append the recorded time.
 function fmtEntryWhen(entry: LedgerEntry) {
-  const d = new Date(entry.date);
   if (entry.type === "order") {
-    return d.toLocaleString("en-BD", {
+    return new Date(entry.date).toLocaleString("en-BD", {
       day: "numeric",
       month: "short",
       year: "numeric",
@@ -71,11 +72,19 @@ function fmtEntryWhen(entry: LedgerEntry) {
       minute: "2-digit",
     });
   }
-  return d.toLocaleDateString("en-BD", {
+  const datePart = new Date(entry.date).toLocaleDateString("en-BD", {
     day: "numeric",
     month: "short",
     year: "numeric",
   });
+  if (entry.createdAt) {
+    const timePart = new Date(entry.createdAt).toLocaleTimeString("en-BD", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+    return `${datePart}, ${timePart}`;
+  }
+  return datePart;
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
