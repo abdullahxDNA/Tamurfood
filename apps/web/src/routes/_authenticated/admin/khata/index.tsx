@@ -11,6 +11,16 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/_authenticated/admin/khata/")({
   component: KhataPage,
@@ -160,6 +170,62 @@ function LedgerSheet({
     onError: (err: Error) => toast.error(err.message),
   });
 
+  const [payOpen, setPayOpen] = useState(false);
+  const [payAmount, setPayAmount] = useState("");
+  const [payDate, setPayDate] = useState(() =>
+    new Date().toISOString().slice(0, 10),
+  );
+  const [payNote, setPayNote] = useState("");
+
+  function invalidateMoney() {
+    queryClient.invalidateQueries({ queryKey: ["khata/ledger"] });
+    queryClient.invalidateQueries({ queryKey: ["khata/overview"] });
+  }
+
+  const recordPaymentMutation = useMutation({
+    mutationFn: async () => {
+      const res = await api.api.v1.admin.payments.$post({
+        json: {
+          shopId: shop!.id,
+          amount: parseInt(payAmount, 10),
+          paymentDate: payDate,
+          note: payNote || undefined,
+        },
+      });
+      if (!res.ok) {
+        const d = (await res.json()) as { error?: string };
+        throw new Error(d.error ?? "Failed to record payment");
+      }
+    },
+    onSuccess: () => {
+      invalidateMoney();
+      toast.success("Payment recorded.");
+      setPayOpen(false);
+      setPayAmount("");
+      setPayNote("");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const deletePaymentMutation = useMutation({
+    mutationFn: async (paymentId: string) => {
+      const res = await api.api.v1.admin.payments[":id"].$delete({
+        param: { id: paymentId },
+      });
+      if (!res.ok) throw new Error("Failed to delete payment");
+    },
+    onSuccess: () => {
+      invalidateMoney();
+      toast.success("Payment deleted.");
+    },
+    onError: (err: Error) => toast.error(err.message),
+  });
+
+  const amountNum = parseInt(payAmount, 10);
+  const validAmount = Number.isFinite(amountNum) && amountNum > 0;
+  const afterBalance =
+    data && validAmount ? data.outstandingBalance - amountNum : null;
+
   return (
     <Sheet open={!!shop} onOpenChange={(open) => !open && onClose()}>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
@@ -189,6 +255,9 @@ function LedgerSheet({
                   ? "overpaid"
                   : "all settled"}
             </p>
+            <Button size="sm" className="mt-3" onClick={() => setPayOpen(true)}>
+              Record Payment
+            </Button>
           </div>
         )}
 
@@ -330,25 +399,115 @@ function LedgerSheet({
                   </p>
                 )}
               </div>
-              <div className="text-right space-y-0.5">
-                <p
-                  className={
-                    entry.type === "order"
-                      ? "text-destructive font-medium"
-                      : "text-green-600 dark:text-green-400 font-medium"
-                  }
-                >
-                  {entry.type === "order"
-                    ? `+৳${entry.debit}`
-                    : `-৳${entry.credit}`}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  bal: ৳{entry.balance}
-                </p>
+              <div className="flex items-center gap-2">
+                <div className="text-right space-y-0.5">
+                  <p
+                    className={
+                      entry.type === "order"
+                        ? "text-destructive font-medium"
+                        : "text-green-600 dark:text-green-400 font-medium"
+                    }
+                  >
+                    {entry.type === "order"
+                      ? `+৳${entry.debit}`
+                      : `-৳${entry.credit}`}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    bal: ৳{entry.balance}
+                  </p>
+                </div>
+                {entry.type === "payment" && (
+                  <button
+                    type="button"
+                    className="text-xs text-muted-foreground hover:text-destructive"
+                    title="Delete this payment"
+                    disabled={deletePaymentMutation.isPending}
+                    onClick={() => {
+                      if (
+                        confirm(
+                          `Delete this ৳${entry.credit} payment? This raises the balance back.`,
+                        )
+                      )
+                        deletePaymentMutation.mutate(entry.id);
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
             </div>
           ))}
         </div>
+
+        {/* Record Payment dialog — any amount (partial or full) */}
+        <Dialog open={payOpen} onOpenChange={(o) => !o && setPayOpen(false)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Record Payment — {shop?.name}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="pay-amount">Amount (৳)</Label>
+                <Input
+                  id="pay-amount"
+                  type="number"
+                  min={1}
+                  autoFocus
+                  value={payAmount}
+                  onChange={(e) => setPayAmount(e.target.value)}
+                  placeholder="e.g. 300"
+                />
+                {data && (
+                  <p className="text-xs text-muted-foreground">
+                    Balance ৳{data.outstandingBalance.toLocaleString()}
+                    {afterBalance !== null && (
+                      <>
+                        {" "}
+                        →{" "}
+                        <span className="font-medium text-foreground">
+                          ৳{afterBalance.toLocaleString()}
+                        </span>{" "}
+                        after this
+                      </>
+                    )}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pay-date">Date</Label>
+                <Input
+                  id="pay-date"
+                  type="date"
+                  value={payDate}
+                  onChange={(e) => setPayDate(e.target.value)}
+                  className="dark:[color-scheme:dark]"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="pay-note">Note (optional)</Label>
+                <Textarea
+                  id="pay-note"
+                  rows={2}
+                  maxLength={300}
+                  value={payNote}
+                  onChange={(e) => setPayNote(e.target.value)}
+                  placeholder="e.g. weekly settlement"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setPayOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                disabled={!validAmount || recordPaymentMutation.isPending}
+                onClick={() => recordPaymentMutation.mutate()}
+              >
+                {recordPaymentMutation.isPending ? "Saving…" : "Record Payment"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </SheetContent>
     </Sheet>
   );
