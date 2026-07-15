@@ -22,6 +22,7 @@ import {
   orderEvents,
   type NewOrderEvent,
   type OrderStatusEvent,
+  type PaymentEvent,
 } from "../lib/order-events";
 
 const paymentSchema = z.object({
@@ -258,6 +259,11 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
       createdAt: now,
     });
 
+    // Notify the shop's Khata badge that a payment was recorded.
+    orderEvents.emit("payment_recorded", {
+      shopId: existing.shopId,
+    } satisfies PaymentEvent);
+
     return c.json({ isPaid: true });
   })
   // GET /analytics — today/week/month stats + top 5 shops
@@ -453,6 +459,11 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
         createdAt: new Date(),
       })
       .returning({ id: payments.id });
+
+    // Notify the shop's Khata badge that a payment was recorded.
+    orderEvents.emit("payment_recorded", {
+      shopId: body.shopId,
+    } satisfies PaymentEvent);
 
     return c.json({ id: inserted.id }, 201);
   })
