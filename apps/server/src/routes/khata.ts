@@ -179,6 +179,7 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
             date: payments.paymentDate,
             amount: payments.amount,
             note: payments.note,
+            createdAt: payments.createdAt,
           })
           .from(payments)
           .where(
@@ -212,7 +213,11 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
         note: string | null;
       };
 
-      const merged: Omit<Entry, "balance">[] = [
+      // sortAt is the precise moment used to order the ledger — orders use their
+      // placed time, payments use when they were recorded (paymentDate is only a
+      // day, so it can't order same-day entries). It's internal: dropped before
+      // the response is built.
+      const merged: (Omit<Entry, "balance"> & { sortAt: number })[] = [
         ...monthOrders.map((o) => ({
           id: o.id,
           type: "order" as const,
@@ -221,6 +226,7 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
           credit: null,
           orderNumber: o.orderNumber,
           note: o.note,
+          sortAt: o.date.getTime(),
         })),
         ...monthPayments.map((p) => ({
           id: p.id,
@@ -232,14 +238,24 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
           debit: null,
           credit: p.amount,
           note: p.note,
+          sortAt: new Date(p.createdAt).getTime(),
         })),
-      ].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      ].sort((a, b) => a.sortAt - b.sortAt);
 
-      // Compute running balance
+      // Compute running balance (oldest → newest), dropping the internal sortAt.
       let running = openingBalance;
       const entries: Entry[] = merged.map((e) => {
         running += (e.debit ?? 0) - (e.credit ?? 0);
-        return { ...e, balance: running };
+        return {
+          id: e.id,
+          type: e.type,
+          date: e.date,
+          debit: e.debit,
+          credit: e.credit,
+          orderNumber: e.orderNumber,
+          note: e.note,
+          balance: running,
+        };
       });
 
       // All the shop's still-unpaid accepted orders (any date), newest first —
