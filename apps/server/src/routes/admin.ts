@@ -18,7 +18,11 @@ import {
 } from "@tamurfood/db/schema";
 import { auth } from "../auth";
 import { requireAdmin, requireModerator, type Variables } from "../lib/helpers";
-import { orderEvents, type NewOrderEvent } from "../lib/order-events";
+import {
+  orderEvents,
+  type NewOrderEvent,
+  type OrderStatusEvent,
+} from "../lib/order-events";
 
 const paymentSchema = z.object({
   shopId: z.string().min(1),
@@ -201,6 +205,13 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
         },
         createdAt: now,
       });
+
+      // Push the status change to the shop's live tracker (instant "Accepted").
+      orderEvents.emit("order_status", {
+        orderId: id,
+        shopId: existing.shopId,
+        status: "accepted",
+      } satisfies OrderStatusEvent);
 
       return c.json({ isDone: true, paid });
     },
@@ -549,6 +560,7 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
         .select({
           isDone: orders.isDone,
           isCancelled: sql<boolean>`"orders"."is_cancelled"`,
+          shopId: orders.shopId,
         })
         .from(orders)
         .where(eq(orders.id, id))
@@ -567,6 +579,13 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
           cancelledAt: new Date(),
         })
         .where(eq(orders.id, id));
+
+      // Push the status change to the shop's live tracker (instant "Cancelled").
+      orderEvents.emit("order_status", {
+        orderId: id,
+        shopId: existing.shopId,
+        status: "cancelled",
+      } satisfies OrderStatusEvent);
 
       return c.json({ isCancelled: true });
     },

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { streamSSE } from "hono/streaming";
 import { z } from "zod";
 import { zValidator } from "../lib/validator";
 import { eq, and, desc, gte, lt, sql, inArray } from "drizzle-orm";
@@ -10,7 +11,11 @@ import {
   analyticsEvents,
 } from "@tamurfood/db/schema";
 import { requireSession, getShopForUser, type Variables } from "../lib/helpers";
-import { orderEvents, type NewOrderEvent } from "../lib/order-events";
+import {
+  orderEvents,
+  type NewOrderEvent,
+  type OrderStatusEvent,
+} from "../lib/order-events";
 
 // Thrown inside the order transaction when a tracked item loses the race for
 // its last units, so the whole order rolls back and we report which item.
@@ -266,6 +271,36 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
       })),
     });
   })
+  // GET /stream — SSE feed of this shop's order status changes, so the shop's
+  // live tracker flips to Accepted/Cancelled the instant staff act (no polling
+  // delay). Kept as a raw EventSource on the client (RPC has no streaming).
+  .get("/stream", async (c) => {
+    const authErr = requireSession(c);
+    if (authErr) return authErr;
+
+    const session = c.get("session")!;
+    const shop = await getShopForUser(session.user.id);
+    if (!shop) return c.json({ error: "Forbidden" }, 403);
+
+    return streamSSE(c, async (stream) => {
+      const handler = async (data: OrderStatusEvent) => {
+        // Only push events for this shop's own orders.
+        if (data.shopId !== shop.id) return;
+        await stream.writeSSE({
+          event: "order_status",
+          data: JSON.stringify(data),
+        });
+      };
+      orderEvents.on("order_status", handler);
+      stream.onAbort(() => {
+        orderEvents.off("order_status", handler);
+      });
+      while (true) {
+        await stream.sleep(30_000);
+        await stream.writeSSE({ event: "ping", data: "" });
+      }
+    });
+  })
   // GET / — order history for shop
   .get("/", async (c) => {
     const authErr = requireSession(c);
@@ -378,6 +413,13 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
     await db.execute(
       sql`UPDATE "orders" SET "is_cancelled" = true, "cancelled_at" = NOW() WHERE "id" = ${id}`,
     );
+
+    // Push to any other open sessions for this shop (e.g. another device).
+    orderEvents.emit("order_status", {
+      orderId: id,
+      shopId: shop.id,
+      status: "cancelled",
+    } satisfies OrderStatusEvent);
 
     return c.json({ isCancelled: true });
   });

@@ -200,10 +200,9 @@ function OrderHistory() {
         ? pages.length + 1
         : undefined,
     staleTime: 0,
-    // Poll every 5s on the "today" view so the shop sees an order flip to
-    // Ready/Cancelled within a few seconds of staff accepting/rejecting it
-    // (React Query pauses this while the tab is backgrounded).
-    refetchInterval: filter === "today" ? 5_000 : false,
+    // Status changes arrive instantly over SSE (see effect below). This poll is
+    // just a fallback for when the stream is down — hence the relaxed interval.
+    refetchInterval: filter === "today" ? 20_000 : false,
     // Refetch the moment the shop returns to the tab, so status is fresh
     // immediately instead of waiting for the next poll tick.
     refetchOnWindowFocus: true,
@@ -211,6 +210,17 @@ function OrderHistory() {
 
   // Derived from the cache — always in sync, even when returning to a filter.
   const allOrders = data?.pages.flatMap((p) => p.orders) ?? [];
+
+  // Live status via SSE: refetch the instant staff accept/cancel an order for
+  // this shop, so the tracker flips with no polling delay. EventSource
+  // auto-reconnects on drop; the poll above covers any gap.
+  useEffect(() => {
+    const source = new EventSource("/api/v1/orders/stream");
+    source.addEventListener("order_status", () => {
+      queryClient.invalidateQueries({ queryKey: ["orders"] });
+    });
+    return () => source.close();
+  }, [queryClient]);
 
   // Toast when an order transitions from pending → done
   useEffect(() => {
