@@ -92,6 +92,13 @@
       "when": 1783000240000,
       "tag": "0012_add_order_is_paid",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1783000300000,
+      "tag": "0013_add_payment_order_id",
+      "breakpoints": true
     }
   ]
 }

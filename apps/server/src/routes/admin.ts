@@ -186,6 +186,7 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
         await db.insert(payments).values({
           id: crypto.randomUUID(),
           shopId: existing.shopId,
+          orderId: id,
           amount: existing.totalAmount,
           paymentDate: now.toISOString().slice(0, 10),
           note: `Order #${existing.orderNumber}`,
@@ -253,6 +254,7 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
     await db.insert(payments).values({
       id: paymentId,
       shopId: existing.shopId,
+      orderId: id,
       amount: existing.totalAmount,
       paymentDate: now.toISOString().slice(0, 10),
       note: `Order #${existing.orderNumber}`,
