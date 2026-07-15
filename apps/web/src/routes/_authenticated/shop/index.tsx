@@ -731,93 +731,107 @@ function ShopMenu() {
       >
         <SheetContent
           side="bottom"
-          className="max-h-[85vh] overflow-y-auto"
+          // Flex column with a fixed header, a scrollable middle, and a pinned
+          // footer button — so the action button is always on screen no matter
+          // how many items are in the cart. `dvh` (not `vh`) accounts for the
+          // mobile browser toolbar, which otherwise pushes the footer off-screen.
+          className="flex max-h-[85dvh] flex-col"
           // Don't auto-focus the Note textarea on open — it pops the mobile
           // keyboard for an optional field. Keep focus on the sheet itself.
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          <SheetHeader>
+          <SheetHeader className="shrink-0">
             <SheetTitle>
               {successOrder ? "Order Placed!" : "Confirm Order"}
             </SheetTitle>
           </SheetHeader>
 
           {successOrder ? (
-            <div className="mt-4 space-y-4">
-              {priceMismatch !== null && (
-                <div className="rounded-md border border-blue-300 bg-blue-50 p-3 text-sm text-blue-800">
-                  Price updated by server: ৳{priceMismatch}
-                </div>
-              )}
-              <div className="rounded-md border bg-muted/50 p-4 text-center space-y-1">
-                <p className="text-lg font-semibold">
-                  Order #{successOrder.dailyNumber ?? successOrder.orderNumber}
-                  <span className="text-sm font-normal text-muted-foreground">
-                    {" "}
-                    · today
-                  </span>
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Ref #{successOrder.orderNumber}
-                </p>
-                <p className="text-muted-foreground">
-                  Total: ৳{successOrder.totalAmount}
-                </p>
-              </div>
-              <Button className="w-full" onClick={handleNewOrder}>
-                New Order
-              </Button>
-            </div>
-          ) : (
-            <div className="mt-4 space-y-4">
-              {/* Cart items */}
-              <div className="divide-y rounded-md border overflow-hidden">
-                {Object.entries(cart).map(([id, entry]) => (
-                  <div
-                    key={id}
-                    className="flex items-center justify-between px-4 py-2 text-sm"
-                  >
-                    <span className="font-medium">{entry.name}</span>
-                    <div className="flex items-center gap-4 text-muted-foreground">
-                      <span>×{entry.quantity}</span>
-                      <span className="tabular-nums">
-                        ৳{entry.price * entry.quantity}
-                      </span>
-                    </div>
+            <>
+              <div className="mt-4 flex-1 space-y-4 overflow-y-auto">
+                {priceMismatch !== null && (
+                  <div className="rounded-md border border-blue-300 bg-blue-50 p-3 text-sm text-blue-800">
+                    Price updated by server: ৳{priceMismatch}
                   </div>
-                ))}
-              </div>
-
-              <div className="flex items-center justify-between font-semibold text-base px-1">
-                <span>Total</span>
-                <span>৳{totalAmount}</span>
-              </div>
-
-              <Textarea
-                placeholder="Note (optional)..."
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                rows={2}
-                maxLength={500}
-              />
-
-              {mutation.isError && (
-                <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-                  {(mutation.error as Error & { status?: number })?.status ===
-                  409
-                    ? "Some items just went stock out and were removed from your cart. Please review and try again."
-                    : "Failed to place order. Please try again."}
+                )}
+                <div className="rounded-md border bg-muted/50 p-4 text-center space-y-1">
+                  <p className="text-lg font-semibold">
+                    Order #
+                    {successOrder.dailyNumber ?? successOrder.orderNumber}
+                    <span className="text-sm font-normal text-muted-foreground">
+                      {" "}
+                      · today
+                    </span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Ref #{successOrder.orderNumber}
+                  </p>
+                  <p className="text-muted-foreground">
+                    Total: ৳{successOrder.totalAmount}
+                  </p>
                 </div>
-              )}
+              </div>
+              <div className="mt-4 shrink-0 border-t pt-4">
+                <Button className="w-full" onClick={handleNewOrder}>
+                  New Order
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Scrollable middle: cart items, total, note, error */}
+              <div className="mt-4 flex-1 space-y-4 overflow-y-auto">
+                <div className="divide-y rounded-md border overflow-hidden">
+                  {Object.entries(cart).map(([id, entry]) => (
+                    <div
+                      key={id}
+                      className="flex items-center justify-between px-4 py-2 text-sm"
+                    >
+                      <span className="font-medium">{entry.name}</span>
+                      <div className="flex items-center gap-4 text-muted-foreground">
+                        <span>×{entry.quantity}</span>
+                        <span className="tabular-nums">
+                          ৳{entry.price * entry.quantity}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
 
-              <Button
-                className="w-full"
-                onClick={handleConfirmOrder}
-                disabled={mutation.isPending}
-              >
-                {mutation.isPending ? "Placing order..." : "Confirm Order"}
-              </Button>
-            </div>
+                <div className="flex items-center justify-between font-semibold text-base px-1">
+                  <span>Total</span>
+                  <span>৳{totalAmount}</span>
+                </div>
+
+                <Textarea
+                  placeholder="Note (optional)..."
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  rows={2}
+                  maxLength={500}
+                />
+
+                {mutation.isError && (
+                  <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                    {(mutation.error as Error & { status?: number })?.status ===
+                    409
+                      ? "Some items just went stock out and were removed from your cart. Please review and try again."
+                      : "Failed to place order. Please try again."}
+                  </div>
+                )}
+              </div>
+
+              {/* Pinned footer — always visible */}
+              <div className="mt-4 shrink-0 border-t pt-4">
+                <Button
+                  className="w-full"
+                  onClick={handleConfirmOrder}
+                  disabled={mutation.isPending}
+                >
+                  {mutation.isPending ? "Placing order..." : "Confirm Order"}
+                </Button>
+              </div>
+            </>
           )}
         </SheetContent>
       </Sheet>

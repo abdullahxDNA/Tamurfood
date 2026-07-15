@@ -26,3 +26,6 @@ supabase/.temp/
 # Local-only deployment notes (may contain infra values)
 DEPLOY.md
 production/
+
+# TanStack Router generated temp files
+.tanstack/
