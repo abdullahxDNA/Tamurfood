@@ -100,9 +100,20 @@ function ShopLayout() {
   // isn't currently looking at. Same per-shop SSE feed the order tracker uses.
   useEffect(() => {
     const source = new EventSource("/api/v1/orders/stream");
-    source.addEventListener("order_status", () => {
+    source.addEventListener("order_status", (e) => {
+      let status: string | undefined;
+      try {
+        status = (JSON.parse((e as MessageEvent).data) as { status?: string })
+          .status;
+      } catch {
+        /* ignore malformed payload */
+      }
       if (!pathRef.current.startsWith("/shop/orders"))
         setOrdersUnseen((n) => n + 1);
+      // An accepted order adds a debit to the khata (the shop now owes more), so
+      // the Khata tab has something new too. A cancellation doesn't change it.
+      if (status === "accepted" && !pathRef.current.startsWith("/shop/khata"))
+        setKhataUnseen((n) => n + 1);
     });
     source.addEventListener("payment_recorded", () => {
       if (!pathRef.current.startsWith("/shop/khata"))

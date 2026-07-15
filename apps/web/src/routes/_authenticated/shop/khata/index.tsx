@@ -58,10 +58,23 @@ function fmtMonthLabel(month: string) {
   });
 }
 
-function fmtDate(iso: string) {
-  return new Date(iso).toLocaleDateString("en-BD", {
+// When a transaction happened. Orders carry a real timestamp, so show the time
+// too; payments are recorded against a day, so show just the date.
+function fmtEntryWhen(entry: LedgerEntry) {
+  const d = new Date(entry.date);
+  if (entry.type === "order") {
+    return d.toLocaleString("en-BD", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+  return d.toLocaleDateString("en-BD", {
     day: "numeric",
     month: "short",
+    year: "numeric",
   });
 }
 
@@ -194,23 +207,21 @@ function ShopKhataPage() {
               key={entry.id}
               className="flex items-center justify-between rounded-lg border px-4 py-3 text-sm"
             >
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <span
-                    className={`text-xs font-medium px-1.5 py-0.5 rounded ${
-                      entry.type === "order"
-                        ? "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300"
-                        : "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300"
-                    }`}
-                  >
-                    {entry.type === "order"
-                      ? `Order #${entry.orderNumber}`
-                      : "Payment received"}
-                  </span>
-                  <span className="text-xs text-muted-foreground">
-                    {fmtDate(entry.date)}
-                  </span>
-                </div>
+              <div className="space-y-1">
+                <span
+                  className={`inline-block text-xs font-medium px-1.5 py-0.5 rounded ${
+                    entry.type === "order"
+                      ? "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300"
+                      : "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300"
+                  }`}
+                >
+                  {entry.type === "order"
+                    ? `Order #${entry.orderNumber}`
+                    : "Payment received"}
+                </span>
+                <p className="text-xs text-muted-foreground">
+                  {fmtEntryWhen(entry)}
+                </p>
                 {entry.note && (
                   <p className="text-xs text-muted-foreground italic">
                     "{entry.note}"
