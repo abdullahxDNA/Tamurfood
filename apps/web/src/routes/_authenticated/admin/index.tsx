@@ -30,6 +30,13 @@ export const Route = createFileRoute("/_authenticated/admin/")({
 function todayDate() {
   return new Date().toISOString().slice(0, 10);
 }
+// Whether an order was placed today in Bangladesh time — used to keep the
+// dashboard's "Mark Paid" button on today's orders only (older unpaid orders
+// are settled from the shop's Khata).
+function isTodayDhaka(iso: string) {
+  const fmt = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka" });
+  return fmt.format(new Date(iso)) === fmt.format(new Date());
+}
 function yesterdayDate() {
   const d = new Date();
   d.setDate(d.getDate() - 1);
@@ -638,7 +645,13 @@ function AdminDashboard() {
                   key={order.id}
                   order={order}
                   isNew={false}
-                  onMarkPaid={(id) => markPaidMutation.mutate(id)}
+                  // Mark Paid only for today's orders; older unpaid orders are
+                  // settled from the shop's Khata.
+                  onMarkPaid={
+                    isTodayDhaka(order.placedAt)
+                      ? (id) => markPaidMutation.mutate(id)
+                      : undefined
+                  }
                   onShopClick={(id, name) => setShopHistory({ id, name })}
                 />
               ))}
