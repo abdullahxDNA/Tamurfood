@@ -69,6 +69,7 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
         totalAmount: orders.totalAmount,
         note: orders.note,
         isDone: orders.isDone,
+        isPaid: sql<boolean>`"orders"."is_paid"`,
         isCancelled: sql<boolean>`"orders"."is_cancelled"`,
         placedAt: orders.placedAt,
         doneAt: orders.doneAt,
@@ -173,7 +174,7 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
 
       await db
         .update(orders)
-        .set({ isDone: true, doneAt: now })
+        .set({ isDone: true, isPaid: paid, doneAt: now })
         .where(eq(orders.id, id));
 
       if (paid) {
@@ -204,6 +205,50 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
       return c.json({ isDone: true, paid });
     },
   )
+  // PATCH /orders/:id/paid — mark an accepted-but-unpaid order as paid,
+  // recording a payment (for when a shop pays after delivery)
+  .patch("/orders/:id/paid", async (c) => {
+    const authErr = requireModerator(c);
+    if (authErr) return authErr;
+
+    const session = c.get("session")!;
+    const id = c.req.param("id");
+
+    const [existing] = await db
+      .select({
+        isDone: orders.isDone,
+        isPaid: sql<boolean>`"orders"."is_paid"`,
+        isCancelled: sql<boolean>`"orders"."is_cancelled"`,
+        shopId: orders.shopId,
+        totalAmount: orders.totalAmount,
+        orderNumber: orders.orderNumber,
+      })
+      .from(orders)
+      .where(eq(orders.id, id))
+      .limit(1);
+
+    if (!existing) return c.json({ error: "Not found" }, 404);
+    if (existing.isCancelled)
+      return c.json({ error: "Order was cancelled" }, 409);
+    if (!existing.isDone)
+      return c.json({ error: "Accept the order first" }, 409);
+    if (existing.isPaid)
+      return c.json({ error: "Order already marked paid" }, 409);
+
+    const now = new Date();
+    await db.update(orders).set({ isPaid: true }).where(eq(orders.id, id));
+    await db.insert(payments).values({
+      id: crypto.randomUUID(),
+      shopId: existing.shopId,
+      amount: existing.totalAmount,
+      paymentDate: now.toISOString().slice(0, 10),
+      note: `Order #${existing.orderNumber}`,
+      recordedBy: session.user.id,
+      createdAt: now,
+    });
+
+    return c.json({ isPaid: true });
+  })
   // GET /analytics — today/week/month stats + top 5 shops
   .get("/analytics", async (c) => {
     const authErr = requireModerator(c);
@@ -419,6 +464,7 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
         totalAmount: orders.totalAmount,
         note: orders.note,
         isDone: orders.isDone,
+        isPaid: sql<boolean>`"orders"."is_paid"`,
         isCancelled: sql<boolean>`"orders"."is_cancelled"`,
         placedAt: orders.placedAt,
         doneAt: orders.doneAt,

@@ -120,6 +120,7 @@ interface AdminOrder {
   totalAmount: number;
   note: string | null;
   isDone: boolean;
+  isPaid: boolean;
   isCancelled: boolean;
   placedAt: string;
   doneAt: string | null;
@@ -194,12 +195,14 @@ function OrderCard({
   order,
   isNew,
   onMarkDone,
+  onMarkPaid,
   onCancel,
   onShopClick,
 }: {
   order: AdminOrder;
   isNew: boolean;
   onMarkDone?: (id: string) => void;
+  onMarkPaid?: (id: string) => void;
   onCancel?: (id: string) => void;
   onShopClick: (id: string, name: string) => void;
 }) {
@@ -231,6 +234,17 @@ function OrderCard({
               {order.isDone ? "Done" : "Pending"}
             </Badge>
           )}
+          {order.isDone &&
+            !order.isCancelled &&
+            (order.isPaid ? (
+              <Badge className="border-green-400 bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-950/40 dark:text-green-300">
+                Paid
+              </Badge>
+            ) : (
+              <Badge className="border-amber-400 bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300">
+                Unpaid
+              </Badge>
+            ))}
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <span className="text-xs text-muted-foreground whitespace-nowrap">
@@ -250,6 +264,18 @@ function OrderCard({
               Cancel
             </Button>
           )}
+          {onMarkPaid &&
+            order.isDone &&
+            !order.isPaid &&
+            !order.isCancelled && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onMarkPaid(order.id)}
+              >
+                Mark Paid
+              </Button>
+            )}
         </div>
       </div>
 
@@ -471,6 +497,28 @@ function AdminDashboard() {
     },
   });
 
+  const markPaidMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await api.api.v1.admin.orders[":id"].paid.$patch({
+        param: { id },
+      });
+      if (!res.ok) {
+        const d = (await res.json()) as { error?: string };
+        throw new Error(d.error ?? "Failed to mark paid");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin/orders"] });
+      queryClient.invalidateQueries({ queryKey: ["admin/payments"] });
+      queryClient.invalidateQueries({ queryKey: ["admin/shop-orders"] });
+      toast.success("Marked as paid — payment recorded.");
+    },
+    onError: (err) => {
+      toast.error((err as Error).message);
+      queryClient.invalidateQueries({ queryKey: ["admin/orders"] });
+    },
+  });
+
   const cancelMutation = useMutation({
     mutationFn: async ({ id, reason }: { id: string; reason?: string }) => {
       const res = await api.api.v1.admin.orders[":id"].cancel.$patch({
@@ -590,6 +638,7 @@ function AdminDashboard() {
                   key={order.id}
                   order={order}
                   isNew={false}
+                  onMarkPaid={(id) => markPaidMutation.mutate(id)}
                   onShopClick={(id, name) => setShopHistory({ id, name })}
                 />
               ))}
@@ -813,6 +862,17 @@ function AdminDashboard() {
                     >
                       {order.isDone ? "Done" : "Pending"}
                     </Badge>
+                    {order.isDone && !order.isCancelled && (
+                      <Badge
+                        className={
+                          order.isPaid
+                            ? "text-xs border-green-400 bg-green-100 text-green-800 hover:bg-green-100 dark:bg-green-950/40 dark:text-green-300"
+                            : "text-xs border-amber-400 bg-amber-100 text-amber-800 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300"
+                        }
+                      >
+                        {order.isPaid ? "Paid" : "Unpaid"}
+                      </Badge>
+                    )}
                   </div>
                   <span className="text-xs text-muted-foreground">
                     {fmtDate(order.placedAt)} {fmtTime(order.placedAt)}

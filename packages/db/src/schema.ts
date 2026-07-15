@@ -112,6 +112,7 @@ export const orders = pgTable(
     totalAmount: integer("total_amount").notNull(),
     note: varchar("note", { length: 500 }),
     isDone: boolean("is_done").notNull().default(false),
+    isPaid: boolean("is_paid").notNull().default(false),
     isCancelled: boolean("is_cancelled").notNull().default(false),
     cancelReason: varchar("cancel_reason", { length: 300 }),
     placedAt: timestamp("placed_at").notNull(),
