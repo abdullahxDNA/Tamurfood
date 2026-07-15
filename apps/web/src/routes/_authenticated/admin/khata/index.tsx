@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -36,6 +37,14 @@ interface LedgerEntry {
   note: string | null;
 }
 
+interface UnpaidOrder {
+  id: string;
+  orderNumber: number;
+  dailyNumber: number | null;
+  amount: number;
+  placedAt: string;
+}
+
 interface ShopLedger {
   shopId: string;
   shopName: string;
@@ -45,6 +54,7 @@ interface ShopLedger {
   monthOrdered: number;
   monthPaid: number;
   entries: LedgerEntry[];
+  unpaidOrders: UnpaidOrder[];
 }
 
 // ─── API ─────────────────────────────────────────────────────────────────────
@@ -123,11 +133,31 @@ function LedgerSheet({
 }) {
   const [month, setMonth] = useState(currentMonth);
   const cur = currentMonth();
+  const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
     queryKey: ["khata/ledger", shop?.id, month],
     queryFn: () => fetchLedger(shop!.id, month),
     enabled: !!shop,
+  });
+
+  const markPaidMutation = useMutation({
+    mutationFn: async (orderId: string) => {
+      const res = await api.api.v1.admin.orders[":id"].paid.$patch({
+        param: { id: orderId },
+      });
+      if (!res.ok) {
+        const d = (await res.json()) as { error?: string };
+        throw new Error(d.error ?? "Failed to mark paid");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["khata/ledger"] });
+      queryClient.invalidateQueries({ queryKey: ["khata/overview"] });
+      queryClient.invalidateQueries({ queryKey: ["admin/orders"] });
+      toast.success("Order marked as paid.");
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   return (
@@ -136,6 +166,73 @@ function LedgerSheet({
         <SheetHeader>
           <SheetTitle>{shop?.name} — Khata</SheetTitle>
         </SheetHeader>
+
+        {/* Balance headline — the authoritative "what they owe" number */}
+        {data && (
+          <div className="mt-4 rounded-lg border p-4 text-center">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+              Outstanding balance
+            </p>
+            <p
+              className={`mt-1 text-3xl font-bold ${
+                data.outstandingBalance > 0
+                  ? "text-destructive"
+                  : "text-green-600 dark:text-green-400"
+              }`}
+            >
+              ৳{Math.abs(data.outstandingBalance).toLocaleString()}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {data.outstandingBalance > 0
+                ? "owed to you"
+                : data.outstandingBalance < 0
+                  ? "overpaid"
+                  : "all settled"}
+            </p>
+          </div>
+        )}
+
+        {/* Unpaid orders (any date) — settle them from here */}
+        {data && data.unpaidOrders.length > 0 && (
+          <div className="mt-4 space-y-2">
+            <h3 className="text-sm font-semibold">
+              Unpaid orders ({data.unpaidOrders.length})
+            </h3>
+            <div className="space-y-2">
+              {data.unpaidOrders.map((o) => (
+                <div
+                  key={o.id}
+                  className="flex items-center justify-between gap-2 rounded-md border border-amber-300 bg-amber-50 p-2.5 dark:border-amber-800 dark:bg-amber-950/20"
+                >
+                  <div className="min-w-0 text-sm">
+                    <span className="font-medium">
+                      #{o.dailyNumber ?? o.orderNumber}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {" "}
+                      · {fmtDate(o.placedAt)} · ৳{o.amount.toLocaleString()}
+                    </span>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="h-7 shrink-0 text-xs"
+                    disabled={markPaidMutation.isPending}
+                    onClick={() => {
+                      if (
+                        confirm(
+                          `Mark order #${o.dailyNumber ?? o.orderNumber} as paid (৳${o.amount})? This records a payment.`,
+                        )
+                      )
+                        markPaidMutation.mutate(o.id);
+                    }}
+                  >
+                    Paid
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Month navigator */}
         <div className="flex items-center justify-between mt-4 mb-3">

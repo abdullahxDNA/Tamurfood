@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "../lib/validator";
-import { eq, and, gte, lt, sql } from "drizzle-orm";
+import { eq, and, gte, lt, desc, sql } from "drizzle-orm";
 import { db } from "@tamurfood/db";
 import { orders, payments, shops } from "@tamurfood/db/schema";
 import {
@@ -242,6 +242,27 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
         return { ...e, balance: running };
       });
 
+      // All the shop's still-unpaid accepted orders (any date), newest first —
+      // so they can be settled from one place regardless of when they were made.
+      const unpaidOrders = await db
+        .select({
+          id: orders.id,
+          orderNumber: orders.orderNumber,
+          dailyNumber: orders.dailyNumber,
+          amount: orders.totalAmount,
+          placedAt: orders.placedAt,
+        })
+        .from(orders)
+        .where(
+          and(
+            eq(orders.shopId, shopId),
+            eq(orders.isDone, true),
+            eq(orders.isPaid, false),
+            eq(orders.isCancelled, false),
+          ),
+        )
+        .orderBy(desc(orders.placedAt));
+
       return c.json({
         shopId: shop.id,
         shopName: shop.shopName,
@@ -251,6 +272,7 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
         monthOrdered,
         monthPaid,
         entries,
+        unpaidOrders,
       });
     },
   );
