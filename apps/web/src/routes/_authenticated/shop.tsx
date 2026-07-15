@@ -3,14 +3,38 @@ import {
   redirect,
   Outlet,
   Link,
+  useRouter,
+  useLocation,
 } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { authClient } from "@/lib/auth-client";
-import { useRouter } from "@tanstack/react-router";
 import type { SessionUser } from "@/lib/session";
 import { Button } from "@/components/ui/button";
 import { CartProvider } from "@/lib/cart-context";
 import { useTheme } from "@/lib/theme";
+
+// Per-device unread counters for the bottom-nav notification badges. They
+// increment on live SSE events while the shop is away from that tab, and reset
+// to 0 when the shop opens it.
+const ORDERS_SEEN_KEY = "shop-unseen-orders";
+const KHATA_SEEN_KEY = "shop-unseen-khata";
+
+function loadCount(key: string): number {
+  if (typeof localStorage === "undefined") return 0;
+  const n = Number(localStorage.getItem(key));
+  return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+// Small red count badge shown over a nav icon.
+function NavBadge({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <span className="absolute -right-2 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold leading-none text-white">
+      {count > 9 ? "9+" : count}
+    </span>
+  );
+}
 
 export const Route = createFileRoute("/_authenticated/shop")({
   beforeLoad: ({ context }) => {
@@ -28,6 +52,64 @@ function ShopLayout() {
   const queryClient = useQueryClient();
   const { session } = Route.useRouteContext();
   const { theme, toggleTheme } = useTheme();
+
+  // ── Notification badges ──────────────────────────────────────────────────
+  const pathname = useLocation({ select: (l) => l.pathname });
+  const [ordersUnseen, setOrdersUnseen] = useState(() =>
+    loadCount(ORDERS_SEEN_KEY),
+  );
+  const [khataUnseen, setKhataUnseen] = useState(() =>
+    loadCount(KHATA_SEEN_KEY),
+  );
+
+  // Keep the current path readable inside the SSE callbacks below.
+  const pathRef = useRef(pathname);
+  useEffect(() => {
+    pathRef.current = pathname;
+  }, [pathname]);
+
+  // Persist the counters so badges survive a refresh.
+  useEffect(() => {
+    try {
+      localStorage.setItem(ORDERS_SEEN_KEY, String(ordersUnseen));
+    } catch {
+      /* ignore */
+    }
+  }, [ordersUnseen]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(KHATA_SEEN_KEY, String(khataUnseen));
+    } catch {
+      /* ignore */
+    }
+  }, [khataUnseen]);
+
+  // Opening a tab clears its badge. Track the previous path in state and adjust
+  // during render (guarded to avoid loops) — React's documented pattern for
+  // "adjusting state when a prop changes".
+  const [prevPath, setPrevPath] = useState(pathname);
+  if (prevPath !== pathname) {
+    setPrevPath(pathname);
+    if (pathname.startsWith("/shop/orders") && ordersUnseen !== 0)
+      setOrdersUnseen(0);
+    if (pathname.startsWith("/shop/khata") && khataUnseen !== 0)
+      setKhataUnseen(0);
+  }
+
+  // Live badge updates: bump the count when an event arrives for a tab the shop
+  // isn't currently looking at. Same per-shop SSE feed the order tracker uses.
+  useEffect(() => {
+    const source = new EventSource("/api/v1/orders/stream");
+    source.addEventListener("order_status", () => {
+      if (!pathRef.current.startsWith("/shop/orders"))
+        setOrdersUnseen((n) => n + 1);
+    });
+    source.addEventListener("payment_recorded", () => {
+      if (!pathRef.current.startsWith("/shop/khata"))
+        setKhataUnseen((n) => n + 1);
+    });
+    return () => source.close();
+  }, []);
 
   async function handleLogout() {
     await authClient.signOut();
@@ -96,23 +178,26 @@ function ShopLayout() {
             activeProps={{ className: "text-foreground" }}
             inactiveProps={{ className: "text-muted-foreground" }}
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-              <line x1="16" y1="13" x2="8" y2="13" />
-              <line x1="16" y1="17" x2="8" y2="17" />
-              <polyline points="10 9 9 9 8 9" />
-            </svg>
+            <span className="relative">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+                <polyline points="10 9 9 9 8 9" />
+              </svg>
+              <NavBadge count={ordersUnseen} />
+            </span>
             Orders
           </Link>
           <Link
@@ -121,21 +206,24 @@ function ShopLayout() {
             activeProps={{ className: "text-foreground" }}
             inactiveProps={{ className: "text-muted-foreground" }}
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <rect x="2" y="3" width="20" height="14" rx="2" />
-              <line x1="8" y1="21" x2="16" y2="21" />
-              <line x1="12" y1="17" x2="12" y2="21" />
-            </svg>
+            <span className="relative">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <rect x="2" y="3" width="20" height="14" rx="2" />
+                <line x1="8" y1="21" x2="16" y2="21" />
+                <line x1="12" y1="17" x2="12" y2="21" />
+              </svg>
+              <NavBadge count={khataUnseen} />
+            </span>
             Khata
           </Link>
           <Link

@@ -15,6 +15,7 @@ import {
   orderEvents,
   type NewOrderEvent,
   type OrderStatusEvent,
+  type PaymentEvent,
 } from "../lib/order-events";
 
 // Thrown inside the order transaction when a tracked item loses the race for
@@ -283,7 +284,7 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
     if (!shop) return c.json({ error: "Forbidden" }, 403);
 
     return streamSSE(c, async (stream) => {
-      const handler = async (data: OrderStatusEvent) => {
+      const statusHandler = async (data: OrderStatusEvent) => {
         // Only push events for this shop's own orders.
         if (data.shopId !== shop.id) return;
         await stream.writeSSE({
@@ -291,9 +292,18 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
           data: JSON.stringify(data),
         });
       };
-      orderEvents.on("order_status", handler);
+      const paymentHandler = async (data: PaymentEvent) => {
+        if (data.shopId !== shop.id) return;
+        await stream.writeSSE({
+          event: "payment_recorded",
+          data: JSON.stringify(data),
+        });
+      };
+      orderEvents.on("order_status", statusHandler);
+      orderEvents.on("payment_recorded", paymentHandler);
       stream.onAbort(() => {
-        orderEvents.off("order_status", handler);
+        orderEvents.off("order_status", statusHandler);
+        orderEvents.off("payment_recorded", paymentHandler);
       });
       while (true) {
         await stream.sleep(30_000);

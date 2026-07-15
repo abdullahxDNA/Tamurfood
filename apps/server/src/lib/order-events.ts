@@ -19,3 +19,9 @@ export type OrderStatusEvent = {
   shopId: string;
   status: "accepted" | "cancelled";
 };
+
+// Emitted when the bakery records a payment against a shop's khata (manual
+// entry or marking an order paid). Powers the shop's Khata notification badge.
+export type PaymentEvent = {
+  shopId: string;
+};
