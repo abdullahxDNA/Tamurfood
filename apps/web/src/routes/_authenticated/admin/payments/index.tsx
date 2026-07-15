@@ -150,7 +150,16 @@ function PaymentsPage() {
           <TableBody>
             {payments.map((p) => (
               <TableRow key={p.id}>
-                <TableCell>{p.paymentDate}</TableCell>
+                <TableCell>
+                  <div>{p.paymentDate}</div>
+                  <div className="text-xs text-muted-foreground">
+                    recorded{" "}
+                    {new Date(p.createdAt).toLocaleTimeString("en-BD", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </div>
+                </TableCell>
                 <TableCell>{p.shopName}</TableCell>
                 <TableCell>৳{p.amount.toLocaleString()}</TableCell>
                 <TableCell className="text-muted-foreground">

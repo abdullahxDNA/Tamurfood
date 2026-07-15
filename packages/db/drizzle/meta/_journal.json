@@ -85,6 +85,13 @@
       "when": 1783000180000,
       "tag": "0011_add_menu_item_visibility",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1783000240000,
+      "tag": "0012_add_order_is_paid",
+      "breakpoints": true
     }
   ]
 }
