@@ -748,7 +748,7 @@ function ShopMenu() {
 
           {successOrder ? (
             <>
-              <div className="mt-4 flex-1 space-y-4 overflow-y-auto">
+              <div className="mt-4 flex-1 space-y-4 overflow-y-auto px-4">
                 {priceMismatch !== null && (
                   <div className="rounded-md border border-blue-300 bg-blue-50 p-3 text-sm text-blue-800">
                     Price updated by server: ৳{priceMismatch}
@@ -771,7 +771,7 @@ function ShopMenu() {
                   </p>
                 </div>
               </div>
-              <div className="mt-4 shrink-0 border-t pt-4">
+              <div className="mt-4 shrink-0 border-t px-4 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+2rem)]">
                 <Button className="w-full" onClick={handleNewOrder}>
                   New Order
                 </Button>
@@ -780,7 +780,7 @@ function ShopMenu() {
           ) : (
             <>
               {/* Scrollable middle: cart items, total, note, error */}
-              <div className="mt-4 flex-1 space-y-4 overflow-y-auto">
+              <div className="mt-4 flex-1 space-y-4 overflow-y-auto px-4">
                 <div className="divide-y rounded-md border overflow-hidden">
                   {Object.entries(cart).map(([id, entry]) => (
                     <div
@@ -821,8 +821,9 @@ function ShopMenu() {
                 )}
               </div>
 
-              {/* Pinned footer — always visible */}
-              <div className="mt-4 shrink-0 border-t pt-4">
+              {/* Pinned footer — always visible, lifted clear of the screen's
+                  bottom edge (safe-area inset + extra breathing room). */}
+              <div className="mt-4 shrink-0 border-t px-4 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+2rem)]">
                 <Button
                   className="w-full"
                   onClick={handleConfirmOrder}
