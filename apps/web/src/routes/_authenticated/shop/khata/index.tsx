@@ -92,23 +92,60 @@ function ShopKhataPage() {
     enabled: !!myShop,
   });
 
+  const owe = data?.outstandingBalance ?? 0;
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <h1 className="text-2xl font-bold">Khata</h1>
+
+      {(!myShop || isLoading) && (
+        <p className="text-muted-foreground text-sm">Loading…</p>
+      )}
+
+      {/* Balance hero — the number the shop cares about most (all-time). */}
+      {data && (
+        <div
+          className={`rounded-xl border p-5 text-center ${
+            owe > 0
+              ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/20"
+              : "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/20"
+          }`}
+        >
+          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            Your balance
+          </p>
+          <p
+            className={`mt-1 text-4xl font-bold ${
+              owe > 0
+                ? "text-red-600 dark:text-red-400"
+                : "text-green-600 dark:text-green-400"
+            }`}
+          >
+            ৳{Math.abs(owe).toLocaleString()}
+          </p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {owe > 0
+              ? "you owe the bakery"
+              : owe < 0
+                ? "overpaid — credit in your favour"
+                : "all settled ✓"}
+          </p>
+        </div>
+      )}
 
       {/* Month navigator */}
       <div className="flex items-center justify-between">
         <button
           type="button"
-          className="text-sm px-3 py-1.5 rounded border hover:bg-accent"
+          className="text-sm px-3 py-1.5 rounded-full border hover:bg-accent"
           onClick={() => setMonth(prevMonth(month))}
         >
           ‹ Prev
         </button>
-        <span className="text-sm font-medium">{fmtMonthLabel(month)}</span>
+        <span className="text-sm font-semibold">{fmtMonthLabel(month)}</span>
         <button
           type="button"
-          className="text-sm px-3 py-1.5 rounded border hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed"
+          className="text-sm px-3 py-1.5 rounded-full border hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed"
           onClick={() => setMonth(nextMonth(month))}
           disabled={month >= cur}
         >
@@ -116,104 +153,90 @@ function ShopKhataPage() {
         </button>
       </div>
 
-      {/* Summary card */}
+      {/* This month at a glance */}
       {data && (
-        <div className="rounded-lg border p-4 space-y-2 text-sm">
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Ordered this month</span>
-            <span className="font-medium">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-lg border bg-card p-3">
+            <p className="text-xs text-muted-foreground">Ordered this month</p>
+            <p className="mt-0.5 text-xl font-bold">
               ৳{data.monthOrdered.toLocaleString()}
-            </span>
+            </p>
           </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Paid this month</span>
-            <span className="font-medium text-green-600">
+          <div className="rounded-lg border bg-card p-3">
+            <p className="text-xs text-muted-foreground">Paid this month</p>
+            <p className="mt-0.5 text-xl font-bold text-green-600 dark:text-green-400">
               ৳{data.monthPaid.toLocaleString()}
-            </span>
-          </div>
-          <div className="border-t pt-2 flex justify-between font-semibold text-base">
-            <span>Balance due</span>
-            <span
-              className={
-                data.outstandingBalance > 0
-                  ? "text-destructive"
-                  : "text-green-600"
-              }
-            >
-              {data.outstandingBalance > 0
-                ? `You owe ৳${data.outstandingBalance.toLocaleString()}`
-                : data.outstandingBalance < 0
-                  ? `Overpaid ৳${Math.abs(data.outstandingBalance).toLocaleString()}`
-                  : "Settled ✓"}
-            </span>
+            </p>
           </div>
         </div>
       )}
 
-      {(!myShop || isLoading) && (
-        <p className="text-muted-foreground text-sm">Loading…</p>
-      )}
+      {/* Transactions */}
+      {data && (
+        <div className="space-y-2">
+          <div className="flex items-baseline justify-between">
+            <h2 className="text-sm font-semibold">Transactions</h2>
+            {data.openingBalance !== 0 && data.entries.length > 0 && (
+              <span className="text-xs text-muted-foreground">
+                Opening: ৳{data.openingBalance.toLocaleString()}
+              </span>
+            )}
+          </div>
 
-      {data?.entries.length === 0 && (
-        <p className="text-muted-foreground text-sm">
-          No transactions this month.
-        </p>
-      )}
+          {data.entries.length === 0 && (
+            <p className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
+              No transactions this month.
+            </p>
+          )}
 
-      {/* Opening balance note */}
-      {data && data.openingBalance !== 0 && data.entries.length > 0 && (
-        <p className="text-xs text-center text-muted-foreground">
-          Opening balance: ৳{data.openingBalance.toLocaleString()}
-        </p>
-      )}
-
-      {/* Ledger entries */}
-      <div className="space-y-2">
-        {data?.entries.map((entry) => (
-          <div
-            key={entry.id}
-            className="flex items-center justify-between rounded-lg border px-4 py-3 text-sm"
-          >
-            <div className="space-y-0.5">
-              <div className="flex items-center gap-2">
-                <span
-                  className={`text-xs font-medium px-1.5 py-0.5 rounded ${
+          {data.entries.map((entry) => (
+            <div
+              key={entry.id}
+              className="flex items-center justify-between rounded-lg border px-4 py-3 text-sm"
+            >
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-xs font-medium px-1.5 py-0.5 rounded ${
+                      entry.type === "order"
+                        ? "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300"
+                        : "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300"
+                    }`}
+                  >
+                    {entry.type === "order"
+                      ? `Order #${entry.orderNumber}`
+                      : "Payment received"}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    {fmtDate(entry.date)}
+                  </span>
+                </div>
+                {entry.note && (
+                  <p className="text-xs text-muted-foreground italic">
+                    "{entry.note}"
+                  </p>
+                )}
+              </div>
+              <div className="text-right space-y-0.5">
+                <p
+                  className={`font-medium ${
                     entry.type === "order"
-                      ? "bg-orange-100 text-orange-700"
-                      : "bg-green-100 text-green-700"
+                      ? "text-red-600 dark:text-red-400"
+                      : "text-green-600 dark:text-green-400"
                   }`}
                 >
                   {entry.type === "order"
-                    ? `Order #${entry.orderNumber}`
-                    : "Payment received"}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {fmtDate(entry.date)}
-                </span>
-              </div>
-              {entry.note && (
-                <p className="text-xs text-muted-foreground italic">
-                  "{entry.note}"
+                    ? `+৳${entry.debit}`
+                    : `−৳${entry.credit}`}
                 </p>
-              )}
+                <p className="text-xs text-muted-foreground">
+                  bal: ৳{entry.balance.toLocaleString()}
+                </p>
+              </div>
             </div>
-            <div className="text-right space-y-0.5">
-              <p
-                className={`font-medium ${
-                  entry.type === "order" ? "text-destructive" : "text-green-600"
-                }`}
-              >
-                {entry.type === "order"
-                  ? `+৳${entry.debit}`
-                  : `-৳${entry.credit}`}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                bal: ৳{entry.balance}
-              </p>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
