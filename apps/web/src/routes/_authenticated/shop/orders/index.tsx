@@ -199,9 +199,14 @@ function OrderHistory() {
       pages.length * lastPage.pageSize < lastPage.total
         ? pages.length + 1
         : undefined,
-    staleTime: 30 * 1000,
-    // Poll every 20s on "today" view so shop sees when orders flip to done
-    refetchInterval: filter === "today" ? 20_000 : false,
+    staleTime: 0,
+    // Poll every 5s on the "today" view so the shop sees an order flip to
+    // Ready/Cancelled within a few seconds of staff accepting/rejecting it
+    // (React Query pauses this while the tab is backgrounded).
+    refetchInterval: filter === "today" ? 5_000 : false,
+    // Refetch the moment the shop returns to the tab, so status is fresh
+    // immediately instead of waiting for the next poll tick.
+    refetchOnWindowFocus: true,
   });
 
   // Derived from the cache — always in sync, even when returning to a filter.
