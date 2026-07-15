@@ -126,7 +126,7 @@ function StepNode({
   );
 }
 
-// Live status of a shop's order. Two real milestones (Placed → Ready) plus a
+// Live status of a shop's order. Two real milestones (Placed → Accepted) plus a
 // terminal Cancelled state — matching the staff's single "Mark Done" action.
 function OrderStatusTracker({
   isDone,
@@ -158,12 +158,12 @@ function OrderStatusTracker({
         <StepNode
           done={isDone}
           pending={!isDone}
-          label={isDone ? "Ready" : "Preparing"}
+          label={isDone ? "Accepted" : "Waiting"}
         />
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
         {isDone
-          ? "✅ Accepted by the bakery — ready for pickup."
+          ? "✅ Accepted — your food will be delivered in a few minutes."
           : "⏳ Waiting for the bakery to accept your order…"}
       </p>
     </div>
@@ -221,7 +221,9 @@ function OrderHistory() {
     if (!isFirstLoadRef.current) {
       for (const order of orders) {
         if (prev.get(order.id) === false && order.isDone) {
-          toast.success(`Order #${order.orderNumber} is ready for pickup!`);
+          toast.success(
+            `Order #${order.orderNumber} accepted — food will be delivered in a few minutes!`,
+          );
         }
       }
     }
