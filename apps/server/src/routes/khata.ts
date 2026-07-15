@@ -1,9 +1,9 @@
 import { Hono } from "hono";
 import { z } from "zod";
 import { zValidator } from "../lib/validator";
-import { eq, and, gte, lt, desc, sql } from "drizzle-orm";
+import { eq, and, gte, lt, desc, sql, inArray } from "drizzle-orm";
 import { db } from "@tamurfood/db";
-import { orders, payments, shops } from "@tamurfood/db/schema";
+import { orders, orderItems, payments, shops } from "@tamurfood/db/schema";
 import {
   requireAdmin,
   requireSession,
@@ -269,7 +269,7 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
 
       // All the shop's still-unpaid accepted orders (any date), newest first —
       // so they can be settled from one place regardless of when they were made.
-      const unpaidOrders = await db
+      const unpaidRows = await db
         .select({
           id: orders.id,
           orderNumber: orders.orderNumber,
@@ -287,6 +287,35 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
           ),
         )
         .orderBy(desc(orders.placedAt));
+
+      // Attach line items so the shop can expand an unpaid order to see what's
+      // in it.
+      const unpaidItems =
+        unpaidRows.length > 0
+          ? await db
+              .select({
+                orderId: orderItems.orderId,
+                itemName: orderItems.itemName,
+                quantity: orderItems.quantity,
+                lineTotal: orderItems.lineTotal,
+              })
+              .from(orderItems)
+              .where(
+                inArray(
+                  orderItems.orderId,
+                  unpaidRows.map((o) => o.id),
+                ),
+              )
+          : [];
+      const itemsByOrder = new Map<string, typeof unpaidItems>();
+      for (const it of unpaidItems) {
+        if (!itemsByOrder.has(it.orderId)) itemsByOrder.set(it.orderId, []);
+        itemsByOrder.get(it.orderId)!.push(it);
+      }
+      const unpaidOrders = unpaidRows.map((o) => ({
+        ...o,
+        items: itemsByOrder.get(o.id) ?? [],
+      }));
 
       return c.json({
         shopId: shop.id,
