@@ -19,9 +19,12 @@ import { useTheme } from "@/lib/theme";
 // to 0 when the shop opens it.
 const ORDERS_SEEN_KEY = "shop-unseen-orders";
 const KHATA_SEEN_KEY = "shop-unseen-khata";
-// IDs of orders that changed while the shop was away from the Orders tab. The
-// Orders page reads these on open to flash a "NEW" marker (see it there).
+// IDs of items that changed while the shop was away from that tab. The tab's
+// page reads these on open to flash a "NEW" marker on the affected rows — for
+// Orders these are order IDs, for Khata they are ledger-row IDs (order or
+// payment IDs). They persist until the tab is opened (never expire while away).
 const NEW_ORDERS_KEY = "shop-new-orders";
+const NEW_KHATA_KEY = "shop-new-khata";
 
 function loadCount(key: string): number {
   if (typeof localStorage === "undefined") return 0;
@@ -29,12 +32,12 @@ function loadCount(key: string): number {
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
-function stashNewOrderId(id: string) {
+function stashNewId(key: string, id: string) {
   try {
-    const raw = localStorage.getItem(NEW_ORDERS_KEY);
+    const raw = localStorage.getItem(key);
     const ids = new Set<string>(raw ? (JSON.parse(raw) as string[]) : []);
     ids.add(id);
-    localStorage.setItem(NEW_ORDERS_KEY, JSON.stringify([...ids]));
+    localStorage.setItem(key, JSON.stringify([...ids]));
   } catch {
     /* ignore */
   }
@@ -130,16 +133,31 @@ function ShopLayout() {
       if (!pathRef.current.startsWith("/shop/orders")) {
         setOrdersUnseen((n) => n + 1);
         // Remember it so the Orders page can flash a "NEW" marker when opened.
-        if (orderId) stashNewOrderId(orderId);
+        if (orderId) stashNewId(NEW_ORDERS_KEY, orderId);
       }
       // An accepted order adds a debit to the khata (the shop now owes more), so
-      // the Khata tab has something new too. A cancellation doesn't change it.
-      if (status === "accepted" && !pathRef.current.startsWith("/shop/khata"))
+      // the Khata tab has something new too — its ledger row's id is the order id.
+      // A cancellation doesn't change the khata.
+      if (status === "accepted" && !pathRef.current.startsWith("/shop/khata")) {
         setKhataUnseen((n) => n + 1);
+        if (orderId) stashNewId(NEW_KHATA_KEY, orderId);
+      }
     });
-    source.addEventListener("payment_recorded", () => {
-      if (!pathRef.current.startsWith("/shop/khata"))
+    source.addEventListener("payment_recorded", (e) => {
+      let paymentId: string | undefined;
+      try {
+        paymentId = (
+          JSON.parse((e as MessageEvent).data) as {
+            paymentId?: string;
+          }
+        ).paymentId;
+      } catch {
+        /* ignore malformed payload */
+      }
+      if (!pathRef.current.startsWith("/shop/khata")) {
         setKhataUnseen((n) => n + 1);
+        if (paymentId) stashNewId(NEW_KHATA_KEY, paymentId);
+      }
     });
     return () => source.close();
   }, []);

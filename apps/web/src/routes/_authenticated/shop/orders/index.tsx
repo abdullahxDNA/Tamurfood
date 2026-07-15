@@ -173,7 +173,8 @@ function OrderStatusTracker({
 // Must match the key the shop layout writes to (see shop.tsx). Holds IDs of
 // orders that changed while the shop was away, so they can be flashed as "NEW".
 const NEW_ORDERS_KEY = "shop-new-orders";
-const NEW_MARKER_MS = 5000;
+// How long a "NEW" marker lingers after the shop sees it, then clears.
+const NEW_MARKER_MS = 10000;
 
 function OrderHistory() {
   const { setQty } = useCart();

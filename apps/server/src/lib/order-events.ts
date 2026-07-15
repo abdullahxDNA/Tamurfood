@@ -21,7 +21,9 @@ export type OrderStatusEvent = {
 };
 
 // Emitted when the bakery records a payment against a shop's khata (manual
-// entry or marking an order paid). Powers the shop's Khata notification badge.
+// entry or marking an order paid). Powers the shop's Khata notification badge
+// and the "NEW" marker on the freshly-added ledger row (paymentId).
 export type PaymentEvent = {
   shopId: string;
+  paymentId: string;
 };

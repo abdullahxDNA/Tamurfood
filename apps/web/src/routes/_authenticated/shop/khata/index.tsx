@@ -1,11 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 
 export const Route = createFileRoute("/_authenticated/shop/khata/")({
   component: ShopKhataPage,
 });
+
+// Must match the key the shop layout writes to (see shop.tsx). Holds ledger-row
+// IDs (order or payment IDs) that changed while the shop was away from Khata.
+const NEW_KHATA_KEY = "shop-new-khata";
+// How long a "NEW" marker lingers after the shop sees it, then clears.
+const NEW_MARKER_MS = 10000;
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -102,6 +108,7 @@ function ShopKhataPage() {
     },
   });
 
+  const queryClient = useQueryClient();
   const { data, isLoading } = useQuery({
     queryKey: ["khata/ledger/me", myShop?.shopId, month],
     queryFn: async () => {
@@ -113,6 +120,88 @@ function ShopKhataPage() {
     },
     enabled: !!myShop,
   });
+
+  // Ledger rows that changed recently get a "NEW" marker, lingering a few
+  // seconds after the shop sees them (on open, or live while on this page).
+  const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
+  const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+    new Map(),
+  );
+  const markNew = useCallback((id: string) => {
+    setHighlightedIds((prev) => new Set(prev).add(id));
+    const timers = timersRef.current;
+    const existing = timers.get(id);
+    if (existing) clearTimeout(existing);
+    timers.set(
+      id,
+      setTimeout(() => {
+        setHighlightedIds((prev) => {
+          const next = new Set(prev);
+          next.delete(id);
+          return next;
+        });
+        timers.delete(id);
+      }, NEW_MARKER_MS),
+    );
+  }, []);
+
+  useEffect(() => {
+    const timers = timersRef.current;
+    return () => {
+      timers.forEach((t) => clearTimeout(t));
+      timers.clear();
+    };
+  }, []);
+
+  // On open, flash rows that changed while the shop was on another tab.
+  useEffect(() => {
+    let ids: string[] = [];
+    try {
+      const raw = localStorage.getItem(NEW_KHATA_KEY);
+      if (!raw) return;
+      localStorage.removeItem(NEW_KHATA_KEY);
+      ids = JSON.parse(raw) as string[];
+    } catch {
+      return;
+    }
+    const t = setTimeout(() => {
+      for (const id of ids) markNew(id);
+    }, 0);
+    return () => clearTimeout(t);
+  }, [markNew]);
+
+  // Live: when staff accept an order or record a payment for this shop, refetch
+  // the ledger and flash the new row. Accepted order → row id is the order id;
+  // payment → row id is the payment id.
+  useEffect(() => {
+    const source = new EventSource("/api/v1/orders/stream");
+    const refetchAndMark = (id?: string) => {
+      queryClient.invalidateQueries({ queryKey: ["khata/ledger/me"] });
+      if (id) markNew(id);
+    };
+    source.addEventListener("order_status", (e) => {
+      try {
+        const p = JSON.parse((e as MessageEvent).data) as {
+          status?: string;
+          orderId?: string;
+        };
+        if (p.status === "accepted") refetchAndMark(p.orderId);
+      } catch {
+        /* ignore */
+      }
+    });
+    source.addEventListener("payment_recorded", (e) => {
+      try {
+        const { paymentId } = JSON.parse((e as MessageEvent).data) as {
+          paymentId?: string;
+        };
+        refetchAndMark(paymentId);
+      } catch {
+        /* ignore */
+      }
+    });
+    return () => source.close();
+  }, [queryClient, markNew]);
 
   const owe = data?.outstandingBalance ?? 0;
 
@@ -214,20 +303,31 @@ function ShopKhataPage() {
           {data.entries.map((entry) => (
             <div
               key={entry.id}
-              className="flex items-center justify-between rounded-lg border px-4 py-3 text-sm"
+              className={`flex items-center justify-between rounded-lg border px-4 py-3 text-sm transition-all ${
+                highlightedIds.has(entry.id)
+                  ? "ring-2 ring-primary bg-primary/5"
+                  : ""
+              }`}
             >
               <div className="space-y-1">
-                <span
-                  className={`inline-block text-xs font-medium px-1.5 py-0.5 rounded ${
-                    entry.type === "order"
-                      ? "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300"
-                      : "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300"
-                  }`}
-                >
-                  {entry.type === "order"
-                    ? `Order #${entry.orderNumber}`
-                    : "Payment received"}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`inline-block text-xs font-medium px-1.5 py-0.5 rounded ${
+                      entry.type === "order"
+                        ? "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300"
+                        : "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300"
+                    }`}
+                  >
+                    {entry.type === "order"
+                      ? `Order #${entry.orderNumber}`
+                      : "Payment received"}
+                  </span>
+                  {highlightedIds.has(entry.id) && (
+                    <span className="animate-pulse rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-none text-primary-foreground">
+                      NEW
+                    </span>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   {fmtEntryWhen(entry)}
                 </p>
