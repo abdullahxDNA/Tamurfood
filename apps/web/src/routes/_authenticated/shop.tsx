@@ -19,11 +19,25 @@ import { useTheme } from "@/lib/theme";
 // to 0 when the shop opens it.
 const ORDERS_SEEN_KEY = "shop-unseen-orders";
 const KHATA_SEEN_KEY = "shop-unseen-khata";
+// IDs of orders that changed while the shop was away from the Orders tab. The
+// Orders page reads these on open to flash a "NEW" marker (see it there).
+const NEW_ORDERS_KEY = "shop-new-orders";
 
 function loadCount(key: string): number {
   if (typeof localStorage === "undefined") return 0;
   const n = Number(localStorage.getItem(key));
   return Number.isFinite(n) && n > 0 ? n : 0;
+}
+
+function stashNewOrderId(id: string) {
+  try {
+    const raw = localStorage.getItem(NEW_ORDERS_KEY);
+    const ids = new Set<string>(raw ? (JSON.parse(raw) as string[]) : []);
+    ids.add(id);
+    localStorage.setItem(NEW_ORDERS_KEY, JSON.stringify([...ids]));
+  } catch {
+    /* ignore */
+  }
 }
 
 // Small red count badge shown over a nav icon.
@@ -102,14 +116,22 @@ function ShopLayout() {
     const source = new EventSource("/api/v1/orders/stream");
     source.addEventListener("order_status", (e) => {
       let status: string | undefined;
+      let orderId: string | undefined;
       try {
-        status = (JSON.parse((e as MessageEvent).data) as { status?: string })
-          .status;
+        const p = JSON.parse((e as MessageEvent).data) as {
+          status?: string;
+          orderId?: string;
+        };
+        status = p.status;
+        orderId = p.orderId;
       } catch {
         /* ignore malformed payload */
       }
-      if (!pathRef.current.startsWith("/shop/orders"))
+      if (!pathRef.current.startsWith("/shop/orders")) {
         setOrdersUnseen((n) => n + 1);
+        // Remember it so the Orders page can flash a "NEW" marker when opened.
+        if (orderId) stashNewOrderId(orderId);
+      }
       // An accepted order adds a debit to the khata (the shop now owes more), so
       // the Khata tab has something new too. A cancellation doesn't change it.
       if (status === "accepted" && !pathRef.current.startsWith("/shop/khata"))
