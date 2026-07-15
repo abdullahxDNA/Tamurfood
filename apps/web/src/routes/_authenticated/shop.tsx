@@ -170,7 +170,7 @@ function ShopLayout() {
 
   return (
     <CartProvider>
-      <div className="min-h-screen overflow-x-clip pb-16">
+      <div className="min-h-screen overflow-x-clip pb-[calc(4rem+env(safe-area-inset-bottom))]">
         <header className="border-b px-6 py-4 flex items-center justify-between gap-3">
           <span className="text-lg font-extrabold tracking-tight whitespace-nowrap">
             তামুরফুড <span className="text-muted-foreground">·</span> Tamurfood
@@ -200,11 +200,14 @@ function ShopLayout() {
           <Outlet />
         </main>
         {/* Bottom navigation */}
-        <nav className="fixed bottom-0 left-0 right-0 border-t bg-background flex h-16">
+        <nav
+          aria-label="Primary"
+          className="fixed inset-x-0 bottom-0 z-40 box-content flex h-16 border-t bg-background pb-[env(safe-area-inset-bottom)]"
+        >
           <Link
             to="/shop"
-            className="flex-1 flex flex-col items-center justify-center gap-1 text-xs font-medium transition-colors"
-            activeProps={{ className: "text-foreground" }}
+            className="flex-1 flex flex-col items-center justify-center gap-1 text-xs font-medium transition-colors select-none active:bg-muted/50"
+            activeProps={{ className: "text-primary", "aria-current": "page" }}
             inactiveProps={{ className: "text-muted-foreground" }}
           >
             <svg
@@ -225,8 +228,8 @@ function ShopLayout() {
           </Link>
           <Link
             to="/shop/orders"
-            className="flex-1 flex flex-col items-center justify-center gap-1 text-xs font-medium transition-colors"
-            activeProps={{ className: "text-foreground" }}
+            className="flex-1 flex flex-col items-center justify-center gap-1 text-xs font-medium transition-colors select-none active:bg-muted/50"
+            activeProps={{ className: "text-primary", "aria-current": "page" }}
             inactiveProps={{ className: "text-muted-foreground" }}
           >
             <span className="relative">
@@ -253,8 +256,8 @@ function ShopLayout() {
           </Link>
           <Link
             to="/shop/khata"
-            className="flex-1 flex flex-col items-center justify-center gap-1 text-xs font-medium transition-colors"
-            activeProps={{ className: "text-foreground" }}
+            className="flex-1 flex flex-col items-center justify-center gap-1 text-xs font-medium transition-colors select-none active:bg-muted/50"
+            activeProps={{ className: "text-primary", "aria-current": "page" }}
             inactiveProps={{ className: "text-muted-foreground" }}
           >
             <span className="relative">
@@ -279,8 +282,8 @@ function ShopLayout() {
           </Link>
           <Link
             to="/shop/profile"
-            className="flex-1 flex flex-col items-center justify-center gap-1 text-xs font-medium transition-colors"
-            activeProps={{ className: "text-foreground" }}
+            className="flex-1 flex flex-col items-center justify-center gap-1 text-xs font-medium transition-colors select-none active:bg-muted/50"
+            activeProps={{ className: "text-primary", "aria-current": "page" }}
             inactiveProps={{ className: "text-muted-foreground" }}
           >
             <svg
