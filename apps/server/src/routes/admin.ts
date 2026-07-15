@@ -273,27 +273,21 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
           revenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)::int`,
         })
         .from(orders)
-        .where(
-          and(gte(orders.placedAt, todayStart), eq(orders.isCancelled, false)),
-        ),
+        .where(and(gte(orders.placedAt, todayStart), eq(orders.isDone, true))),
       db
         .select({
           count: sql<number>`count(*)::int`,
           revenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)::int`,
         })
         .from(orders)
-        .where(
-          and(gte(orders.placedAt, weekStart), eq(orders.isCancelled, false)),
-        ),
+        .where(and(gte(orders.placedAt, weekStart), eq(orders.isDone, true))),
       db
         .select({
           count: sql<number>`count(*)::int`,
           revenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)::int`,
         })
         .from(orders)
-        .where(
-          and(gte(orders.placedAt, monthStart), eq(orders.isCancelled, false)),
-        ),
+        .where(and(gte(orders.placedAt, monthStart), eq(orders.isDone, true))),
     ]);
 
     const topShops = await db
@@ -305,9 +299,7 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
       })
       .from(orders)
       .innerJoin(shops, eq(orders.shopId, shops.id))
-      .where(
-        and(gte(orders.placedAt, monthStart), eq(orders.isCancelled, false)),
-      )
+      .where(and(gte(orders.placedAt, monthStart), eq(orders.isDone, true)))
       .groupBy(orders.shopId, shops.shopName)
       .orderBy(desc(sql`sum(${orders.totalAmount})`))
       .limit(5);
@@ -345,7 +337,7 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
           and(
             gte(orders.placedAt, fromDate),
             lt(orders.placedAt, toDate),
-            eq(orders.isCancelled, false),
+            eq(orders.isDone, true),
           ),
         );
 
@@ -361,7 +353,7 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
           and(
             gte(orders.placedAt, fromDate),
             lt(orders.placedAt, toDate),
-            eq(orders.isCancelled, false),
+            eq(orders.isDone, true),
           ),
         )
         .groupBy(shops.shopName)
