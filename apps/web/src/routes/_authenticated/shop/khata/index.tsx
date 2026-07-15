@@ -323,12 +323,17 @@ function ShopKhataPage() {
                       <div className="flex items-center gap-2">
                         <Chevron open={expanded} />
                         <div>
-                          <OrderRef
-                            className="text-sm"
-                            withLabel
-                            dailyNumber={o.dailyNumber}
-                            orderNumber={o.orderNumber}
-                          />
+                          <div className="flex items-center gap-1.5">
+                            <OrderRef
+                              className="text-sm"
+                              withLabel
+                              dailyNumber={o.dailyNumber}
+                              orderNumber={o.orderNumber}
+                            />
+                            <span className="rounded bg-red-500 px-1.5 py-0.5 text-[10px] font-semibold leading-none text-white">
+                              Unpaid
+                            </span>
+                          </div>
                           <p className="text-xs text-muted-foreground">
                             {new Date(o.placedAt).toLocaleDateString("en-BD", {
                               day: "numeric",

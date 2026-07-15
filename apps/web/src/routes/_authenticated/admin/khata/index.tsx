@@ -289,6 +289,9 @@ function LedgerSheet({
                   className="flex items-center justify-between gap-2 rounded-md border border-amber-300 bg-amber-50 p-2.5 dark:border-amber-800 dark:bg-amber-950/20"
                 >
                   <div className="min-w-0 text-sm">
+                    <span className="mr-1.5 inline-block rounded bg-red-500 px-1.5 py-0.5 align-middle text-[10px] font-semibold leading-none text-white">
+                      Unpaid
+                    </span>
                     <OrderRef
                       dailyNumber={o.dailyNumber}
                       orderNumber={o.orderNumber}
