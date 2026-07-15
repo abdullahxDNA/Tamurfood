@@ -1,4 +1,10 @@
-import { createContext, useContext, useReducer, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useReducer,
+  type ReactNode,
+} from "react";
 
 export interface CartEntry {
   name: string;
@@ -8,6 +14,30 @@ export interface CartEntry {
 
 interface CartState {
   items: Record<string, CartEntry>;
+}
+
+// Persist the cart so a page refresh (or accidental tab close) doesn't wipe the
+// shop's selections. Expire after 12h so a cart left overnight doesn't resurrect
+// stale the next day — daily bakery orders should start fresh each morning.
+const STORAGE_KEY = "tamurfood-cart";
+const MAX_AGE_MS = 12 * 60 * 60 * 1000;
+
+function loadInitialState(): CartState {
+  if (typeof window === "undefined") return { items: {} };
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { items: {} };
+    const parsed = JSON.parse(raw) as {
+      items?: Record<string, CartEntry>;
+      savedAt?: number;
+    };
+    if (!parsed.items || typeof parsed.savedAt !== "number")
+      return { items: {} };
+    if (Date.now() - parsed.savedAt > MAX_AGE_MS) return { items: {} };
+    return { items: parsed.items };
+  } catch {
+    return { items: {} };
+  }
 }
 
 type CartAction =
@@ -50,7 +80,28 @@ interface CartContextValue {
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(cartReducer, { items: {} });
+  const [state, dispatch] = useReducer(
+    cartReducer,
+    undefined,
+    loadInitialState,
+  );
+
+  // Mirror the cart into localStorage on every change (and clear the key when
+  // the cart empties) so it can be restored after a refresh.
+  useEffect(() => {
+    try {
+      if (Object.keys(state.items).length === 0) {
+        localStorage.removeItem(STORAGE_KEY);
+      } else {
+        localStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify({ items: state.items, savedAt: Date.now() }),
+        );
+      }
+    } catch {
+      // localStorage unavailable (private mode / quota) — cart just won't persist
+    }
+  }, [state.items]);
 
   const totalItems = Object.values(state.items).reduce(
     (sum, e) => sum + e.quantity,
