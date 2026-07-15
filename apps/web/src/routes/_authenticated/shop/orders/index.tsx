@@ -158,7 +158,7 @@ function OrderStatusTracker({
         <StepNode
           done={isDone}
           pending={!isDone}
-          label={isDone ? "Accepted" : "Awaiting acceptance"}
+          label={isDone ? "Accepted" : "Waiting"}
         />
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
