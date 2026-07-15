@@ -273,21 +273,27 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
           revenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)::int`,
         })
         .from(orders)
-        .where(gte(orders.placedAt, todayStart)),
+        .where(
+          and(gte(orders.placedAt, todayStart), eq(orders.isCancelled, false)),
+        ),
       db
         .select({
           count: sql<number>`count(*)::int`,
           revenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)::int`,
         })
         .from(orders)
-        .where(gte(orders.placedAt, weekStart)),
+        .where(
+          and(gte(orders.placedAt, weekStart), eq(orders.isCancelled, false)),
+        ),
       db
         .select({
           count: sql<number>`count(*)::int`,
           revenue: sql<number>`coalesce(sum(${orders.totalAmount}), 0)::int`,
         })
         .from(orders)
-        .where(gte(orders.placedAt, monthStart)),
+        .where(
+          and(gte(orders.placedAt, monthStart), eq(orders.isCancelled, false)),
+        ),
     ]);
 
     const topShops = await db
@@ -299,7 +305,9 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
       })
       .from(orders)
       .innerJoin(shops, eq(orders.shopId, shops.id))
-      .where(gte(orders.placedAt, monthStart))
+      .where(
+        and(gte(orders.placedAt, monthStart), eq(orders.isCancelled, false)),
+      )
       .groupBy(orders.shopId, shops.shopName)
       .orderBy(desc(sql`sum(${orders.totalAmount})`))
       .limit(5);
