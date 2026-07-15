@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
+import { OrderRef } from "@/components/order-ref";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -228,12 +229,11 @@ function OrderCard({
           >
             {order.shopName}
           </button>
-          <span className="text-sm font-medium">
-            #{order.dailyNumber ?? order.orderNumber}
-          </span>
-          <span className="text-[10px] text-muted-foreground">
-            Ref #{order.orderNumber}
-          </span>
+          <OrderRef
+            className="text-sm"
+            dailyNumber={order.dailyNumber}
+            orderNumber={order.orderNumber}
+          />
           {order.isCancelled ? (
             <Badge variant="destructive">Cancelled</Badge>
           ) : (
@@ -998,12 +998,11 @@ function AdminDashboard() {
               <div key={order.id} className="border rounded-lg p-3 space-y-1.5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-sm">
-                      #{order.dailyNumber ?? order.orderNumber}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground">
-                      Ref #{order.orderNumber}
-                    </span>
+                    <OrderRef
+                      className="text-sm"
+                      dailyNumber={order.dailyNumber}
+                      orderNumber={order.orderNumber}
+                    />
                     <Badge
                       variant={order.isDone ? "secondary" : "default"}
                       className="text-xs"

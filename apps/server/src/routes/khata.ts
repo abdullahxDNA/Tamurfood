@@ -161,6 +161,7 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
             date: orders.placedAt,
             amount: orders.totalAmount,
             orderNumber: orders.orderNumber,
+            dailyNumber: orders.dailyNumber,
             note: orders.note,
           })
           .from(orders)
@@ -210,6 +211,7 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
         credit: number | null;
         balance: number;
         orderNumber?: number;
+        dailyNumber?: number | null;
         note: string | null;
         // When a payment was recorded (has a time-of-day, unlike the date-only
         // paymentDate) — lets the shop ledger show the payment's time.
@@ -228,6 +230,7 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
           debit: o.amount,
           credit: null,
           orderNumber: o.orderNumber,
+          dailyNumber: o.dailyNumber,
           note: o.note,
           sortAt: o.date.getTime(),
         })),
@@ -260,6 +263,7 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
             debit: e.debit,
             credit: e.credit,
             orderNumber: e.orderNumber,
+            dailyNumber: e.dailyNumber,
             note: e.note,
             createdAt: e.createdAt,
             balance: running,

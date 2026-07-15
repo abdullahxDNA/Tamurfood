@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { OrderRef } from "@/components/order-ref";
 import { Badge } from "@/components/ui/badge";
 import {
   Sheet,
@@ -44,6 +45,7 @@ interface LedgerEntry {
   credit: number | null;
   balance: number;
   orderNumber?: number;
+  dailyNumber?: number | null;
   note: string | null;
 }
 
@@ -287,9 +289,10 @@ function LedgerSheet({
                   className="flex items-center justify-between gap-2 rounded-md border border-amber-300 bg-amber-50 p-2.5 dark:border-amber-800 dark:bg-amber-950/20"
                 >
                   <div className="min-w-0 text-sm">
-                    <span className="font-medium">
-                      #{o.dailyNumber ?? o.orderNumber}
-                    </span>
+                    <OrderRef
+                      dailyNumber={o.dailyNumber}
+                      orderNumber={o.orderNumber}
+                    />
                     <span className="text-muted-foreground">
                       {" "}
                       · {fmtDate(o.placedAt)} · ৳{o.amount.toLocaleString()}
@@ -399,9 +402,14 @@ function LedgerSheet({
                     }`}
                   >
                     {entry.type === "order"
-                      ? `Order #${entry.orderNumber}`
+                      ? `Order #${entry.dailyNumber ?? entry.orderNumber}`
                       : "Payment"}
                   </span>
+                  {entry.type === "order" && entry.dailyNumber != null && (
+                    <span className="text-[10px] text-muted-foreground">
+                      Ref #{entry.orderNumber}
+                    </span>
+                  )}
                   <span className="text-xs text-muted-foreground">
                     {fmtDate(entry.date)}
                   </span>
