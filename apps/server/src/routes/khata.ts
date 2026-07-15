@@ -242,21 +242,25 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
         })),
       ].sort((a, b) => a.sortAt - b.sortAt);
 
-      // Compute running balance (oldest → newest), dropping the internal sortAt.
+      // Accumulate the running balance oldest → newest (each entry's balance is
+      // the total up to and including it), then reverse so the newest
+      // transaction shows first. The per-entry balance stays correct either way.
       let running = openingBalance;
-      const entries: Entry[] = merged.map((e) => {
-        running += (e.debit ?? 0) - (e.credit ?? 0);
-        return {
-          id: e.id,
-          type: e.type,
-          date: e.date,
-          debit: e.debit,
-          credit: e.credit,
-          orderNumber: e.orderNumber,
-          note: e.note,
-          balance: running,
-        };
-      });
+      const entries: Entry[] = merged
+        .map((e) => {
+          running += (e.debit ?? 0) - (e.credit ?? 0);
+          return {
+            id: e.id,
+            type: e.type,
+            date: e.date,
+            debit: e.debit,
+            credit: e.credit,
+            orderNumber: e.orderNumber,
+            note: e.note,
+            balance: running,
+          };
+        })
+        .reverse();
 
       // All the shop's still-unpaid accepted orders (any date), newest first —
       // so they can be settled from one place regardless of when they were made.
