@@ -7,7 +7,7 @@ import {
 import { useState, useRef, useEffect } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
-import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -84,6 +84,90 @@ async function fetchOrders(
   const res = await api.api.v1.orders.$get({ query });
   if (!res.ok) throw new Error("Failed to fetch orders");
   return res.json() as Promise<OrdersResponse>;
+}
+
+// A single milestone in the order tracker.
+function StepNode({
+  done,
+  pending,
+  label,
+}: {
+  done: boolean;
+  pending?: boolean;
+  label: string;
+}) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <span
+        className={cn(
+          "flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold",
+          done
+            ? "bg-green-500 text-white"
+            : pending
+              ? "animate-pulse border-2 border-amber-400 text-amber-500"
+              : "bg-muted text-muted-foreground",
+        )}
+      >
+        {done ? "✓" : ""}
+      </span>
+      <span
+        className={cn(
+          "text-xs font-medium",
+          done
+            ? "text-foreground"
+            : pending
+              ? "text-amber-600 dark:text-amber-400"
+              : "text-muted-foreground",
+        )}
+      >
+        {label}
+      </span>
+    </div>
+  );
+}
+
+// Live status of a shop's order. Two real milestones (Placed → Ready) plus a
+// terminal Cancelled state — matching the staff's single "Mark Done" action.
+function OrderStatusTracker({
+  isDone,
+  isCancelled,
+}: {
+  isDone: boolean;
+  isCancelled: boolean;
+}) {
+  if (isCancelled) {
+    return (
+      <div className="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2">
+        <span className="text-sm font-bold text-destructive">✕</span>
+        <span className="text-sm font-medium text-destructive">
+          Order cancelled
+        </span>
+      </div>
+    );
+  }
+  return (
+    <div className="rounded-md border bg-muted/30 px-3 py-2.5">
+      <div className="flex items-center">
+        <StepNode done label="Placed" />
+        <div
+          className={cn(
+            "mx-2 h-0.5 flex-1 rounded",
+            isDone ? "bg-green-500" : "bg-muted-foreground/25",
+          )}
+        />
+        <StepNode
+          done={isDone}
+          pending={!isDone}
+          label={isDone ? "Ready" : "Preparing"}
+        />
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">
+        {isDone
+          ? "✅ Accepted by the bakery — ready for pickup."
+          : "⏳ Waiting for the bakery to accept your order…"}
+      </p>
+    </div>
+  );
 }
 
 function OrderHistory() {
@@ -238,31 +322,28 @@ function OrderHistory() {
       <div className="space-y-3">
         {filteredOrders.map((order) => (
           <div key={order.id} className="rounded-lg border p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-sm">
-                  #{order.dailyNumber ?? order.orderNumber}
-                </span>
-                <span className="text-[10px] text-muted-foreground">
-                  Ref #{order.orderNumber}
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {new Date(order.placedAt).toLocaleDateString("en-GB", {
-                    day: "numeric",
-                    month: "short",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </span>
-              </div>
-              {order.isCancelled ? (
-                <Badge variant="destructive">Cancelled</Badge>
-              ) : order.isDone ? (
-                <Badge variant="default">Ready</Badge>
-              ) : (
-                <Badge variant="secondary">Pending</Badge>
-              )}
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-sm">
+                #{order.dailyNumber ?? order.orderNumber}
+              </span>
+              <span className="text-[10px] text-muted-foreground">
+                Ref #{order.orderNumber}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {new Date(order.placedAt).toLocaleDateString("en-GB", {
+                  day: "numeric",
+                  month: "short",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </span>
             </div>
+
+            {/* Live status tracker */}
+            <OrderStatusTracker
+              isDone={order.isDone}
+              isCancelled={order.isCancelled}
+            />
 
             <div className="space-y-1">
               {order.items.map((item, idx) => (
