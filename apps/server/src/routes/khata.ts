@@ -181,8 +181,12 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
             amount: payments.amount,
             note: payments.note,
             createdAt: payments.createdAt,
+            // The order this payment settled (NULL for lump-sum payments).
+            paidOrderNumber: orders.orderNumber,
+            paidDailyNumber: orders.dailyNumber,
           })
           .from(payments)
+          .leftJoin(orders, eq(payments.orderId, orders.id))
           .where(
             and(
               eq(payments.shopId, shopId),
@@ -216,6 +220,10 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
         // When a payment was recorded (has a time-of-day, unlike the date-only
         // paymentDate) — lets the shop ledger show the payment's time.
         createdAt?: string;
+        // For a payment made against a specific order: that order's numbers, so
+        // the ledger can show "Paid — Order #5 · Ref #1042".
+        paidOrderNumber?: number | null;
+        paidDailyNumber?: number | null;
       };
 
       // sortAt is the precise moment used to order the ledger — orders use their
@@ -245,6 +253,8 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
           credit: p.amount,
           note: p.note,
           createdAt: new Date(p.createdAt).toISOString(),
+          paidOrderNumber: p.paidOrderNumber,
+          paidDailyNumber: p.paidDailyNumber,
           sortAt: new Date(p.createdAt).getTime(),
         })),
       ].sort((a, b) => a.sortAt - b.sortAt);
@@ -266,6 +276,8 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
             dailyNumber: e.dailyNumber,
             note: e.note,
             createdAt: e.createdAt,
+            paidOrderNumber: e.paidOrderNumber,
+            paidDailyNumber: e.paidDailyNumber,
             balance: running,
           };
         })

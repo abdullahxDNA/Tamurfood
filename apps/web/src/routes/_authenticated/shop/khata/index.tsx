@@ -27,6 +27,8 @@ interface LedgerEntry {
   dailyNumber?: number | null;
   note: string | null;
   createdAt?: string | null;
+  paidOrderNumber?: number | null;
+  paidDailyNumber?: number | null;
 }
 
 interface UnpaidOrder {
@@ -443,13 +445,22 @@ function ShopKhataPage() {
                   >
                     {entry.type === "order"
                       ? `Order #${entry.dailyNumber ?? entry.orderNumber}`
-                      : "Payment received"}
+                      : entry.paidOrderNumber != null
+                        ? `Paid — Order #${entry.paidDailyNumber ?? entry.paidOrderNumber}`
+                        : "Payment received"}
                   </span>
                   {entry.type === "order" && entry.dailyNumber != null && (
                     <span className="text-[10px] text-muted-foreground">
                       Ref #{entry.orderNumber}
                     </span>
                   )}
+                  {entry.type === "payment" &&
+                    entry.paidOrderNumber != null &&
+                    entry.paidDailyNumber != null && (
+                      <span className="text-[10px] text-muted-foreground">
+                        Ref #{entry.paidOrderNumber}
+                      </span>
+                    )}
                   {highlightedIds.has(entry.id) && (
                     <span className="animate-pulse rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-none text-primary-foreground">
                       NEW

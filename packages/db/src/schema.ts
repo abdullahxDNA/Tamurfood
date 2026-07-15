@@ -150,6 +150,11 @@ export const payments = pgTable(
     amount: integer("amount").notNull(),
     paymentDate: date("payment_date").notNull(),
     note: varchar("note", { length: 300 }),
+    // The specific order this payment settled, when it came from "Mark Paid" on
+    // one order. NULL for lump-sum "Record Payment" entries (partial/multi-order).
+    orderId: text("order_id").references(() => orders.id, {
+      onDelete: "set null",
+    }),
     recordedBy: text("recorded_by")
       .notNull()
       .references(() => user.id, { onDelete: "restrict" }),

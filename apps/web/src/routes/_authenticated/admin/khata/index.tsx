@@ -47,6 +47,8 @@ interface LedgerEntry {
   orderNumber?: number;
   dailyNumber?: number | null;
   note: string | null;
+  paidOrderNumber?: number | null;
+  paidDailyNumber?: number | null;
 }
 
 interface UnpaidOrder {
@@ -405,13 +407,22 @@ function LedgerSheet({
                   >
                     {entry.type === "order"
                       ? `Order #${entry.dailyNumber ?? entry.orderNumber}`
-                      : "Payment"}
+                      : entry.paidOrderNumber != null
+                        ? `Paid — Order #${entry.paidDailyNumber ?? entry.paidOrderNumber}`
+                        : "Payment"}
                   </span>
                   {entry.type === "order" && entry.dailyNumber != null && (
                     <span className="text-[10px] text-muted-foreground">
                       Ref #{entry.orderNumber}
                     </span>
                   )}
+                  {entry.type === "payment" &&
+                    entry.paidOrderNumber != null &&
+                    entry.paidDailyNumber != null && (
+                      <span className="text-[10px] text-muted-foreground">
+                        Ref #{entry.paidOrderNumber}
+                      </span>
+                    )}
                   <span className="text-xs text-muted-foreground">
                     {fmtDate(entry.date)}
                   </span>
