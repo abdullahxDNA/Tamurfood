@@ -386,7 +386,8 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
     },
   )
   // GET /backup-status — when the database was last backed up (admin only), so
-  // the dashboard can nudge if it's overdue. Recorded by scripts/backup-db.sh.
+  // the dashboard can nudge if it's overdue. Recorded by the backup workflow
+  // (GitHub Actions) after each successful backup, or by scripts/backup-db.sh.
   .get("/backup-status", async (c) => {
     const authErr = requireAdmin(c);
     if (authErr) return authErr;

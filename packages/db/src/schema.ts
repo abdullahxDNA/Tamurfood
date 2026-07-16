@@ -224,5 +224,5 @@ export const backupLog = pgTable("backup_log", {
   id: text("id").primaryKey(),
   createdAt: timestamp("created_at").notNull(),
   sizeKb: integer("size_kb"),
-  source: varchar("source", { length: 20 }), // "manual" | "cron"
+  source: varchar("source", { length: 20 }), // "github" | "manual" | "cron"
 });

@@ -604,7 +604,8 @@ function AdminDashboard() {
         </div>
       )}
 
-      {/* Backup reminder — shows when today's backup hasn't run yet */}
+      {/* Backup reminder — hidden while automatic backups are healthy; shows
+          only if they seem to have stopped (no backup recorded recently). */}
       {backupDays !== 0 && (
         <div
           className={`rounded-md border px-4 py-2.5 text-sm ${
@@ -615,16 +616,13 @@ function AdminDashboard() {
         >
           <span className="font-medium">
             {backupDays === null
-              ? "⚠️ No database backup yet."
+              ? "⚠️ No database backup recorded yet."
               : backupDays >= 2
                 ? `⚠️ No backup in ${backupDays} days.`
-                : "🔔 No backup today."}
+                : "🔔 No backup recorded in the last day."}
           </span>{" "}
-          Run{" "}
-          <code className="rounded bg-black/10 px-1 dark:bg-white/10">
-            ./scripts/backup-db.sh
-          </code>{" "}
-          and save the file somewhere safe.
+          Automatic backups may have stopped — check your GitHub Actions
+          backups.
         </div>
       )}
 
