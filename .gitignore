@@ -29,3 +29,6 @@ production/
 
 # TanStack Router generated temp files
 .tanstack/
+
+# Local database backups (never commit customer data)
+backups/
