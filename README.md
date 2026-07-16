@@ -6,6 +6,14 @@ Built and deployed as a production application handling real orders and payments
 
 > Full-stack TypeScript · React 19 · Hono · PostgreSQL · Real-time SSE · Role-based access
 
+## Demo
+
+<p align="center">
+  <img src="docs/screenshots/demo.gif" alt="Placing an order on the shop side" width="280" />
+</p>
+
+<p align="center"><em>A shop placing an order — menu → cart → confirm → placed.</em></p>
+
 ## Screenshots
 
 <!-- Add images to docs/screenshots/ (see the guide there). They render once present. -->
