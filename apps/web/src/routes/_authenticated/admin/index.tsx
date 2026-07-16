@@ -179,6 +179,24 @@ async function fetchShopOrders(shopId: string) {
   return res.json() as Promise<{ shopName: string; orders: AdminOrder[] }>;
 }
 
+async function fetchBackupStatus() {
+  const res = await api.api.v1.admin["backup-status"].$get();
+  if (!res.ok) throw new Error("Failed to fetch backup status");
+  return res.json() as Promise<{ lastBackupAt: string | null }>;
+}
+
+// Whole calendar days (Dhaka time) since the last backup; null = never.
+function backupDaysAgo(lastBackupAt: string | null): number | null {
+  if (!lastBackupAt) return null;
+  const dhakaDay = (d: Date) =>
+    new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka" }).format(d);
+  const last = dhakaDay(new Date(lastBackupAt));
+  const today = dhakaDay(new Date());
+  return Math.round(
+    (Date.parse(today) - Date.parse(last)) / (1000 * 60 * 60 * 24),
+  );
+}
+
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
 function StatCard({ title, stats }: { title: string; stats: AnalyticsStats }) {
@@ -381,6 +399,18 @@ function AdminDashboard() {
     refetchInterval: 60_000,
   });
 
+  // Backup reminder — admin only (endpoint 403s for moderators, so the query
+  // just stays empty for them and no banner shows).
+  const { data: backupStatus } = useQuery({
+    queryKey: ["admin/backup-status"],
+    queryFn: fetchBackupStatus,
+    refetchInterval: 5 * 60_000,
+    retry: false,
+  });
+  const backupDays = backupStatus
+    ? backupDaysAgo(backupStatus.lastBackupAt)
+    : 0;
+
   const { data: ordersData, isLoading } = useQuery({
     queryKey: ["admin/orders", date],
     queryFn: () => fetchAdminOrders(date),
@@ -571,6 +601,28 @@ function AdminDashboard() {
         <div className="rounded-md bg-yellow-50 border border-yellow-200 px-4 py-2 text-sm text-yellow-800 dark:bg-yellow-950/30 dark:border-yellow-900 dark:text-yellow-200">
           Lost connection to server. Trying to reconnect… Orders refresh every
           10s.
+        </div>
+      )}
+
+      {/* Backup reminder — hidden while automatic backups are healthy; shows
+          only if they seem to have stopped (no backup recorded recently). */}
+      {backupDays !== 0 && (
+        <div
+          className={`rounded-md border px-4 py-2.5 text-sm ${
+            backupDays === null || backupDays >= 2
+              ? "border-red-300 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200"
+              : "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
+          }`}
+        >
+          <span className="font-medium">
+            {backupDays === null
+              ? "⚠️ No database backup recorded yet."
+              : backupDays >= 2
+                ? `⚠️ No backup in ${backupDays} days.`
+                : "🔔 No backup recorded in the last day."}
+          </span>{" "}
+          Automatic backups may have stopped — check your GitHub Actions
+          backups.
         </div>
       )}
 

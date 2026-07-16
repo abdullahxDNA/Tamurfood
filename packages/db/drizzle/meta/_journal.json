@@ -99,6 +99,13 @@
       "when": 1783000300000,
       "tag": "0013_add_payment_order_id",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1783000360000,
+      "tag": "0014_add_backup_log",
+      "breakpoints": true
     }
   ]
 }

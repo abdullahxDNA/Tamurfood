@@ -216,3 +216,13 @@ export const banner = pgTable("banner", {
   enabled: boolean("enabled").notNull().default(true),
   updatedAt: timestamp("updated_at").notNull(),
 });
+
+// One row per database backup taken by scripts/backup-db.sh. Lets the admin
+// panel warn when a backup hasn't run recently. Interim safety net while on the
+// Supabase free plan (no automated backups).
+export const backupLog = pgTable("backup_log", {
+  id: text("id").primaryKey(),
+  createdAt: timestamp("created_at").notNull(),
+  sizeKb: integer("size_kb"),
+  source: varchar("source", { length: 20 }), // "github" | "manual" | "cron"
+});

@@ -15,6 +15,7 @@ import {
   analyticsEvents,
   pendingMenuChanges,
   menuItems,
+  backupLog,
 } from "@tamurfood/db/schema";
 import { auth } from "../auth";
 import { requireAdmin, requireModerator, type Variables } from "../lib/helpers";
@@ -384,6 +385,21 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
       return c.json({ from, to, ...stats, topShops });
     },
   )
+  // GET /backup-status — when the database was last backed up (admin only), so
+  // the dashboard can nudge if it's overdue. Recorded by the backup workflow
+  // (GitHub Actions) after each successful backup, or by scripts/backup-db.sh.
+  .get("/backup-status", async (c) => {
+    const authErr = requireAdmin(c);
+    if (authErr) return authErr;
+
+    const [last] = await db
+      .select({ createdAt: backupLog.createdAt })
+      .from(backupLog)
+      .orderBy(desc(backupLog.createdAt))
+      .limit(1);
+
+    return c.json({ lastBackupAt: last?.createdAt ?? null });
+  })
   // GET /payments — list payments with shopName + recorder name
   .get("/payments", async (c) => {
     const authErr = requireAdmin(c);
