@@ -53,6 +53,40 @@ It's a complete, production-grade system — not a demo — covering authenticat
 - Analytics: today / week / month order counts & revenue, top shops, custom ranges
 - Moderator approval workflow for menu changes
 
+## Roles & permissions
+
+Access is enforced server-side by role, with a lightweight approval workflow for moderators.
+
+| Capability                           | Shop |     Moderator     | Admin |
+| ------------------------------------ | :--: | :---------------: | :---: |
+| Place orders · view own Khata        |  ✅  |         —         |   —   |
+| View & fulfil orders (accept/cancel) |  —   |        ✅         |  ✅   |
+| Toggle stock / availability          |  —   |        ✅         |  ✅   |
+| Add / edit / delete menu items       |  —   | ⚠️ needs approval |  ✅   |
+| Analytics dashboard                  |  —   |        ✅         |  ✅   |
+| Manage shops, payments & Khata       |  —   |         —         |  ✅   |
+| Approve moderator change requests    |  —   |         —         |  ✅   |
+
+> ⚠️ Moderators **propose** menu changes; they queue for an admin to approve before going live.
+
+## Architecture
+
+```mermaid
+flowchart LR
+  subgraph Client["Browser · mobile-first"]
+    UI["React 19 · TanStack Router/Query"]
+  end
+  subgraph Server["Hono on Bun"]
+    API["REST + SSE API"]
+    EV["EventEmitter"]
+    API --- EV
+  end
+  UI -- "typed RPC (hc)" --> API
+  API -- "live SSE stream" --> UI
+  API -- "Drizzle ORM" --> DB[("PostgreSQL")]
+  API -- "service role" --> ST["Supabase Storage"]
+```
+
 ## Tech stack
 
 | Layer         | Technology                                                                               |
