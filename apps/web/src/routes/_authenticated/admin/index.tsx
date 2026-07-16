@@ -188,16 +188,16 @@ async function fetchBackupStatus() {
   return res.json() as Promise<{ lastBackupAt: string | null }>;
 }
 
-// Whole calendar days (Dhaka time) since the last backup; null = never.
-function backupDaysAgo(lastBackupAt: string | null): number | null {
+// Backups run every ~6h, so warn on hours-since-last-backup, not calendar days
+// (a calendar-day check false-alarms right after midnight even when a backup ran
+// an hour earlier).
+const BACKUP_WARN_HOURS = 12; // amber: missed ~2 cycles
+const BACKUP_CRITICAL_HOURS = 24; // red: no backup in a full day
+
+// Real elapsed hours since the last backup; null = never backed up.
+function hoursSinceBackup(lastBackupAt: string | null): number | null {
   if (!lastBackupAt) return null;
-  const dhakaDay = (d: Date) =>
-    new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka" }).format(d);
-  const last = dhakaDay(new Date(lastBackupAt));
-  const today = dhakaDay(new Date());
-  return Math.round(
-    (Date.parse(today) - Date.parse(last)) / (1000 * 60 * 60 * 24),
-  );
+  return (Date.now() - new Date(lastBackupAt).getTime()) / (1000 * 60 * 60);
 }
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -410,9 +410,9 @@ function AdminDashboard() {
     refetchInterval: 5 * 60_000,
     retry: false,
   });
-  const backupDays = backupStatus
-    ? backupDaysAgo(backupStatus.lastBackupAt)
-    : 0;
+  const backupHours = backupStatus
+    ? hoursSinceBackup(backupStatus.lastBackupAt)
+    : null;
 
   const { data: ordersData, isLoading } = useQuery({
     queryKey: ["admin/orders", date],
@@ -607,27 +607,30 @@ function AdminDashboard() {
         </div>
       )}
 
-      {/* Backup reminder — hidden while automatic backups are healthy; shows
-          only if they seem to have stopped (no backup recorded recently). */}
-      {backupDays !== 0 && (
-        <div
-          className={`rounded-md border px-4 py-2.5 text-sm ${
-            backupDays === null || backupDays >= 2
-              ? "border-red-300 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200"
-              : "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
-          }`}
-        >
-          <span className="font-medium">
-            {backupDays === null
-              ? "⚠️ No database backup recorded yet."
-              : backupDays >= 2
-                ? `⚠️ No backup in ${backupDays} days.`
-                : "🔔 No backup recorded in the last day."}
-          </span>{" "}
-          Automatic backups may have stopped — check your GitHub Actions
-          backups.
-        </div>
-      )}
+      {/* Backup reminder — hidden while backups are recent; warns only when
+          genuinely overdue (>12h), so it won't false-alarm right after midnight. */}
+      {backupStatus &&
+        (backupHours === null || backupHours >= BACKUP_WARN_HOURS) && (
+          <div
+            className={`rounded-md border px-4 py-2.5 text-sm ${
+              backupHours === null || backupHours >= BACKUP_CRITICAL_HOURS
+                ? "border-red-300 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/30 dark:text-red-200"
+                : "border-amber-300 bg-amber-50 text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200"
+            }`}
+          >
+            <span className="font-medium">
+              {backupHours === null
+                ? "⚠️ No database backup recorded yet."
+                : backupHours >= BACKUP_CRITICAL_HOURS
+                  ? `⚠️ No backup in ${Math.floor(backupHours / 24)} day${
+                      Math.floor(backupHours / 24) === 1 ? "" : "s"
+                    }.`
+                  : `🔔 No backup in ${Math.round(backupHours)} hours.`}
+            </span>{" "}
+            Automatic backups may have stopped — check your GitHub Actions
+            backups.
+          </div>
+        )}
 
       {/* Header row */}
       <div className="flex flex-wrap items-center justify-between gap-3">
