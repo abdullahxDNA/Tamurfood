@@ -28,8 +28,12 @@ export const Route = createFileRoute("/_authenticated/admin/")({
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
+// Dhaka calendar date (YYYY-MM-DD). The server reckons order days in Dhaka time,
+// so the date filter must use the same day boundary.
 function todayDate() {
-  return new Date().toISOString().slice(0, 10);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka" }).format(
+    new Date(),
+  );
 }
 // Whether an order was placed today in Bangladesh time — used to keep the
 // dashboard's "Mark Paid" button on today's orders only (older unpaid orders
@@ -39,9 +43,8 @@ function isTodayDhaka(iso: string) {
   return fmt.format(new Date(iso)) === fmt.format(new Date());
 }
 function yesterdayDate() {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().slice(0, 10);
+  const d = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka" }).format(d);
 }
 function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString("en-BD", {

@@ -2,6 +2,7 @@ import { and, eq, lt } from "drizzle-orm";
 import { db } from "@tamurfood/db";
 import { orders } from "@tamurfood/db/schema";
 import { orderEvents, type OrderStatusEvent } from "./order-events";
+import { startOfDhakaDayUTC } from "./time";
 
 // End-of-day cleanup: orders a shop places but nobody accepts (or cancels) don't
 // carry into the next day. Any order still pending from a *previous* Dhaka day is
@@ -11,19 +12,6 @@ import { orderEvents, type OrderStatusEvent } from "./order-events";
 
 const SWEEP_INTERVAL_MS = 30 * 60 * 1000; // re-check every 30 minutes
 const CANCEL_REASON = "Not accepted — order closed for the day";
-
-// Bangladesh is UTC+6 (no DST). Returns the UTC instant of 00:00 today in Dhaka,
-// so orders placed on any earlier Dhaka day fall before it.
-function startOfDhakaDayUTC(now = new Date()): Date {
-  const DHAKA_OFFSET_MS = 6 * 60 * 60 * 1000;
-  const dhakaNow = new Date(now.getTime() + DHAKA_OFFSET_MS);
-  const dhakaMidnight = Date.UTC(
-    dhakaNow.getUTCFullYear(),
-    dhakaNow.getUTCMonth(),
-    dhakaNow.getUTCDate(),
-  );
-  return new Date(dhakaMidnight - DHAKA_OFFSET_MS);
-}
 
 // Cancel every order still pending from before today (Dhaka time). Returns the
 // number cancelled. Notifies each shop's live tracker so the change is instant.

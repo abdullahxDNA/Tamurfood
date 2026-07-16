@@ -20,6 +20,12 @@ import {
 import { auth } from "../auth";
 import { requireAdmin, requireModerator, type Variables } from "../lib/helpers";
 import {
+  startOfDhakaDayUTC,
+  startOfDhakaMonthUTC,
+  dhakaDateStartUTC,
+  addDays,
+} from "../lib/time";
+import {
   orderEvents,
   type NewOrderEvent,
   type OrderStatusEvent,
@@ -47,8 +53,9 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
 
     const conditions: ReturnType<typeof eq>[] = [];
     if (dateParam) {
-      const start = new Date(`${dateParam}T00:00:00`);
-      const end = new Date(`${dateParam}T23:59:59.999`);
+      // Interpret the date as a Dhaka calendar day → [00:00, next 00:00) Dhaka.
+      const start = dhakaDateStartUTC(dateParam);
+      const end = addDays(start, 1);
       conditions.push(gte(orders.placedAt, start) as ReturnType<typeof eq>);
       conditions.push(lt(orders.placedAt, end) as ReturnType<typeof eq>);
     }
@@ -278,15 +285,10 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
 
     const now = new Date();
 
-    const todayStart = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-    );
-    const weekStart = new Date(now);
-    weekStart.setDate(weekStart.getDate() - 6);
-    weekStart.setHours(0, 0, 0, 0);
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    // Day/week/month windows are anchored to Dhaka midnight (see lib/time).
+    const todayStart = startOfDhakaDayUTC(now);
+    const weekStart = addDays(todayStart, -6);
+    const monthStart = startOfDhakaMonthUTC(now);
 
     const [todayStats, weekStats, monthStats] = await Promise.all([
       db
@@ -345,9 +347,9 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
       if (authErr) return authErr;
 
       const { from, to } = c.req.valid("query");
-      const fromDate = new Date(from);
-      const toDate = new Date(to);
-      toDate.setDate(toDate.getDate() + 1); // inclusive end
+      // from/to are Dhaka calendar dates → [from 00:00, to+1 00:00) Dhaka.
+      const fromDate = dhakaDateStartUTC(from);
+      const toDate = addDays(dhakaDateStartUTC(to), 1); // inclusive end
 
       const [stats] = await db
         .select({
@@ -433,6 +435,9 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
       if (authErr) return authErr;
 
       const { date } = c.req.valid("query");
+      // Reconcile by the Dhaka day the payment was recorded.
+      const dayStart = dhakaDateStartUTC(date);
+      const dayEnd = addDays(dayStart, 1);
       const rows = await db
         .select({
           staffId: payments.recordedBy,
@@ -442,7 +447,12 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
         })
         .from(payments)
         .innerJoin(user, eq(payments.recordedBy, user.id))
-        .where(sql`${payments.createdAt}::date = ${date}::date`)
+        .where(
+          and(
+            gte(payments.createdAt, dayStart),
+            lt(payments.createdAt, dayEnd),
+          ),
+        )
         .groupBy(payments.recordedBy, user.name)
         .orderBy(desc(sql`sum(${payments.amount})`));
 
