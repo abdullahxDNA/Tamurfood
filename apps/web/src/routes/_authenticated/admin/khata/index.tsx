@@ -135,6 +135,13 @@ function fmtDate(iso: string) {
   });
 }
 
+// Whether an order was placed today in Bangladesh time. Same-day orders are
+// settled with the per-order "Paid" button; older dues go through Record Payment.
+function isTodayDhaka(iso: string) {
+  const fmt = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka" });
+  return fmt.format(new Date(iso)) === fmt.format(new Date());
+}
+
 function BalanceBadge({ balance }: { balance: number }) {
   if (balance > 0)
     return (
@@ -302,21 +309,27 @@ function LedgerSheet({
                       · {fmtDate(o.placedAt)} · ৳{o.amount.toLocaleString()}
                     </span>
                   </div>
-                  <Button
-                    size="sm"
-                    className="h-7 shrink-0 text-xs"
-                    disabled={markPaidMutation.isPending}
-                    onClick={() => {
-                      if (
-                        confirm(
-                          `Mark order #${o.dailyNumber ?? o.orderNumber} as paid (৳${o.amount})? This records a payment.`,
+                  {isTodayDhaka(o.placedAt) ? (
+                    <Button
+                      size="sm"
+                      className="h-7 shrink-0 text-xs"
+                      disabled={markPaidMutation.isPending}
+                      onClick={() => {
+                        if (
+                          confirm(
+                            `Mark order #${o.dailyNumber ?? o.orderNumber} as paid (৳${o.amount})? This records a payment.`,
+                          )
                         )
-                      )
-                        markPaidMutation.mutate(o.id);
-                    }}
-                  >
-                    Paid
-                  </Button>
+                          markPaidMutation.mutate(o.id);
+                      }}
+                    >
+                      Paid
+                    </Button>
+                  ) : (
+                    <span className="shrink-0 text-xs text-muted-foreground">
+                      via Record Payment
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
@@ -535,7 +548,19 @@ function LedgerSheet({
               </Button>
               <Button
                 disabled={!validAmount || recordPaymentMutation.isPending}
-                onClick={() => recordPaymentMutation.mutate()}
+                onClick={() => {
+                  const sameDayUnpaid = (data?.unpaidOrders ?? []).filter((o) =>
+                    isTodayDhaka(o.placedAt),
+                  ).length;
+                  if (
+                    sameDayUnpaid > 0 &&
+                    !confirm(
+                      `This shop has ${sameDayUnpaid} unpaid order(s) from today. For accurate same-day records, mark those "Paid" first. Record this payment anyway?`,
+                    )
+                  )
+                    return;
+                  recordPaymentMutation.mutate();
+                }}
               >
                 {recordPaymentMutation.isPending ? "Saving…" : "Record Payment"}
               </Button>
