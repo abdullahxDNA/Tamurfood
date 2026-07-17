@@ -10,6 +10,7 @@ import {
   getShopForUser,
   type Variables,
 } from "../lib/helpers";
+import { reconcileCarriedOverOrders } from "../lib/reconcile";
 
 export const khataRouter = new Hono<{ Variables: Variables }>()
   // GET /overview — all shops with all-time balance summary (admin only)
@@ -87,6 +88,10 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
         .limit(1);
 
       if (!shop) return c.json({ error: "Shop not found" }, 404);
+
+      // Reconcile carried-over dues on open, so old orders that are already
+      // covered by payments show as paid without waiting for the next payment.
+      await reconcileCarriedOverOrders(shopId);
 
       // Parse month param (default current month)
       const monthParam = c.req.valid("query").month; // YYYY-MM
