@@ -26,6 +26,9 @@ export const env = createEnv({
     // Supabase Storage (server-side image uploads via service role)
     SUPABASE_URL: z.string().url(),
     SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+
+    // Error tracking (Sentry) — optional; when unset, error reporting is off.
+    SENTRY_DSN: z.string().url().optional(),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,
