@@ -7,9 +7,20 @@ import * as Sentry from "@sentry/react";
 import { routeTree } from "./routeTree.gen";
 import "./index.css";
 
-// Error tracking — only active when VITE_SENTRY_DSN is set (prod build). Without
-// it this is a no-op, so local dev and PR previews stay quiet.
-const sentryDsn = import.meta.env.VITE_SENTRY_DSN as string | undefined;
+// Runtime config injected by the server into index.html (see apps/server). Lets
+// production read secrets/keys at runtime instead of baking them in at build
+// time (Railway doesn't reliably pass VITE_ build args to the Docker build).
+declare global {
+  interface Window {
+    __ENV__?: { SENTRY_DSN?: string | null };
+  }
+}
+
+// Error tracking — DSN from the server at runtime, with a build-time VITE_ var
+// fallback for local dev. No-op when neither is set (keeps dev quiet).
+const sentryDsn =
+  window.__ENV__?.SENTRY_DSN ??
+  (import.meta.env.VITE_SENTRY_DSN as string | undefined);
 if (sentryDsn) {
   Sentry.init({
     dsn: sentryDsn,
