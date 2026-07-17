@@ -2,7 +2,17 @@ import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import { z } from "zod";
 import { zValidator } from "../lib/validator";
-import { eq, and, desc, gte, lt, sql, inArray } from "drizzle-orm";
+import {
+  eq,
+  and,
+  desc,
+  gte,
+  lt,
+  sql,
+  inArray,
+  isNull,
+  isNotNull,
+} from "drizzle-orm";
 import { db } from "@tamurfood/db";
 import {
   orders,
@@ -38,6 +48,59 @@ const paymentSchema = z.object({
   paymentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   note: z.string().max(300).optional(),
 });
+
+// Reconcile a shop's carried-over dues after a payment change. Marks the oldest
+// carried-over orders (accepted, placed before today in Dhaka, and NOT settled
+// individually via the per-order "Paid" button) as paid while their running
+// total is covered by the shop's total "Record Payment" (untied) pool. This uses
+// the CUMULATIVE pool — so several small payments add up to clear an order —
+// instead of requiring one payment to cover an order. Idempotent.
+async function reconcileCarriedOverOrders(shopId: string) {
+  const [{ pool }] = await db
+    .select({ pool: sql<number>`coalesce(sum(${payments.amount}), 0)::int` })
+    .from(payments)
+    .where(and(eq(payments.shopId, shopId), isNull(payments.orderId)));
+
+  const tied = await db
+    .select({ orderId: payments.orderId })
+    .from(payments)
+    .where(and(eq(payments.shopId, shopId), isNotNull(payments.orderId)));
+  const tiedIds = new Set(tied.map((t) => t.orderId));
+
+  const oldOrders = await db
+    .select({ id: orders.id, amount: orders.totalAmount })
+    .from(orders)
+    .where(
+      and(
+        eq(orders.shopId, shopId),
+        eq(orders.isDone, true),
+        eq(orders.isCancelled, false),
+        lt(orders.placedAt, startOfDhakaDayUTC()),
+      ),
+    )
+    .orderBy(orders.placedAt);
+
+  let cumulative = 0;
+  const toPay: string[] = [];
+  const toUnpay: string[] = [];
+  for (const o of oldOrders) {
+    if (tiedIds.has(o.id)) continue; // settled individually via the per-order button
+    cumulative += o.amount;
+    (cumulative <= pool ? toPay : toUnpay).push(o.id);
+  }
+  if (toPay.length > 0) {
+    await db
+      .update(orders)
+      .set({ isPaid: true })
+      .where(inArray(orders.id, toPay));
+  }
+  if (toUnpay.length > 0) {
+    await db
+      .update(orders)
+      .set({ isPaid: false })
+      .where(inArray(orders.id, toUnpay));
+  }
+}
 
 export const adminRouter = new Hono<{ Variables: Variables }>()
   // GET /orders — all orders with shopName (page, date, isDone)
@@ -490,41 +553,9 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
       })
       .returning({ id: payments.id });
 
-    // Auto-reconcile: apply this payment to the shop's oldest CARRIED-OVER unpaid
-    // orders (accepted, placed before today in Dhaka), oldest first, up to the
-    // amount — so they stop showing as "unpaid". No extra payment rows: this lump
-    // sum IS the payment. Today's orders are settled individually via the
-    // per-order "Paid" button, so they're left untouched here.
-    const carriedOver = await db
-      .select({ id: orders.id, amount: orders.totalAmount })
-      .from(orders)
-      .where(
-        and(
-          eq(orders.shopId, body.shopId),
-          eq(orders.isDone, true),
-          eq(orders.isPaid, false),
-          eq(orders.isCancelled, false),
-          lt(orders.placedAt, startOfDhakaDayUTC()),
-        ),
-      )
-      .orderBy(orders.placedAt);
-
-    let remaining = body.amount;
-    const toSettle: string[] = [];
-    for (const o of carriedOver) {
-      if (o.amount <= remaining) {
-        toSettle.push(o.id);
-        remaining -= o.amount;
-      } else {
-        break; // greedy FIFO — stop at the first order this payment can't fully cover
-      }
-    }
-    if (toSettle.length > 0) {
-      await db
-        .update(orders)
-        .set({ isPaid: true })
-        .where(inArray(orders.id, toSettle));
-    }
+    // Reconcile carried-over dues against the shop's cumulative payment pool, so
+    // old orders clear once enough has been paid (even across several payments).
+    await reconcileCarriedOverOrders(body.shopId);
 
     // Notify the shop's Khata badge that a payment was recorded.
     orderEvents.emit("payment_recorded", {
@@ -541,7 +572,7 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
 
     const id = c.req.param("id");
     const [existing] = await db
-      .select({ id: payments.id })
+      .select({ id: payments.id, shopId: payments.shopId })
       .from(payments)
       .where(eq(payments.id, id))
       .limit(1);
@@ -551,6 +582,10 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
     }
 
     await db.delete(payments).where(eq(payments.id, id));
+
+    // Recompute the shop's carried-over paid/unpaid flags now the pool changed.
+    await reconcileCarriedOverOrders(existing.shopId);
+
     return c.json({ success: true });
   })
   // GET /shops/:shopId/orders — full order history for one shop (admin/moderator view)
