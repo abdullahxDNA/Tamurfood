@@ -2,17 +2,7 @@ import { Hono } from "hono";
 import { streamSSE } from "hono/streaming";
 import { z } from "zod";
 import { zValidator } from "../lib/validator";
-import {
-  eq,
-  and,
-  desc,
-  gte,
-  lt,
-  sql,
-  inArray,
-  isNull,
-  isNotNull,
-} from "drizzle-orm";
+import { eq, and, desc, gte, lt, sql, inArray } from "drizzle-orm";
 import { db } from "@tamurfood/db";
 import {
   orders,
@@ -41,6 +31,7 @@ import {
   type OrderStatusEvent,
   type PaymentEvent,
 } from "../lib/order-events";
+import { reconcileCarriedOverOrders } from "../lib/reconcile";
 
 const paymentSchema = z.object({
   shopId: z.string().min(1),
@@ -48,59 +39,6 @@ const paymentSchema = z.object({
   paymentDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   note: z.string().max(300).optional(),
 });
-
-// Reconcile a shop's carried-over dues after a payment change. Marks the oldest
-// carried-over orders (accepted, placed before today in Dhaka, and NOT settled
-// individually via the per-order "Paid" button) as paid while their running
-// total is covered by the shop's total "Record Payment" (untied) pool. This uses
-// the CUMULATIVE pool — so several small payments add up to clear an order —
-// instead of requiring one payment to cover an order. Idempotent.
-async function reconcileCarriedOverOrders(shopId: string) {
-  const [{ pool }] = await db
-    .select({ pool: sql<number>`coalesce(sum(${payments.amount}), 0)::int` })
-    .from(payments)
-    .where(and(eq(payments.shopId, shopId), isNull(payments.orderId)));
-
-  const tied = await db
-    .select({ orderId: payments.orderId })
-    .from(payments)
-    .where(and(eq(payments.shopId, shopId), isNotNull(payments.orderId)));
-  const tiedIds = new Set(tied.map((t) => t.orderId));
-
-  const oldOrders = await db
-    .select({ id: orders.id, amount: orders.totalAmount })
-    .from(orders)
-    .where(
-      and(
-        eq(orders.shopId, shopId),
-        eq(orders.isDone, true),
-        eq(orders.isCancelled, false),
-        lt(orders.placedAt, startOfDhakaDayUTC()),
-      ),
-    )
-    .orderBy(orders.placedAt);
-
-  let cumulative = 0;
-  const toPay: string[] = [];
-  const toUnpay: string[] = [];
-  for (const o of oldOrders) {
-    if (tiedIds.has(o.id)) continue; // settled individually via the per-order button
-    cumulative += o.amount;
-    (cumulative <= pool ? toPay : toUnpay).push(o.id);
-  }
-  if (toPay.length > 0) {
-    await db
-      .update(orders)
-      .set({ isPaid: true })
-      .where(inArray(orders.id, toPay));
-  }
-  if (toUnpay.length > 0) {
-    await db
-      .update(orders)
-      .set({ isPaid: false })
-      .where(inArray(orders.id, toUnpay));
-  }
-}
 
 export const adminRouter = new Hono<{ Variables: Variables }>()
   // GET /orders — all orders with shopName (page, date, isDone)
