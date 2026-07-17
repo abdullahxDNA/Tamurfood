@@ -27,6 +27,25 @@ if (sentryDsn) {
     environment: import.meta.env.MODE,
     // Capture a small sample of performance traces; errors are always sent.
     tracesSampleRate: 0.1,
+    // Drop noise from browser extensions (crypto wallets, etc.) — these errors
+    // come from injected scripts, not our app, and would otherwise flood Sentry.
+    ignoreErrors: [
+      "Cannot redefine property: ethereum",
+      "Cannot set property ethereum",
+      "MetaMask",
+      "evmAsk",
+      "Non-Error promise rejection captured",
+    ],
+    denyUrls: [
+      /^chrome-extension:\/\//i,
+      /^moz-extension:\/\//i,
+      /extensions\//i,
+      /evmAsk\.js/i,
+      /inpage\.js/i,
+      /contentscript\.js/i,
+      /contentScript\.js/i,
+      /kleoContentScript\.js/i,
+    ],
   });
 }
 
