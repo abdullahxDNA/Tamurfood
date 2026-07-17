@@ -27,36 +27,44 @@ export const user = pgTable("user", {
   updatedAt: timestamp("updated_at").notNull(),
 });
 
-export const session = pgTable("session", {
-  id: text("id").primaryKey(),
-  expiresAt: timestamp("expires_at").notNull(),
-  token: text("token").notNull().unique(),
-  createdAt: timestamp("created_at").notNull(),
-  updatedAt: timestamp("updated_at").notNull(),
-  ipAddress: text("ip_address"),
-  userAgent: text("user_agent"),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-});
+export const session = pgTable(
+  "session",
+  {
+    id: text("id").primaryKey(),
+    expiresAt: timestamp("expires_at").notNull(),
+    token: text("token").notNull().unique(),
+    createdAt: timestamp("created_at").notNull(),
+    updatedAt: timestamp("updated_at").notNull(),
+    ipAddress: text("ip_address"),
+    userAgent: text("user_agent"),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+  },
+  (t) => [index("session_user_id_idx").on(t.userId)],
+);
 
-export const account = pgTable("account", {
-  id: text("id").primaryKey(),
-  accountId: text("account_id").notNull(),
-  providerId: text("provider_id").notNull(),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  accessToken: text("access_token"),
-  refreshToken: text("refresh_token"),
-  idToken: text("id_token"),
-  accessTokenExpiresAt: timestamp("access_token_expires_at"),
-  refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
-  scope: text("scope"),
-  password: text("password"),
-  createdAt: timestamp("created_at").notNull(),
-  updatedAt: timestamp("updated_at").notNull(),
-});
+export const account = pgTable(
+  "account",
+  {
+    id: text("id").primaryKey(),
+    accountId: text("account_id").notNull(),
+    providerId: text("provider_id").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    accessToken: text("access_token"),
+    refreshToken: text("refresh_token"),
+    idToken: text("id_token"),
+    accessTokenExpiresAt: timestamp("access_token_expires_at"),
+    refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
+    scope: text("scope"),
+    password: text("password"),
+    createdAt: timestamp("created_at").notNull(),
+    updatedAt: timestamp("updated_at").notNull(),
+  },
+  (t) => [index("account_user_id_idx").on(t.userId)],
+);
 
 export const verification = pgTable("verification", {
   id: text("id").primaryKey(),
@@ -125,20 +133,27 @@ export const orders = pgTable(
   ],
 );
 
-export const orderItems = pgTable("order_items", {
-  id: text("id").primaryKey(),
-  orderId: text("order_id")
-    .notNull()
-    .references(() => orders.id, { onDelete: "cascade" }),
-  menuItemId: text("menu_item_id")
-    .notNull()
-    .references(() => menuItems.id, { onDelete: "restrict" }),
-  itemName: varchar("item_name", { length: 100 }).notNull(),
-  itemPrice: integer("item_price").notNull(),
-  quantity: integer("quantity").notNull(),
-  lineTotal: integer("line_total").notNull(),
-  itemNote: varchar("item_note", { length: 200 }),
-});
+export const orderItems = pgTable(
+  "order_items",
+  {
+    id: text("id").primaryKey(),
+    orderId: text("order_id")
+      .notNull()
+      .references(() => orders.id, { onDelete: "cascade" }),
+    menuItemId: text("menu_item_id")
+      .notNull()
+      .references(() => menuItems.id, { onDelete: "restrict" }),
+    itemName: varchar("item_name", { length: 100 }).notNull(),
+    itemPrice: integer("item_price").notNull(),
+    quantity: integer("quantity").notNull(),
+    lineTotal: integer("line_total").notNull(),
+    itemNote: varchar("item_note", { length: 200 }),
+  },
+  (t) => [
+    index("order_items_order_id_idx").on(t.orderId),
+    index("order_items_menu_item_id_idx").on(t.menuItemId),
+  ],
+);
 
 export const payments = pgTable(
   "payments",
@@ -160,7 +175,11 @@ export const payments = pgTable(
       .references(() => user.id, { onDelete: "restrict" }),
     createdAt: timestamp("created_at").notNull(),
   },
-  (t) => [index("payments_shop_date_idx").on(t.shopId, t.paymentDate)],
+  (t) => [
+    index("payments_shop_date_idx").on(t.shopId, t.paymentDate),
+    index("payments_order_id_idx").on(t.orderId),
+    index("payments_recorded_by_idx").on(t.recordedBy),
+  ],
 );
 
 // Atomic per-day counter that generates the resetting daily order number.
@@ -186,25 +205,35 @@ export const analyticsEvents = pgTable(
     metadata: jsonb("metadata"),
     createdAt: timestamp("created_at").notNull(),
   },
-  (t) => [index("analytics_event_type_idx").on(t.eventType, t.createdAt)],
+  (t) => [
+    index("analytics_event_type_idx").on(t.eventType, t.createdAt),
+    index("analytics_events_user_id_idx").on(t.userId),
+  ],
 );
 
-export const pendingMenuChanges = pgTable("pending_menu_changes", {
-  id: text("id").primaryKey(),
-  type: varchar("type", { length: 10 }).notNull(), // "create" | "update" | "delete"
-  proposedBy: text("proposed_by")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  menuItemId: text("menu_item_id"), // null for create
-  proposedData: jsonb("proposed_data"), // item fields for create/update, null for delete
-  status: varchar("status", { length: 10 }).notNull().default("pending"),
-  reviewNote: text("review_note"),
-  createdAt: timestamp("created_at").notNull(),
-  reviewedAt: timestamp("reviewed_at"),
-  reviewedBy: text("reviewed_by").references(() => user.id, {
-    onDelete: "set null",
-  }),
-});
+export const pendingMenuChanges = pgTable(
+  "pending_menu_changes",
+  {
+    id: text("id").primaryKey(),
+    type: varchar("type", { length: 10 }).notNull(), // "create" | "update" | "delete"
+    proposedBy: text("proposed_by")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    menuItemId: text("menu_item_id"), // null for create
+    proposedData: jsonb("proposed_data"), // item fields for create/update, null for delete
+    status: varchar("status", { length: 10 }).notNull().default("pending"),
+    reviewNote: text("review_note"),
+    createdAt: timestamp("created_at").notNull(),
+    reviewedAt: timestamp("reviewed_at"),
+    reviewedBy: text("reviewed_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
+  },
+  (t) => [
+    index("pending_menu_changes_proposed_by_idx").on(t.proposedBy),
+    index("pending_menu_changes_reviewed_by_idx").on(t.reviewedBy),
+  ],
+);
 
 // Singleton row (id = "default") holding the shop hero banner, editable by admin.
 export const banner = pgTable("banner", {
