@@ -86,6 +86,7 @@ function LoginPage() {
                 id="phoneNumber"
                 type="tel"
                 placeholder="01700000000"
+                autoComplete="username"
                 value={phoneNumber}
                 onChange={(e) => setPhoneNumber(e.target.value)}
                 required
@@ -96,6 +97,7 @@ function LoginPage() {
               <Input
                 id="password"
                 type="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
