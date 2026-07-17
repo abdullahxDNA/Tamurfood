@@ -249,9 +249,6 @@ function LedgerSheet({
   const validAmount = Number.isFinite(amountNum) && amountNum > 0;
   const afterBalance =
     data && validAmount ? data.outstandingBalance - amountNum : null;
-  const sameDayUnpaidCount = (data?.unpaidOrders ?? []).filter((o) =>
-    isTodayDhaka(o.placedAt),
-  ).length;
 
   return (
     <Sheet open={!!shop} onOpenChange={(open) => !open && onClose()}>
@@ -496,14 +493,6 @@ function LedgerSheet({
               <DialogTitle>Record Payment — {shop?.name}</DialogTitle>
             </DialogHeader>
             <div className="space-y-3">
-              {sameDayUnpaidCount > 0 && (
-                <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-                  ⚠️ {sameDayUnpaidCount} order
-                  {sameDayUnpaidCount > 1 ? "s" : ""} from today still unpaid —
-                  consider marking {sameDayUnpaidCount > 1 ? "them" : "it"} Paid
-                  first for accurate same-day records.
-                </div>
-              )}
               <div className="space-y-1.5">
                 <Label htmlFor="pay-amount">Amount (৳)</Label>
                 <Input
