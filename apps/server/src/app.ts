@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { secureHeaders } from "hono/secure-headers";
+import * as Sentry from "@sentry/bun";
 import { auth } from "./auth";
 import { APIError } from "better-auth/api";
 import { env } from "./env";
@@ -93,8 +94,10 @@ const app = new Hono<{ Variables: Variables }>()
   .route("/api/v1/khata", khataRouter)
   .route("/api/v1/banner", bannerRouter);
 
-// Global fallback: log the real error, never leak internals to the client.
+// Global fallback: report the error (Sentry, if configured), log it, and never
+// leak internals to the client.
 app.onError((err, c) => {
+  Sentry.captureException(err);
   console.error("[unhandled error]", err);
   return c.json({ error: "Internal server error" }, 500);
 });

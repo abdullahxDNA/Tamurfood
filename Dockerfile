@@ -17,8 +17,10 @@ RUN find . -name ".env" -o -name ".env.local" | xargs rm -f 2>/dev/null || true
 # Build frontend — VITE_ vars are baked in at build time
 ARG VITE_SUPABASE_URL
 ARG VITE_SUPABASE_ANON_KEY
+ARG VITE_SENTRY_DSN
 ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
 ENV VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY
+ENV VITE_SENTRY_DSN=$VITE_SENTRY_DSN
 RUN bun run --cwd apps/web build:docker
 
 ENV NODE_ENV=production

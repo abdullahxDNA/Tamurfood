@@ -17,6 +17,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-slot": "^1.2.4",
+    "@sentry/react": "^10.66.0",
     "@supabase/supabase-js": "^2.98.0",
     "@tanstack/react-query": "^5.90.21",
     "@tanstack/react-router": "^1.163.3",
