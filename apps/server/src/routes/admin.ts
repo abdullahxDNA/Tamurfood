@@ -490,6 +490,42 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
       })
       .returning({ id: payments.id });
 
+    // Auto-reconcile: apply this payment to the shop's oldest CARRIED-OVER unpaid
+    // orders (accepted, placed before today in Dhaka), oldest first, up to the
+    // amount — so they stop showing as "unpaid". No extra payment rows: this lump
+    // sum IS the payment. Today's orders are settled individually via the
+    // per-order "Paid" button, so they're left untouched here.
+    const carriedOver = await db
+      .select({ id: orders.id, amount: orders.totalAmount })
+      .from(orders)
+      .where(
+        and(
+          eq(orders.shopId, body.shopId),
+          eq(orders.isDone, true),
+          eq(orders.isPaid, false),
+          eq(orders.isCancelled, false),
+          lt(orders.placedAt, startOfDhakaDayUTC()),
+        ),
+      )
+      .orderBy(orders.placedAt);
+
+    let remaining = body.amount;
+    const toSettle: string[] = [];
+    for (const o of carriedOver) {
+      if (o.amount <= remaining) {
+        toSettle.push(o.id);
+        remaining -= o.amount;
+      } else {
+        break; // greedy FIFO — stop at the first order this payment can't fully cover
+      }
+    }
+    if (toSettle.length > 0) {
+      await db
+        .update(orders)
+        .set({ isPaid: true })
+        .where(inArray(orders.id, toSettle));
+    }
+
     // Notify the shop's Khata badge that a payment was recorded.
     orderEvents.emit("payment_recorded", {
       shopId: body.shopId,
