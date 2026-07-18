@@ -35,3 +35,13 @@ export function dhakaDateStartUTC(dateStr: string): Date {
 export function addDays(d: Date, days: number): Date {
   return new Date(d.getTime() + days * 24 * 60 * 60 * 1000);
 }
+
+// The Dhaka calendar date (YYYY-MM-DD) for a UTC instant. Use this for payment
+// dates so an auto-recorded payment lands on the same Dhaka day the khata month
+// and order filters use — not the UTC date, which is a day behind between
+// midnight and 6am Dhaka.
+export function dhakaDateString(now = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka" }).format(
+    now,
+  );
+}

@@ -3,6 +3,8 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 import { secureHeaders } from "hono/secure-headers";
 import * as Sentry from "@sentry/bun";
+import { db } from "@tamurfood/db";
+import { sql } from "drizzle-orm";
 import { auth } from "./auth";
 import { APIError } from "better-auth/api";
 import { env } from "./env";
@@ -42,7 +44,18 @@ const app = new Hono<{ Variables: Variables }>()
     c.set("session", session && session.user.isActive ? session : null);
     await next();
   })
-  .get("/api/health", (c) => c.json({ status: "ok" }))
+  // Health check pings the DB so Railway only considers the app healthy when
+  // Postgres is actually reachable — a running server with a dead DB is not
+  // "up". Returns 503 on failure so the platform can restart / hold traffic.
+  .get("/api/health", async (c) => {
+    try {
+      await db.execute(sql`SELECT 1`);
+      return c.json({ status: "ok" });
+    } catch (err) {
+      console.error("[health] database check failed:", err);
+      return c.json({ status: "error", database: "unreachable" }, 503);
+    }
+  })
   // GET /api/v1/auth/me — return current session user
   .get("/api/v1/auth/me", (c) => {
     const session = c.get("session");
