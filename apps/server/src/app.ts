@@ -33,10 +33,13 @@ const app = new Hono<{ Variables: Variables }>()
       return c.json({ error: "Authentication error" }, 500);
     }
   })
-  // Session middleware for /api/v1/* routes
+  // Session middleware for /api/v1/* routes. A deactivated user (isActive=false)
+  // is treated as having NO session, so every guarded route rejects them — even
+  // if they still hold a valid cookie or sign in again. This is what makes
+  // "disable account" actually keep them out, not just log them out once.
   .use("/api/v1/*", async (c, next) => {
     const session = await auth.api.getSession({ headers: c.req.raw.headers });
-    c.set("session", session);
+    c.set("session", session && session.user.isActive ? session : null);
     await next();
   })
   .get("/api/health", (c) => c.json({ status: "ok" }))
