@@ -258,12 +258,18 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
       .from(orderItems)
       .where(eq(orderItems.orderId, lastOrder.id));
 
-    // Check current availability for each item
-    const menuItemIds = items.map((i) => i.menuItemId);
-    const availabilityRows = await db
-      .select({ id: menuItems.id, isAvailable: menuItems.isAvailable })
-      .from(menuItems)
-      .where(inArray(menuItems.id, menuItemIds));
+    // Check current availability for each item. A null menuItemId means the item
+    // was permanently deleted — it simply can't be reordered (isAvailable=false).
+    const menuItemIds = items
+      .map((i) => i.menuItemId)
+      .filter((id): id is string => id !== null);
+    const availabilityRows =
+      menuItemIds.length > 0
+        ? await db
+            .select({ id: menuItems.id, isAvailable: menuItems.isAvailable })
+            .from(menuItems)
+            .where(inArray(menuItems.id, menuItemIds))
+        : [];
 
     const availMap = new Map(
       availabilityRows.map((r) => [r.id, r.isAvailable]),
@@ -273,7 +279,9 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
       ...lastOrder,
       items: items.map((i) => ({
         ...i,
-        isAvailable: availMap.get(i.menuItemId) ?? false,
+        isAvailable: i.menuItemId
+          ? (availMap.get(i.menuItemId) ?? false)
+          : false,
       })),
     });
   })

@@ -166,7 +166,23 @@ export const menuRouter = new Hono<{ Variables: Variables }>()
     if (err) return err;
 
     const id = c.req.param("id");
-    await db.delete(menuCategories).where(eq(menuCategories.id, id));
+    // Reassign any items still tagged with this category to "Uncategorized" and
+    // delete the category atomically — otherwise the deleted category's heading
+    // keeps showing in the menu (items reference the category by name).
+    await db.transaction(async (tx) => {
+      const [cat] = await tx
+        .select({ name: menuCategories.name })
+        .from(menuCategories)
+        .where(eq(menuCategories.id, id))
+        .limit(1);
+      if (cat) {
+        await tx
+          .update(menuItems)
+          .set({ category: "Uncategorized" })
+          .where(eq(menuItems.category, cat.name));
+      }
+      await tx.delete(menuCategories).where(eq(menuCategories.id, id));
+    });
 
     return c.json({ success: true });
   })
@@ -182,10 +198,25 @@ export const menuRouter = new Hono<{ Variables: Variables }>()
       const { name } = c.req.valid("json");
 
       try {
-        await db
-          .update(menuCategories)
-          .set({ name })
-          .where(eq(menuCategories.id, id));
+        // Rename the category AND re-tag its items to the new name atomically, so
+        // the items follow the rename instead of being orphaned under the old one.
+        await db.transaction(async (tx) => {
+          const [cat] = await tx
+            .select({ name: menuCategories.name })
+            .from(menuCategories)
+            .where(eq(menuCategories.id, id))
+            .limit(1);
+          await tx
+            .update(menuCategories)
+            .set({ name })
+            .where(eq(menuCategories.id, id));
+          if (cat && cat.name !== name) {
+            await tx
+              .update(menuItems)
+              .set({ category: name })
+              .where(eq(menuItems.category, cat.name));
+          }
+        });
       } catch {
         return c.json({ error: "Category name already exists" }, 409);
       }
