@@ -20,8 +20,12 @@ export const env = createEnv({
       .default("development"),
     PORT: z.coerce.number().default(3000),
 
-    // Resend (password-reset emails) — optional in local dev
+    // Resend (password-reset emails) — optional in local dev.
+    // RESEND_FROM: a verified sender, e.g. "Tamurfood <noreply@yourdomain.com>".
+    // Defaults to Resend's shared test sender, which only delivers to your own
+    // Resend account email — set a verified domain before relying on it in prod.
     RESEND_API_KEY: z.string().min(1).optional(),
+    RESEND_FROM: z.string().min(1).optional(),
 
     // Supabase Storage (server-side image uploads via service role)
     SUPABASE_URL: z.string().url(),

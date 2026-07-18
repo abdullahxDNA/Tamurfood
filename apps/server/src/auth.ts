@@ -22,14 +22,16 @@ export const auth = betterAuth({
       console.log(`[reset-password] sending to ${u.email}`);
       try {
         if (!env.RESEND_API_KEY) {
-          console.warn(
-            "[reset-password] RESEND_API_KEY not set, skipping email",
-          );
+          const msg =
+            "[reset-password] RESEND_API_KEY not set — reset email was NOT sent";
+          // Silent in prod would hide a broken password-reset; make it loud.
+          if (env.NODE_ENV === "production") console.error(msg);
+          else console.warn(`${msg} (expected in local dev)`);
           return;
         }
         const resend = new Resend(env.RESEND_API_KEY);
         const { error } = await resend.emails.send({
-          from: "Tamurfood <onboarding@resend.dev>",
+          from: env.RESEND_FROM ?? "Tamurfood <onboarding@resend.dev>",
           to: u.email,
           subject: "Reset your Tamurfood password",
           html: `<p>Click <a href="${url}">here</a> to reset your password. Link expires in 15 minutes.</p>`,
@@ -58,8 +60,10 @@ export const auth = betterAuth({
   plugins: [
     phoneNumber({
       sendOTP: async ({ phoneNumber: phone, code }) => {
-        // AUTH-04 deferred — log for now
-        console.log(`[OTP] ${phone}: ${code}`);
+        // Phone OTP isn't used for login (phone+password is), but never print
+        // codes in production if it ever gets wired up.
+        if (env.NODE_ENV !== "production")
+          console.log(`[OTP] ${phone}: ${code}`);
       },
       requireVerification: false,
     }),
