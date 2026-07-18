@@ -8,8 +8,10 @@ import {
   serial,
   text,
   timestamp,
+  uniqueIndex,
   varchar,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -179,6 +181,12 @@ export const payments = pgTable(
     index("payments_shop_date_idx").on(t.shopId, t.paymentDate),
     index("payments_order_id_idx").on(t.orderId),
     index("payments_recorded_by_idx").on(t.recordedBy),
+    // At most one tied payment per order — prevents a double-click / concurrent
+    // "Mark Paid" from recording the same order's payment twice. Lump-sum
+    // "Record Payment" rows have a NULL order_id and are exempt (partial index).
+    uniqueIndex("payments_order_id_unique")
+      .on(t.orderId)
+      .where(sql`${t.orderId} IS NOT NULL`),
   ],
 );
 

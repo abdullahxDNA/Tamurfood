@@ -189,12 +189,23 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
 
       // Order status + payment must be atomic: an order is marked paid iff a
       // matching payment row exists. Wrap both so a partial failure can't leave
-      // an order "paid" with no payment (or vice-versa).
-      await db.transaction(async (tx) => {
-        await tx
+      // an order "paid" with no payment (or vice-versa). The UPDATE is guarded
+      // on is_done=false so two concurrent accepts can't both win the check —
+      // the loser updates 0 rows and gets a clean 409 (no duplicate payment).
+      const accepted = await db.transaction(async (tx) => {
+        const rows = await tx
           .update(orders)
           .set({ isDone: true, isPaid: paid, doneAt: now })
-          .where(eq(orders.id, id));
+          .where(
+            and(
+              eq(orders.id, id),
+              eq(orders.isDone, false),
+              eq(orders.isCancelled, false),
+            ),
+          )
+          .returning({ id: orders.id });
+
+        if (rows.length === 0) return false;
 
         if (paid) {
           await tx.insert(payments).values({
@@ -208,7 +219,15 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
             createdAt: now,
           });
         }
+        return true;
       });
+
+      if (!accepted) {
+        return c.json(
+          { error: "Order was already accepted or cancelled" },
+          409,
+        );
+      }
 
       // Analytics is best-effort — never fail (or roll back) the accept over a
       // log write.
@@ -273,9 +292,19 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
     const now = new Date();
     const paymentId = crypto.randomUUID();
     // Flag the order paid and record its tied payment atomically — a partial
-    // write here would leave isPaid=true with no matching payment row.
-    await db.transaction(async (tx) => {
-      await tx.update(orders).set({ isPaid: true }).where(eq(orders.id, id));
+    // write here would leave isPaid=true with no matching payment row. The
+    // UPDATE is guarded on is_paid=false so two concurrent "Mark Paid" clicks
+    // can't both proceed; the loser updates 0 rows and gets a clean 409. The
+    // payments_order_id_unique index is the last-line guard against a duplicate.
+    const paidOk = await db.transaction(async (tx) => {
+      const rows = await tx
+        .update(orders)
+        .set({ isPaid: true })
+        .where(and(eq(orders.id, id), eq(orders.isPaid, false)))
+        .returning({ id: orders.id });
+
+      if (rows.length === 0) return false;
+
       await tx.insert(payments).values({
         id: paymentId,
         shopId: existing.shopId,
@@ -286,7 +315,10 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
         recordedBy: session.user.id,
         createdAt: now,
       });
+      return true;
     });
+
+    if (!paidOk) return c.json({ error: "Order already marked paid" }, 409);
 
     // Notify the shop's Khata badge that a payment was recorded.
     orderEvents.emit("payment_recorded", {
@@ -644,18 +676,34 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
       if (existing.isCancelled)
         return c.json({ error: "Order already cancelled" }, 409);
 
-      // Cancel the order and return its reserved stock atomically.
-      await db.transaction(async (tx) => {
-        await tx
+      // Cancel the order and return its reserved stock atomically. The UPDATE is
+      // guarded on is_cancelled=false (and is_done=false) so a concurrent double
+      // cancel can't restore the same order's stock twice — the loser updates 0
+      // rows and skips the restore.
+      const cancelled = await db.transaction(async (tx) => {
+        const rows = await tx
           .update(orders)
           .set({
             isCancelled: true,
             cancelReason: reason,
             cancelledAt: new Date(),
           })
-          .where(eq(orders.id, id));
+          .where(
+            and(
+              eq(orders.id, id),
+              eq(orders.isCancelled, false),
+              eq(orders.isDone, false),
+            ),
+          )
+          .returning({ id: orders.id });
+        if (rows.length === 0) return false;
         await restoreStockForCancelledOrders(tx, [id]);
+        return true;
       });
+
+      if (!cancelled) {
+        return c.json({ error: "Order already done or cancelled" }, 409);
+      }
 
       // Push the status change to the shop's live tracker (instant "Cancelled").
       orderEvents.emit("order_status", {

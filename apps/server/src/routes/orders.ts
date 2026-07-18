@@ -426,13 +426,29 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
       return c.json({ error: "Order already cancelled" }, 409);
 
     // Cancel the order and return its reserved stock atomically, so a cancel
-    // can never lose inventory (or restore it without actually cancelling).
-    await db.transaction(async (tx) => {
-      await tx.execute(
-        sql`UPDATE "orders" SET "is_cancelled" = true, "cancelled_at" = NOW() WHERE "id" = ${id}`,
-      );
+    // can never lose inventory (or restore it without actually cancelling). The
+    // UPDATE is guarded on is_cancelled=false (and is_done=false) so a concurrent
+    // double cancel can't restore the same order's stock twice.
+    const cancelled = await db.transaction(async (tx) => {
+      const rows = await tx
+        .update(orders)
+        .set({ isCancelled: true, cancelledAt: new Date() })
+        .where(
+          and(
+            eq(orders.id, id),
+            eq(orders.isCancelled, false),
+            eq(orders.isDone, false),
+          ),
+        )
+        .returning({ id: orders.id });
+      if (rows.length === 0) return false;
       await restoreStockForCancelledOrders(tx, [id]);
+      return true;
     });
+
+    if (!cancelled) {
+      return c.json({ error: "Order already done or cancelled" }, 409);
+    }
 
     // Push to any other open sessions for this shop (e.g. another device).
     orderEvents.emit("order_status", {
