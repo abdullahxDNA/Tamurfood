@@ -11,6 +11,7 @@ import {
   analyticsEvents,
 } from "@tamurfood/db/schema";
 import { requireSession, getShopForUser, type Variables } from "../lib/helpers";
+import { restoreStockForCancelledOrders } from "../lib/stock";
 import {
   orderEvents,
   type NewOrderEvent,
@@ -62,6 +63,7 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
         name: menuItems.name,
         price: menuItems.price,
         isAvailable: menuItems.isAvailable,
+        isVisible: menuItems.isVisible,
         stockQuantity: menuItems.stockQuantity,
       })
       .from(menuItems)
@@ -73,7 +75,10 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
 
     for (const reqItem of body.items) {
       const found = foundMap.get(reqItem.menuItemId);
-      if (!found || !found.isAvailable) {
+      // Reject items that are missing, out of stock (isAvailable=false), or
+      // hidden from the menu (isVisible=false) — a stale cart or direct API
+      // call must not be able to order something the admin has taken down.
+      if (!found || !found.isAvailable || !found.isVisible) {
         unavailableItems.push(reqItem.menuItemId);
         continue;
       }
@@ -420,9 +425,14 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
     if (existing.isCancelled)
       return c.json({ error: "Order already cancelled" }, 409);
 
-    await db.execute(
-      sql`UPDATE "orders" SET "is_cancelled" = true, "cancelled_at" = NOW() WHERE "id" = ${id}`,
-    );
+    // Cancel the order and return its reserved stock atomically, so a cancel
+    // can never lose inventory (or restore it without actually cancelling).
+    await db.transaction(async (tx) => {
+      await tx.execute(
+        sql`UPDATE "orders" SET "is_cancelled" = true, "cancelled_at" = NOW() WHERE "id" = ${id}`,
+      );
+      await restoreStockForCancelledOrders(tx, [id]);
+    });
 
     // Push to any other open sessions for this shop (e.g. another device).
     orderEvents.emit("order_status", {

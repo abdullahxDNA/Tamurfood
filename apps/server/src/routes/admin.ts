@@ -32,6 +32,7 @@ import {
   type PaymentEvent,
 } from "../lib/order-events";
 import { reconcileCarriedOverOrders } from "../lib/reconcile";
+import { restoreStockForCancelledOrders } from "../lib/stock";
 
 const paymentSchema = z.object({
   shopId: z.string().min(1),
@@ -643,14 +644,18 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
       if (existing.isCancelled)
         return c.json({ error: "Order already cancelled" }, 409);
 
-      await db
-        .update(orders)
-        .set({
-          isCancelled: true,
-          cancelReason: reason,
-          cancelledAt: new Date(),
-        })
-        .where(eq(orders.id, id));
+      // Cancel the order and return its reserved stock atomically.
+      await db.transaction(async (tx) => {
+        await tx
+          .update(orders)
+          .set({
+            isCancelled: true,
+            cancelReason: reason,
+            cancelledAt: new Date(),
+          })
+          .where(eq(orders.id, id));
+        await restoreStockForCancelledOrders(tx, [id]);
+      });
 
       // Push the status change to the shop's live tracker (instant "Cancelled").
       orderEvents.emit("order_status", {
