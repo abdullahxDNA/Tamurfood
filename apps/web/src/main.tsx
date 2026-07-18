@@ -27,14 +27,22 @@ if (sentryDsn) {
     environment: import.meta.env.MODE,
     // Capture a small sample of performance traces; errors are always sent.
     tracesSampleRate: 0.1,
-    // Drop noise from browser extensions (crypto wallets, etc.) — these errors
-    // come from injected scripts, not our app, and would otherwise flood Sentry.
+    // Drop noise from browser extensions (crypto wallets, etc.) and in-app
+    // browsers (Facebook/Instagram/Messenger) — these errors come from injected
+    // scripts, not our app, and would otherwise flood Sentry. e.g. "Java object
+    // is gone" is thrown by the Facebook in-app browser's own tracking bridge
+    // when a shop opens our link from inside the FB/Messenger app.
     ignoreErrors: [
       "Cannot redefine property: ethereum",
       "Cannot set property ethereum",
       "MetaMask",
       "evmAsk",
       "Non-Error promise rejection captured",
+      // In-app browser (FB/IG/Messenger) native-bridge noise
+      "Java object is gone",
+      "Object Not Found Matching Id",
+      "invoking postMessage",
+      "sendDataToNative",
     ],
     denyUrls: [
       /^chrome-extension:\/\//i,
@@ -45,6 +53,9 @@ if (sentryDsn) {
       /contentscript\.js/i,
       /contentScript\.js/i,
       /kleoContentScript\.js/i,
+      // In-app browser injected scripts (Facebook/Instagram/Messenger)
+      /iabjs:\/\//i,
+      /navigation_performance_logger/i,
     ],
   });
 }
