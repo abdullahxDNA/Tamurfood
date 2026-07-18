@@ -228,7 +228,7 @@ function LandingPage() {
                 <span className="h-2.5 w-2.5 rounded-full bg-stone-300 dark:bg-stone-600" />
                 <span className="h-2.5 w-2.5 rounded-full bg-stone-300 dark:bg-stone-600" />
                 <span className="ml-3 text-xs text-stone-400 dark:text-stone-500">
-                  Admin · live orders &amp; analytics
+                  Tamurfood — orders &amp; analytics
                 </span>
               </div>
               <img
