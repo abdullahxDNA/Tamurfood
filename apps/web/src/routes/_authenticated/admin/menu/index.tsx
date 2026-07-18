@@ -717,6 +717,12 @@ function MenuPage() {
   const [dialog, setDialog] = useState<DialogMode>(null);
   const [manageCatsOpen, setManageCatsOpen] = useState(false);
   const [search, setSearch] = useState("");
+  // Item pending delete-confirmation — an in-app dialog instead of window.confirm,
+  // which some in-app browsers (e.g. Facebook's) silently suppress.
+  const [confirmDeleteItem, setConfirmDeleteItem] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const { data: session } = useQuery(sessionQueryOptions);
   const isModerator = session?.role === "moderator";
@@ -976,13 +982,7 @@ function MenuPage() {
     : grouped;
 
   function handleDelete(id: string, name: string) {
-    if (isModerator) {
-      if (confirm(`Request deletion of "${name}"? Admin will review.`)) {
-        submitPendingMutation.mutate({ type: "delete", menuItemId: id });
-      }
-    } else {
-      if (confirm(`Delete "${name}"?`)) deleteMutation.mutate(id);
-    }
+    setConfirmDeleteItem({ id, name });
   }
 
   function handleDialogSubmit(data: {
@@ -1200,6 +1200,53 @@ function MenuPage() {
           categories={categories}
         />
       )}
+
+      {/* Delete item confirmation (in-app, works in every browser) */}
+      <Dialog
+        open={confirmDeleteItem !== null}
+        onOpenChange={(open) => !open && setConfirmDeleteItem(null)}
+      >
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              {isModerator ? "Request deletion?" : "Delete item?"}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {isModerator
+              ? `Request deletion of "${confirmDeleteItem?.name}"? An admin will review it.`
+              : `Permanently delete "${confirmDeleteItem?.name}"? This can't be undone.`}
+          </p>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setConfirmDeleteItem(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={
+                deleteMutation.isPending || submitPendingMutation.isPending
+              }
+              onClick={() => {
+                if (!confirmDeleteItem) return;
+                if (isModerator) {
+                  submitPendingMutation.mutate({
+                    type: "delete",
+                    menuItemId: confirmDeleteItem.id,
+                  });
+                } else {
+                  deleteMutation.mutate(confirmDeleteItem.id);
+                }
+                setConfirmDeleteItem(null);
+              }}
+            >
+              {isModerator ? "Request deletion" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Item dialog */}
       {(dialog?.type === "add" || dialog?.type === "edit") && (
@@ -1566,6 +1613,9 @@ function CategoriesDialog({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [editError, setEditError] = useState<string | null>(null);
+  // Category pending delete-confirmation — inline two-step confirm instead of
+  // window.confirm (which some in-app browsers silently suppress).
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
@@ -1738,22 +1788,43 @@ function CategoriesDialog({
                                 >
                                   Rename
                                 </Button>
-                                <Button
-                                  type="button"
-                                  variant="destructive"
-                                  size="sm"
-                                  className="h-7 text-xs"
-                                  disabled={deleteMutation.isPending}
-                                  onClick={() => {
-                                    if (
-                                      confirm(`Delete category "${cat.name}"?`)
-                                    ) {
-                                      deleteMutation.mutate(cat.id);
-                                    }
-                                  }}
-                                >
-                                  Delete
-                                </Button>
+                                {confirmDeleteId === cat.id ? (
+                                  <>
+                                    <Button
+                                      type="button"
+                                      variant="destructive"
+                                      size="sm"
+                                      className="h-7 text-xs"
+                                      disabled={deleteMutation.isPending}
+                                      onClick={() => {
+                                        deleteMutation.mutate(cat.id);
+                                        setConfirmDeleteId(null);
+                                      }}
+                                    >
+                                      Confirm
+                                    </Button>
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-7 text-xs"
+                                      onClick={() => setConfirmDeleteId(null)}
+                                    >
+                                      Cancel
+                                    </Button>
+                                  </>
+                                ) : (
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    className="h-7 text-xs"
+                                    disabled={deleteMutation.isPending}
+                                    onClick={() => setConfirmDeleteId(cat.id)}
+                                  >
+                                    Delete
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           )
