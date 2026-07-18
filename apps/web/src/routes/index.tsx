@@ -1,4 +1,5 @@
 import { createFileRoute, redirect, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   ShoppingCart,
   BookOpen,
@@ -7,6 +8,7 @@ import {
   BarChart3,
   ShieldCheck,
   ArrowRight,
+  Check,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -24,36 +26,86 @@ export const Route = createFileRoute("/")({
 // Warm clay accent (Anthropic/Claude-like), used for CTAs and highlights.
 const CLAY = "#c15f3c";
 
-const FEATURES = [
+type Feature = {
+  icon: typeof ShoppingCart;
+  title: string;
+  summary: string;
+  points: string[];
+  img: string | null;
+  phone?: boolean;
+};
+
+const FEATURES: Feature[] = [
   {
     icon: ShoppingCart,
     title: "Order management",
-    desc: "Shops place orders; staff accept, fulfil, or cancel — with a full, daily-numbered history.",
+    summary: "Shops place orders; staff accept, fulfil, or cancel them.",
+    points: [
+      "A daily-numbered order history for every shop",
+      "Accept, mark done, or cancel with a reason the shop sees",
+      "Atomic stock decrement — you can never oversell the last units",
+    ],
+    img: "/screenshots/order-tracker.png",
+    phone: true,
   },
   {
     icon: Radio,
     title: "Live order feed",
-    desc: "New orders stream to the admin in real time over Server-Sent Events. No refresh needed.",
+    summary: "New orders reach the admin the instant they're placed.",
+    points: [
+      "Real-time updates over Server-Sent Events",
+      "No polling, no manual refresh",
+      "The admin sees each order the moment it lands",
+    ],
+    img: "/screenshots/admin-dashboard.png",
+    phone: false,
   },
   {
     icon: Wallet,
-    title: "Khata credit ledger",
-    desc: "Per-shop running balances with partial payments and carried-over dues, reconciled automatically.",
+    title: "Khata ledger",
+    summary: "Every shop's running credit balance, tracked automatically.",
+    points: [
+      "Partial payments and carried-over dues",
+      "Auto-reconciled against the shop's payment pool",
+      "Both sides see the same balance — no disputes",
+    ],
+    img: "/screenshots/khata.png",
+    phone: true,
   },
   {
     icon: BarChart3,
     title: "Analytics",
-    desc: "Day, week and month sales, top shops, and fulfilment times — at a glance.",
+    summary: "Understand sales and performance at a glance.",
+    points: [
+      "Day, week and month revenue",
+      "Top shops by spend",
+      "Average order-fulfilment time",
+    ],
+    img: "/screenshots/admin-dashboard.png",
+    phone: false,
   },
   {
     icon: ShieldCheck,
     title: "Role-based access",
-    desc: "Admin, moderator and shop roles. Each sees only what it should, enforced server-side.",
+    summary: "Admin, moderator and shop roles — enforced on the server.",
+    points: [
+      "Moderators run day-to-day; menu edits need admin approval",
+      "Shops only ever see their own data",
+      "Deactivated accounts are blocked instantly",
+    ],
+    img: null,
   },
   {
     icon: BookOpen,
-    title: "Menu & stock control",
-    desc: "Categories, combos, image uploads, live stock tracking, and visibility toggles.",
+    title: "Menu & stock",
+    summary: "Full control over what shops can order.",
+    points: [
+      "Categories, combos and image uploads",
+      "Live stock tracking with automatic stock-out",
+      "Hide items instantly with a visibility toggle",
+    ],
+    img: "/screenshots/shop-menu.png",
+    phone: true,
   },
 ];
 
@@ -145,7 +197,6 @@ function LandingPage() {
       {/* ───────── Product showcase ───────── */}
       <section className="mx-auto max-w-5xl px-6 pb-24 pt-16 sm:pt-20">
         <div className="relative">
-          {/* desktop browser frame — admin dashboard */}
           <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_30px_80px_-20px_rgba(60,40,20,0.25)]">
             <div className="flex items-center gap-1.5 border-b border-stone-100 bg-stone-50 px-4 py-3">
               <span className="h-2.5 w-2.5 rounded-full bg-stone-300" />
@@ -162,7 +213,6 @@ function LandingPage() {
               loading="lazy"
             />
           </div>
-          {/* floating phone — live order-placing GIF */}
           <div className="absolute -bottom-10 -right-3 hidden w-36 overflow-hidden rounded-[2rem] border-[6px] border-stone-900 bg-stone-900 shadow-2xl md:block lg:w-44">
             <img
               src="/screenshots/demo.gif"
@@ -174,39 +224,8 @@ function LandingPage() {
         </div>
       </section>
 
-      {/* ───────── Features ───────── */}
-      <section className="border-t border-stone-200/70 bg-[#f4f2ec]">
-        <div className="mx-auto max-w-5xl px-6 py-24">
-          <div className="max-w-2xl">
-            <h2 className="font-serif text-3xl font-medium tracking-tight text-stone-900 sm:text-4xl">
-              Everything a wholesale supplier needs
-            </h2>
-            <p className="mt-3 text-stone-600">
-              One platform for orders, fulfilment, and the money in between.
-            </p>
-          </div>
-
-          <div className="mt-14 grid gap-px overflow-hidden rounded-2xl border border-stone-200 bg-stone-200 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map((f) => (
-              <div
-                key={f.title}
-                className="bg-[#faf9f5] p-7 transition hover:bg-white"
-              >
-                <div
-                  className="grid h-10 w-10 place-items-center rounded-lg"
-                  style={{ backgroundColor: `${CLAY}14`, color: CLAY }}
-                >
-                  <f.icon className="h-5 w-5" />
-                </div>
-                <h3 className="mt-4 font-medium text-stone-900">{f.title}</h3>
-                <p className="mt-1.5 text-sm leading-relaxed text-stone-600">
-                  {f.desc}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* ───────── Interactive features ───────── */}
+      <FeatureShowcase />
 
       {/* ───────── Mobile screens ───────── */}
       <section className="border-t border-stone-200/70">
@@ -284,5 +303,120 @@ function LandingPage() {
         </footer>
       </section>
     </div>
+  );
+}
+
+// Horizontal, clickable feature switcher: pick a feature from the row of tabs
+// and its details + screenshot appear below.
+function FeatureShowcase() {
+  const [active, setActive] = useState(0);
+  const f = FEATURES[active];
+  const Icon = f.icon;
+
+  return (
+    <section className="border-t border-stone-200/70 bg-[#f4f2ec]">
+      <div className="mx-auto max-w-5xl px-6 py-24">
+        <div className="max-w-2xl">
+          <h2 className="font-serif text-3xl font-medium tracking-tight text-stone-900 sm:text-4xl">
+            Everything a wholesale supplier needs
+          </h2>
+          <p className="mt-3 text-stone-600">
+            Tap through the platform — one place for orders, fulfilment, and the
+            money in between.
+          </p>
+        </div>
+
+        {/* horizontal tab row */}
+        <div className="mt-10 flex flex-wrap gap-2.5">
+          {FEATURES.map((feat, i) => {
+            const on = i === active;
+            const TabIcon = feat.icon;
+            return (
+              <button
+                key={feat.title}
+                type="button"
+                onClick={() => setActive(i)}
+                className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition ${
+                  on
+                    ? "border-transparent text-white shadow-sm"
+                    : "border-stone-200 bg-[#faf9f5] text-stone-600 hover:border-stone-300 hover:text-stone-900"
+                }`}
+                style={on ? { backgroundColor: CLAY } : undefined}
+              >
+                <TabIcon className="h-4 w-4" />
+                {feat.title}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* detail panel for the active feature */}
+        <div className="mt-8 grid items-center gap-10 rounded-2xl border border-stone-200 bg-[#faf9f5] p-8 md:grid-cols-2 md:p-10">
+          <div>
+            <div
+              className="grid h-11 w-11 place-items-center rounded-xl"
+              style={{ backgroundColor: `${CLAY}14`, color: CLAY }}
+            >
+              <Icon className="h-5 w-5" />
+            </div>
+            <h3 className="mt-4 text-xl font-semibold text-stone-900">
+              {f.title}
+            </h3>
+            <p className="mt-1.5 text-stone-600">{f.summary}</p>
+            <ul className="mt-5 space-y-3">
+              {f.points.map((p) => (
+                <li key={p} className="flex items-start gap-3 text-sm">
+                  <Check
+                    className="mt-0.5 h-4 w-4 flex-shrink-0"
+                    style={{ color: CLAY }}
+                  />
+                  <span className="text-stone-700">{p}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* screenshot (phone or browser frame), or a fallback tile */}
+          <div className="flex justify-center">
+            {f.img ? (
+              f.phone ? (
+                <div className="w-40 overflow-hidden rounded-[2rem] border-[6px] border-stone-900 bg-stone-900 shadow-xl sm:w-48">
+                  <img
+                    src={f.img}
+                    alt={f.title}
+                    className="w-full rounded-[1.5rem]"
+                    loading="lazy"
+                  />
+                </div>
+              ) : (
+                <div className="w-full overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
+                  <div className="flex items-center gap-1.5 border-b border-stone-100 bg-stone-50 px-3 py-2">
+                    <span className="h-2 w-2 rounded-full bg-stone-300" />
+                    <span className="h-2 w-2 rounded-full bg-stone-300" />
+                    <span className="h-2 w-2 rounded-full bg-stone-300" />
+                  </div>
+                  <img
+                    src={f.img}
+                    alt={f.title}
+                    className="w-full"
+                    loading="lazy"
+                  />
+                </div>
+              )
+            ) : (
+              <div
+                className="grid h-40 w-full place-items-center rounded-xl border"
+                style={{
+                  borderColor: `${CLAY}22`,
+                  backgroundColor: `${CLAY}0a`,
+                }}
+              >
+                <Icon className="h-12 w-12" style={{ color: CLAY }} />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
