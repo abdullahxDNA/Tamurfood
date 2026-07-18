@@ -171,7 +171,7 @@ function LandingPage() {
         </header>
 
         {/* ───────── Hero ───────── */}
-        <section className="mx-auto max-w-3xl px-6 pt-16 text-center sm:pt-24">
+        <section className="mx-auto max-w-3xl px-6 pb-20 pt-16 text-center sm:pt-24">
           <span
             className="inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-medium"
             style={{
@@ -219,38 +219,49 @@ function LandingPage() {
           </p>
         </section>
 
-        {/* ───────── Product showcase ───────── */}
-        <section className="mx-auto max-w-5xl px-6 pb-24 pt-16 sm:pt-20">
-          <div className="relative">
-            <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_30px_80px_-20px_rgba(60,40,20,0.25)] dark:border-stone-800 dark:bg-stone-900">
-              <div className="flex items-center gap-1.5 border-b border-stone-100 bg-stone-50 px-4 py-3 dark:border-stone-800 dark:bg-stone-800">
-                <span className="h-2.5 w-2.5 rounded-full bg-stone-300 dark:bg-stone-600" />
-                <span className="h-2.5 w-2.5 rounded-full bg-stone-300 dark:bg-stone-600" />
-                <span className="h-2.5 w-2.5 rounded-full bg-stone-300 dark:bg-stone-600" />
-                <span className="ml-3 text-xs text-stone-400 dark:text-stone-500">
-                  Tamurfood — orders &amp; analytics
-                </span>
-              </div>
-              <img
-                src="/screenshots/admin-dashboard.png"
-                alt="Admin dashboard with the live order feed and analytics"
-                className="w-full"
-                loading="lazy"
-              />
+        {/* ───────── Interactive features ───────── */}
+        <FeatureShowcase />
+
+        {/* ───────── Dashboard showcase (continues the features block) ───────── */}
+        <section className="bg-[#f4f2ec] dark:bg-stone-900">
+          <div className="mx-auto max-w-5xl px-6 pb-24">
+            <div className="mx-auto mb-12 max-w-2xl text-center">
+              <h3 className="text-xl font-semibold text-stone-900 dark:text-stone-50">
+                …all from one live dashboard
+              </h3>
+              <p className="mt-2 text-stone-600 dark:text-stone-400">
+                The bakery sees orders, payments, and analytics in one place —
+                in real time.
+              </p>
             </div>
-            <div className="absolute -bottom-10 -right-3 hidden w-36 overflow-hidden rounded-[2rem] border-[6px] border-stone-900 bg-stone-900 shadow-2xl dark:border-stone-700 md:block lg:w-44">
-              <img
-                src="/screenshots/demo.gif"
-                alt="Placing an order on the shop side"
-                className="w-full rounded-[1.5rem]"
-                loading="lazy"
-              />
+            <div className="relative">
+              <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_30px_80px_-20px_rgba(60,40,20,0.25)] dark:border-stone-800 dark:bg-stone-950">
+                <div className="flex items-center gap-1.5 border-b border-stone-100 bg-stone-50 px-4 py-3 dark:border-stone-800 dark:bg-stone-800">
+                  <span className="h-2.5 w-2.5 rounded-full bg-stone-300 dark:bg-stone-600" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-stone-300 dark:bg-stone-600" />
+                  <span className="h-2.5 w-2.5 rounded-full bg-stone-300 dark:bg-stone-600" />
+                  <span className="ml-3 text-xs text-stone-400 dark:text-stone-500">
+                    Tamurfood — orders &amp; analytics
+                  </span>
+                </div>
+                <img
+                  src="/screenshots/admin-dashboard.png"
+                  alt="Admin dashboard with the live order feed and analytics"
+                  className="w-full"
+                  loading="lazy"
+                />
+              </div>
+              <div className="absolute -bottom-10 -right-3 hidden w-36 overflow-hidden rounded-[2rem] border-[6px] border-stone-900 bg-stone-900 shadow-2xl dark:border-stone-700 md:block lg:w-44">
+                <img
+                  src="/screenshots/demo.gif"
+                  alt="Placing an order on the shop side"
+                  className="w-full rounded-[1.5rem]"
+                  loading="lazy"
+                />
+              </div>
             </div>
           </div>
         </section>
-
-        {/* ───────── Interactive features ───────── */}
-        <FeatureShowcase />
 
         {/* ───────── Mobile screens ───────── */}
         <section className="border-t border-stone-200/70 dark:border-stone-800">
