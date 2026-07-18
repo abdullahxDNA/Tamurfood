@@ -578,7 +578,10 @@ function AdminDashboard() {
         param: { id },
         json: reason ? { reason } : {},
       });
-      if (!res.ok) throw new Error("Failed to cancel order");
+      if (!res.ok) {
+        const d = (await res.json()) as { error?: string };
+        throw new Error(d.error ?? "Failed to cancel order");
+      }
       return res.json();
     },
     onSuccess: () => {
