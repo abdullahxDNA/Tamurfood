@@ -271,16 +271,20 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
 
     const now = new Date();
     const paymentId = crypto.randomUUID();
-    await db.update(orders).set({ isPaid: true }).where(eq(orders.id, id));
-    await db.insert(payments).values({
-      id: paymentId,
-      shopId: existing.shopId,
-      orderId: id,
-      amount: existing.totalAmount,
-      paymentDate: now.toISOString().slice(0, 10),
-      note: `Order #${existing.orderNumber}`,
-      recordedBy: session.user.id,
-      createdAt: now,
+    // Flag the order paid and record its tied payment atomically — a partial
+    // write here would leave isPaid=true with no matching payment row.
+    await db.transaction(async (tx) => {
+      await tx.update(orders).set({ isPaid: true }).where(eq(orders.id, id));
+      await tx.insert(payments).values({
+        id: paymentId,
+        shopId: existing.shopId,
+        orderId: id,
+        amount: existing.totalAmount,
+        paymentDate: now.toISOString().slice(0, 10),
+        note: `Order #${existing.orderNumber}`,
+        recordedBy: session.user.id,
+        createdAt: now,
+      });
     });
 
     // Notify the shop's Khata badge that a payment was recorded.
@@ -490,22 +494,25 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
       return c.json({ error: "Shop not found" }, 404);
     }
 
-    const [inserted] = await db
-      .insert(payments)
-      .values({
-        id: crypto.randomUUID(),
-        shopId: body.shopId,
-        amount: body.amount,
-        paymentDate: body.paymentDate,
-        note: body.note ?? null,
-        recordedBy: session.user.id,
-        createdAt: new Date(),
-      })
-      .returning({ id: payments.id });
-
-    // Reconcile carried-over dues against the shop's cumulative payment pool, so
-    // old orders clear once enough has been paid (even across several payments).
-    await reconcileCarriedOverOrders(body.shopId);
+    // Insert the payment and reconcile carried-over dues in one transaction, so
+    // old orders clear once enough has been paid (even across several payments)
+    // and a mid-way failure can't leave the payment recorded with stale flags.
+    const inserted = await db.transaction(async (tx) => {
+      const [row] = await tx
+        .insert(payments)
+        .values({
+          id: crypto.randomUUID(),
+          shopId: body.shopId,
+          amount: body.amount,
+          paymentDate: body.paymentDate,
+          note: body.note ?? null,
+          recordedBy: session.user.id,
+          createdAt: new Date(),
+        })
+        .returning({ id: payments.id });
+      await reconcileCarriedOverOrders(body.shopId, tx);
+      return row;
+    });
 
     // Notify the shop's Khata badge that a payment was recorded.
     orderEvents.emit("payment_recorded", {
@@ -531,10 +538,12 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
       return c.json({ error: "Not found" }, 404);
     }
 
-    await db.delete(payments).where(eq(payments.id, id));
-
-    // Recompute the shop's carried-over paid/unpaid flags now the pool changed.
-    await reconcileCarriedOverOrders(existing.shopId);
+    // Delete the payment and recompute the shop's carried-over paid/unpaid flags
+    // atomically, so the pool change and the flag update can't diverge.
+    await db.transaction(async (tx) => {
+      await tx.delete(payments).where(eq(payments.id, id));
+      await reconcileCarriedOverOrders(existing.shopId, tx);
+    });
 
     return c.json({ success: true });
   })
