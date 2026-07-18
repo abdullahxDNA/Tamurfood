@@ -13,9 +13,9 @@
     "@sentry/bun": "^10.66.0",
     "@t3-oss/env-core": "^0.13.11",
     "@tamurfood/db": "workspace:*",
-    "better-auth": "^1.5.0",
-    "drizzle-orm": "^0.45.1",
-    "hono": "^4.12.3",
+    "better-auth": "^1.6.23",
+    "drizzle-orm": "0.45.2",
+    "hono": "^4.12.30",
     "resend": "^6.17.2",
     "zod": "^4.3.6"
   },
