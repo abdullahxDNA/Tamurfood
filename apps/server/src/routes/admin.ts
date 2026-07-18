@@ -727,44 +727,53 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
 
     const now = new Date();
 
-    if (change.type === "create") {
-      const data = change.proposedData as {
-        name: string;
-        price: number;
-        category: string;
-        imageUrl?: string | null;
-        sortOrder?: number;
-      };
-      await db.insert(menuItems).values({
-        id: crypto.randomUUID(),
-        name: data.name,
-        price: data.price,
-        category: data.category,
-        imageUrl: data.imageUrl ?? null,
-        sortOrder: data.sortOrder ?? 0,
-        isAvailable: true,
-        createdAt: now,
-      });
-    } else if (change.type === "update" && change.menuItemId) {
-      const data = change.proposedData as Partial<{
-        name: string;
-        price: number;
-        category: string;
-        imageUrl: string | null;
-        sortOrder: number;
-      }>;
-      await db
-        .update(menuItems)
-        .set(data)
-        .where(eq(menuItems.id, change.menuItemId));
-    } else if (change.type === "delete" && change.menuItemId) {
-      await db.delete(menuItems).where(eq(menuItems.id, change.menuItemId));
-    }
+    // Apply the proposed menu change and mark the request approved atomically —
+    // otherwise a failure between the two could apply the change while leaving
+    // the request "pending", letting it be approved (and re-applied) again.
+    await db.transaction(async (tx) => {
+      if (change.type === "create") {
+        const data = change.proposedData as {
+          name: string;
+          price: number;
+          category: string;
+          imageUrl?: string | null;
+          sortOrder?: number;
+        };
+        await tx.insert(menuItems).values({
+          id: crypto.randomUUID(),
+          name: data.name,
+          price: data.price,
+          category: data.category,
+          imageUrl: data.imageUrl ?? null,
+          sortOrder: data.sortOrder ?? 0,
+          isAvailable: true,
+          createdAt: now,
+        });
+      } else if (change.type === "update" && change.menuItemId) {
+        const data = change.proposedData as Partial<{
+          name: string;
+          price: number;
+          category: string;
+          imageUrl: string | null;
+          sortOrder: number;
+        }>;
+        await tx
+          .update(menuItems)
+          .set(data)
+          .where(eq(menuItems.id, change.menuItemId));
+      } else if (change.type === "delete" && change.menuItemId) {
+        await tx.delete(menuItems).where(eq(menuItems.id, change.menuItemId));
+      }
 
-    await db
-      .update(pendingMenuChanges)
-      .set({ status: "approved", reviewedAt: now, reviewedBy: session.user.id })
-      .where(eq(pendingMenuChanges.id, id));
+      await tx
+        .update(pendingMenuChanges)
+        .set({
+          status: "approved",
+          reviewedAt: now,
+          reviewedBy: session.user.id,
+        })
+        .where(eq(pendingMenuChanges.id, id));
+    });
 
     return c.json({ success: true });
   })
@@ -868,13 +877,22 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
 
       if (!newUser) return c.json({ error: "Failed to create user" }, 500);
 
-      const hash = await ctx.password.hash(body.password);
-      await ctx.internalAdapter.linkAccount({
-        accountId: newUser.id,
-        providerId: "credential",
-        password: hash,
-        userId: newUser.id,
-      });
+      // Better Auth's internalAdapter can't join a db transaction, so if linking
+      // the password fails we'd be left with a login-less orphan user. Roll the
+      // user back by hand (same compensating pattern as shop creation).
+      try {
+        const hash = await ctx.password.hash(body.password);
+        await ctx.internalAdapter.linkAccount({
+          accountId: newUser.id,
+          providerId: "credential",
+          password: hash,
+          userId: newUser.id,
+        });
+      } catch (linkErr) {
+        await db.delete(user).where(eq(user.id, newUser.id));
+        console.error("[create moderator] failed, rolled back user:", linkErr);
+        return c.json({ error: "Failed to create moderator" }, 500);
+      }
 
       return c.json({ id: newUser.id }, 201);
     },
