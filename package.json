@@ -6,7 +6,7 @@
     "packages/*"
   ],
   "overrides": {
-    "drizzle-orm": "0.45.1"
+    "drizzle-orm": "0.45.2"
   },
   "scripts": {
     "dev": "bun run --filter '*' dev",
@@ -28,5 +28,12 @@
     "husky": "^9.1.7",
     "lint-staged": "^17.0.8",
     "prettier": "^3.9.5"
+  },
+  "dependencies": {
+    "@hono/zod-validator": "^0.9.0",
+    "better-auth": "^1.6.23",
+    "drizzle-kit": "^0.31.10",
+    "drizzle-orm": "^0.45.2",
+    "hono": "^4.12.30"
   }
 }
