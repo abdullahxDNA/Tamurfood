@@ -1,6 +1,7 @@
 import { and, eq, inArray, isNull, isNotNull, sql } from "drizzle-orm";
 import { db } from "@tamurfood/db";
 import { orders, payments } from "@tamurfood/db/schema";
+import { allocatePayments } from "./allocate";
 
 // Reconcile a shop's unpaid orders against its cumulative "Record Payment"
 // (untied) pool. Marks the shop's oldest unpaid orders (accepted, of ANY date,
@@ -36,14 +37,7 @@ export async function reconcileCarriedOverOrders(shopId: string) {
     )
     .orderBy(orders.placedAt);
 
-  let cumulative = 0;
-  const toPay: string[] = [];
-  const toUnpay: string[] = [];
-  for (const o of candidateOrders) {
-    if (tiedIds.has(o.id)) continue; // settled individually via the per-order button
-    cumulative += o.amount;
-    (cumulative <= pool ? toPay : toUnpay).push(o.id);
-  }
+  const { toPay, toUnpay } = allocatePayments(pool, tiedIds, candidateOrders);
   if (toPay.length > 0) {
     await db
       .update(orders)
