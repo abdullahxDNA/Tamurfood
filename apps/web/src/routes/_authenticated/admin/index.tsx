@@ -259,7 +259,7 @@ function OrderCard({
             <Badge variant="destructive">Cancelled</Badge>
           ) : (
             <Badge variant={order.isDone ? "secondary" : "default"}>
-              {order.isDone ? "Done" : "Pending"}
+              {order.isDone ? "Delivered" : "Pending"}
             </Badge>
           )}
           {order.isDone &&
@@ -280,7 +280,7 @@ function OrderCard({
           </span>
           {onMarkDone && !order.isDone && !order.isCancelled && (
             <Button size="sm" onClick={() => onMarkDone(order.id)}>
-              Mark Done
+              Mark Delivered
             </Button>
           )}
           {onCancel && !order.isDone && !order.isCancelled && (
@@ -525,7 +525,7 @@ function AdminDashboard() {
       });
       if (!res.ok) {
         const d = (await res.json()) as { error?: string };
-        throw new Error(d.error ?? "Failed to mark done");
+        throw new Error(d.error ?? "Failed to mark delivered");
       }
       return res.json();
     },
@@ -535,7 +535,9 @@ function AdminDashboard() {
       if (data.paid)
         queryClient.invalidateQueries({ queryKey: ["admin/payments"] });
       toast.success(
-        data.paid ? "Order done — payment recorded." : "Order marked as done.",
+        data.paid
+          ? "Order delivered — payment recorded."
+          : "Order marked delivered.",
       );
       setConfirmDoneId(null);
     },
@@ -680,7 +682,7 @@ function AdminDashboard() {
           <p className="mt-0.5 text-2xl font-bold leading-none">
             {pending.length}
           </p>
-          <p className="mt-1 text-[11px] text-muted-foreground">to accept</p>
+          <p className="mt-1 text-[11px] text-muted-foreground">to deliver</p>
         </div>
         <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/20">
           <p className="text-xs text-amber-700 dark:text-amber-400">
@@ -714,7 +716,7 @@ function AdminDashboard() {
             </span>
           )}
           <span className="ml-auto text-xs text-muted-foreground">
-            Mark Done to accept
+            Mark Delivered once handed over
           </span>
         </div>
         <div className="space-y-3 p-3">
@@ -907,7 +909,7 @@ function AdminDashboard() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Mark order as done?</DialogTitle>
+            <DialogTitle>Mark order as delivered?</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">Was this order paid?</p>
           <DialogFooter className="flex-col sm:flex-row gap-2">
@@ -926,7 +928,7 @@ function AdminDashboard() {
               }
               disabled={markDoneMutation.isPending}
             >
-              Done — Unpaid
+              Delivered — Unpaid
             </Button>
             <Button
               onClick={() =>
@@ -935,7 +937,7 @@ function AdminDashboard() {
               }
               disabled={markDoneMutation.isPending}
             >
-              {markDoneMutation.isPending ? "Saving…" : "Done + Paid"}
+              {markDoneMutation.isPending ? "Saving…" : "Delivered + Paid"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1068,7 +1070,7 @@ function AdminDashboard() {
                       variant={order.isDone ? "secondary" : "default"}
                       className="text-xs"
                     >
-                      {order.isDone ? "Done" : "Pending"}
+                      {order.isDone ? "Delivered" : "Pending"}
                     </Badge>
                     {order.isDone && !order.isCancelled && (
                       <Badge
