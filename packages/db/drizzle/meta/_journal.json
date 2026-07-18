@@ -120,6 +120,13 @@
       "when": 1783000480000,
       "tag": "0016_payment_order_id_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1783000540000,
+      "tag": "0017_deletable_menu_items",
+      "breakpoints": true
     }
   ]
 }

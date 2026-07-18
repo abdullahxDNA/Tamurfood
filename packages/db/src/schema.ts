@@ -142,9 +142,12 @@ export const orderItems = pgTable(
     orderId: text("order_id")
       .notNull()
       .references(() => orders.id, { onDelete: "cascade" }),
-    menuItemId: text("menu_item_id")
-      .notNull()
-      .references(() => menuItems.id, { onDelete: "restrict" }),
+    // Nullable + ON DELETE SET NULL so a menu item can be permanently deleted
+    // without blocking on its order history — the snapshot columns below
+    // (itemName, itemPrice, lineTotal) keep every past order fully readable.
+    menuItemId: text("menu_item_id").references(() => menuItems.id, {
+      onDelete: "set null",
+    }),
     itemName: varchar("item_name", { length: 100 }).notNull(),
     itemPrice: integer("item_price").notNull(),
     quantity: integer("quantity").notNull(),
