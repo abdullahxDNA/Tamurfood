@@ -165,6 +165,40 @@ function LandingPage() {
         </section>
       </div>
 
+      {/* ───────── Product showcase ───────── */}
+      <section className="bg-white px-6 pb-8 pt-20 sm:pt-24">
+        <div className="mx-auto max-w-5xl">
+          <div className="relative">
+            {/* desktop browser frame — admin dashboard */}
+            <div className="overflow-hidden rounded-2xl border border-zinc-200 shadow-2xl shadow-zinc-900/10">
+              <div className="flex items-center gap-1.5 border-b border-zinc-100 bg-zinc-50 px-4 py-3">
+                <span className="h-3 w-3 rounded-full bg-red-400" />
+                <span className="h-3 w-3 rounded-full bg-amber-400" />
+                <span className="h-3 w-3 rounded-full bg-green-400" />
+                <span className="ml-3 text-xs text-zinc-400">
+                  Admin · live orders &amp; analytics
+                </span>
+              </div>
+              <img
+                src="/screenshots/admin-dashboard.png"
+                alt="Admin dashboard with the live order feed and analytics"
+                className="w-full"
+                loading="lazy"
+              />
+            </div>
+            {/* floating phone — live order-placing GIF */}
+            <div className="absolute -bottom-10 -right-2 hidden w-36 overflow-hidden rounded-[2rem] border-[6px] border-zinc-900 bg-zinc-900 shadow-2xl md:block lg:w-44">
+              <img
+                src="/screenshots/demo.gif"
+                alt="Placing an order on the shop side"
+                className="w-full rounded-[1.5rem]"
+                loading="lazy"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ───────── Features ───────── */}
       <section className="mx-auto max-w-6xl px-6 py-20 sm:py-28">
         <div className="text-center">
@@ -191,6 +225,41 @@ function LandingPage() {
               </p>
             </div>
           ))}
+        </div>
+      </section>
+
+      {/* ───────── Mobile screens ───────── */}
+      <section className="border-t border-zinc-100 bg-white">
+        <div className="mx-auto max-w-5xl px-6 py-20">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Built for the shop floor
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-zinc-500">
+              Shops order, track, and check their balance — all from a phone.
+            </p>
+          </div>
+          <div className="mt-12 flex flex-wrap items-start justify-center gap-6 sm:gap-8">
+            {[
+              { src: "/screenshots/shop-menu.png", label: "Menu & ordering" },
+              { src: "/screenshots/order-tracker.png", label: "Order tracker" },
+              { src: "/screenshots/khata.png", label: "Khata balance" },
+            ].map((s) => (
+              <figure key={s.src} className="w-40 sm:w-48">
+                <div className="overflow-hidden rounded-[2rem] border-[6px] border-zinc-900 bg-zinc-900 shadow-xl transition hover:-translate-y-1">
+                  <img
+                    src={s.src}
+                    alt={s.label}
+                    className="w-full rounded-[1.5rem]"
+                    loading="lazy"
+                  />
+                </div>
+                <figcaption className="mt-3 text-center text-sm font-medium text-zinc-500">
+                  {s.label}
+                </figcaption>
+              </figure>
+            ))}
+          </div>
         </div>
       </section>
 
