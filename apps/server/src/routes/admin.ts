@@ -186,36 +186,48 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
 
       const now = new Date();
 
-      await db
-        .update(orders)
-        .set({ isDone: true, isPaid: paid, doneAt: now })
-        .where(eq(orders.id, id));
+      // Order status + payment must be atomic: an order is marked paid iff a
+      // matching payment row exists. Wrap both so a partial failure can't leave
+      // an order "paid" with no payment (or vice-versa).
+      await db.transaction(async (tx) => {
+        await tx
+          .update(orders)
+          .set({ isDone: true, isPaid: paid, doneAt: now })
+          .where(eq(orders.id, id));
 
-      if (paid) {
-        await db.insert(payments).values({
+        if (paid) {
+          await tx.insert(payments).values({
+            id: crypto.randomUUID(),
+            shopId: existing.shopId,
+            orderId: id,
+            amount: existing.totalAmount,
+            paymentDate: now.toISOString().slice(0, 10),
+            note: `Order #${existing.orderNumber}`,
+            recordedBy: session.user.id,
+            createdAt: now,
+          });
+        }
+      });
+
+      // Analytics is best-effort — never fail (or roll back) the accept over a
+      // log write.
+      try {
+        await db.insert(analyticsEvents).values({
           id: crypto.randomUUID(),
-          shopId: existing.shopId,
-          orderId: id,
-          amount: existing.totalAmount,
-          paymentDate: now.toISOString().slice(0, 10),
-          note: `Order #${existing.orderNumber}`,
-          recordedBy: session.user.id,
+          eventType: "order_done",
+          userId: session.user.id,
+          metadata: {
+            orderId: id,
+            shopId: existing.shopId,
+            paid,
+            fulfillmentMs:
+              now.getTime() - new Date(existing.placedAt).getTime(),
+          },
           createdAt: now,
         });
+      } catch (err) {
+        console.error("[order_done analytics] failed:", err);
       }
-
-      await db.insert(analyticsEvents).values({
-        id: crypto.randomUUID(),
-        eventType: "order_done",
-        userId: session.user.id,
-        metadata: {
-          orderId: id,
-          shopId: existing.shopId,
-          paid,
-          fulfillmentMs: now.getTime() - new Date(existing.placedAt).getTime(),
-        },
-        createdAt: now,
-      });
 
       // Push the status change to the shop's live tracker (instant "Accepted").
       orderEvents.emit("order_status", {

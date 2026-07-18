@@ -109,28 +109,38 @@ export const shopsRouter = new Hono<{ Variables: Variables }>()
 
     const userId = newUser.id;
 
-    // Link a credential (email+password) account so the user can sign in.
-    const hash = await ctx.password.hash(body.password);
-    await ctx.internalAdapter.linkAccount({
-      accountId: userId,
-      providerId: "credential",
-      password: hash,
-      userId,
-    });
+    // Better Auth's internal adapter can't join our db.transaction, so use a
+    // compensating rollback: if linking the credential or creating the shop
+    // fails after the user exists, delete the user (FK cascades remove the
+    // account/shop) so we never leave an orphaned login with no shop.
+    try {
+      // Link a credential (email+password) account so the user can sign in.
+      const hash = await ctx.password.hash(body.password);
+      await ctx.internalAdapter.linkAccount({
+        accountId: userId,
+        providerId: "credential",
+        password: hash,
+        userId,
+      });
 
-    // Create shop record
-    const shopId = crypto.randomUUID();
-    await db.insert(shops).values({
-      id: shopId,
-      userId,
-      shopName: body.shopName,
-      ownerName: body.ownerName,
-      address: body.address ?? null,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    });
+      // Create shop record
+      const shopId = crypto.randomUUID();
+      await db.insert(shops).values({
+        id: shopId,
+        userId,
+        shopName: body.shopName,
+        ownerName: body.ownerName,
+        address: body.address ?? null,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
 
-    return c.json({ id: shopId }, 201);
+      return c.json({ id: shopId }, 201);
+    } catch (createErr) {
+      await db.delete(user).where(eq(user.id, userId));
+      console.error("[create shop] failed, rolled back user:", createErr);
+      return c.json({ error: "Failed to create shop" }, 500);
+    }
   })
   // PUT /:id — update shop + user name
   .put("/:id", zValidator("json", updateShopSchema), async (c) => {
