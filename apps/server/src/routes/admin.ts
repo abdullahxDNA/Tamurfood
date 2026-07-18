@@ -23,6 +23,7 @@ import {
   startOfDhakaDayUTC,
   startOfDhakaMonthUTC,
   dhakaDateStartUTC,
+  dhakaDateString,
   addDays,
 } from "../lib/time";
 import {
@@ -213,7 +214,7 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
             shopId: existing.shopId,
             orderId: id,
             amount: existing.totalAmount,
-            paymentDate: now.toISOString().slice(0, 10),
+            paymentDate: dhakaDateString(now),
             note: `Order #${existing.orderNumber}`,
             recordedBy: session.user.id,
             createdAt: now,
@@ -310,7 +311,7 @@ export const adminRouter = new Hono<{ Variables: Variables }>()
         shopId: existing.shopId,
         orderId: id,
         amount: existing.totalAmount,
-        paymentDate: now.toISOString().slice(0, 10),
+        paymentDate: dhakaDateString(now),
         note: `Order #${existing.orderNumber}`,
         recordedBy: session.user.id,
         createdAt: now,

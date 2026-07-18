@@ -3,6 +3,7 @@ import {
   startOfDhakaDayUTC,
   startOfDhakaMonthUTC,
   dhakaDateStartUTC,
+  dhakaDateString,
   addDays,
 } from "./time";
 
@@ -67,6 +68,30 @@ describe("dhakaDateStartUTC", () => {
   test("converts a YYYY-MM-DD Dhaka date to its UTC start instant", () => {
     expect(dhakaDateStartUTC("2026-07-16").toISOString()).toBe(
       "2026-07-15T18:00:00.000Z",
+    );
+  });
+});
+
+describe("dhakaDateString", () => {
+  test("returns the Dhaka calendar date for an afternoon instant", () => {
+    // 2026-07-16 09:00 Dhaka == 2026-07-16 03:00 UTC
+    expect(dhakaDateString(new Date("2026-07-16T03:00:00Z"))).toBe(
+      "2026-07-16",
+    );
+  });
+
+  test("00:00–06:00 Dhaka lands on the Dhaka day, not the UTC day (the fix)", () => {
+    // 2026-07-19 02:30 Dhaka == 2026-07-18 20:30 UTC. The UTC slice would wrongly
+    // say 2026-07-18; the Dhaka date must be 2026-07-19.
+    const early = new Date("2026-07-18T20:30:00Z");
+    expect(early.toISOString().slice(0, 10)).toBe("2026-07-18"); // UTC (wrong)
+    expect(dhakaDateString(early)).toBe("2026-07-19"); // Dhaka (correct)
+  });
+
+  test("just-before-midnight Dhaka stays on the same day", () => {
+    // 2026-07-18 23:30 Dhaka == 2026-07-18 17:30 UTC
+    expect(dhakaDateString(new Date("2026-07-18T17:30:00Z"))).toBe(
+      "2026-07-18",
     );
   });
 });
