@@ -2,6 +2,7 @@ import { and, eq, lt } from "drizzle-orm";
 import { db } from "@tamurfood/db";
 import { orders } from "@tamurfood/db/schema";
 import { orderEvents, type OrderStatusEvent } from "./order-events";
+import { restoreStockForCancelledOrders } from "./stock";
 import { startOfDhakaDayUTC } from "./time";
 
 // End-of-day cleanup: orders a shop places but nobody accepts (or cancels) don't
@@ -18,21 +19,31 @@ const CANCEL_REASON = "Not accepted — order closed for the day";
 export async function cancelStaleOrders(): Promise<number> {
   const cutoff = startOfDhakaDayUTC();
 
-  const cancelled = await db
-    .update(orders)
-    .set({
-      isCancelled: true,
-      cancelReason: CANCEL_REASON,
-      cancelledAt: new Date(),
-    })
-    .where(
-      and(
-        eq(orders.isDone, false),
-        eq(orders.isCancelled, false),
-        lt(orders.placedAt, cutoff),
-      ),
-    )
-    .returning({ id: orders.id, shopId: orders.shopId });
+  // Cancel the stale orders and return their reserved stock atomically, so the
+  // nightly sweep can't leak inventory.
+  const cancelled = await db.transaction(async (tx) => {
+    const rows = await tx
+      .update(orders)
+      .set({
+        isCancelled: true,
+        cancelReason: CANCEL_REASON,
+        cancelledAt: new Date(),
+      })
+      .where(
+        and(
+          eq(orders.isDone, false),
+          eq(orders.isCancelled, false),
+          lt(orders.placedAt, cutoff),
+        ),
+      )
+      .returning({ id: orders.id, shopId: orders.shopId });
+
+    await restoreStockForCancelledOrders(
+      tx,
+      rows.map((r) => r.id),
+    );
+    return rows;
+  });
 
   if (cancelled.length === 0) return 0;
 
