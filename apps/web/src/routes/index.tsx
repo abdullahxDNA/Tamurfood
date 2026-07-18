@@ -40,11 +40,11 @@ type Feature = {
 const FEATURES: Feature[] = [
   {
     icon: ShoppingCart,
-    title: "Order management",
-    summary: "Shops place orders; staff accept, fulfil, or cancel them.",
+    title: "Order & deliver",
+    summary: "Nearby shops order in a tap; bakery staff deliver it over.",
     points: [
       "A daily-numbered order history for every shop",
-      "Accept, mark done, or cancel with a reason the shop sees",
+      "Accept, mark delivered, or cancel with a reason the shop sees",
       "Atomic stock decrement — you can never oversell the last units",
     ],
     img: "/screenshots/order-tracker.png",
@@ -53,11 +53,11 @@ const FEATURES: Feature[] = [
   {
     icon: Radio,
     title: "Live order feed",
-    summary: "New orders reach the admin the instant they're placed.",
+    summary: "Every order reaches the bakery counter the instant it's placed.",
     points: [
       "Real-time updates over Server-Sent Events",
       "No polling, no manual refresh",
-      "The admin sees each order the moment it lands",
+      "Staff see each order the moment it lands and head out to deliver",
     ],
     img: "/screenshots/admin-dashboard.png",
     phone: false,
@@ -184,22 +184,24 @@ function LandingPage() {
               className="h-1.5 w-1.5 rounded-full"
               style={{ backgroundColor: CLAY }}
             />
-            B2B ordering &amp; credit platform
+            Neighbourhood bakery · instant delivery
           </span>
 
           <h1 className="mt-8 font-serif text-5xl font-medium leading-[1.05] tracking-tight text-stone-900 dark:text-stone-50 sm:text-6xl">
-            Ordering &amp; credit,
+            Fresh snacks,
             <br />
-            done right for wholesale.
+            delivered to your shop.
           </h1>
 
           <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-stone-600 dark:text-stone-400">
-            Tamurfood lets a supplier take orders from many shops, fulfil them
-            live, and track every shop&apos;s dues in a built-in{" "}
+            Tamurfood is the bakery next door. The shops around us order snacks
+            and meals for their team — and our own staff bring it over in
+            minutes. No more leaving the counter; just tap, and it arrives. Keep
+            a running{" "}
             <span className="font-medium text-stone-900 dark:text-stone-100">
               Khata
             </span>{" "}
-            ledger — replacing the paper credit book and phone-call ordering.
+            and settle up whenever.
           </p>
 
           <div className="mt-9 flex items-center justify-center">
@@ -213,7 +215,7 @@ function LandingPage() {
             </Link>
           </div>
           <p className="mt-4 text-xs text-stone-400 dark:text-stone-500">
-            Invite-only — accounts are created by the administrator.
+            For nearby shops — the bakery sets up your account.
           </p>
         </section>
 
@@ -255,10 +257,11 @@ function LandingPage() {
           <div className="mx-auto max-w-5xl px-6 py-24">
             <div className="text-center">
               <h2 className="font-serif text-3xl font-medium tracking-tight text-stone-900 dark:text-stone-50 sm:text-4xl">
-                Built for the shop floor
+                Ordered from the counter
               </h2>
               <p className="mx-auto mt-3 max-w-md text-stone-600 dark:text-stone-400">
-                Shops order, track, and check their balance — all from a phone.
+                The shops nearby order, track delivery, and check their Khata —
+                all from a phone.
               </p>
             </div>
             <div className="mt-14 flex flex-wrap items-start justify-center gap-6 sm:gap-10">
@@ -310,7 +313,7 @@ function LandingPage() {
               Ready to get started?
             </h2>
             <p className="mx-auto mt-3 max-w-sm text-stone-600 dark:text-stone-400">
-              Log in with the account created for you by the administrator.
+              Log in with the account the bakery set up for your shop.
             </p>
             <Link
               to="/login"
@@ -322,7 +325,7 @@ function LandingPage() {
             </Link>
           </div>
           <footer className="border-t border-stone-200/70 px-6 py-8 text-center text-sm text-stone-400 dark:border-stone-800 dark:text-stone-500">
-            Tamurfood — B2B bakery ordering &amp; Khata ledger.
+            Tamurfood — neighbourhood snack ordering &amp; instant delivery.
           </footer>
         </section>
       </div>
@@ -342,11 +345,11 @@ function FeatureShowcase() {
       <div className="mx-auto max-w-5xl px-6 py-24">
         <div className="max-w-2xl">
           <h2 className="font-serif text-3xl font-medium tracking-tight text-stone-900 dark:text-stone-50 sm:text-4xl">
-            Everything a wholesale supplier needs
+            Built to serve the shops next door
           </h2>
           <p className="mt-3 text-stone-600 dark:text-stone-400">
-            Tap through the platform — one place for orders, fulfilment, and the
-            money in between.
+            Tap through it — from a shop&apos;s order to instant delivery, and
+            the Khata in between.
           </p>
         </div>
 
