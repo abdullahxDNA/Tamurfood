@@ -9,6 +9,8 @@ import {
   ShieldCheck,
   ArrowRight,
   Check,
+  Moon,
+  Sun,
 } from "lucide-react";
 
 export const Route = createFileRoute("/")({
@@ -128,180 +130,202 @@ const PHONES = [
 ];
 
 function LandingPage() {
+  // Dark mode is scoped to THIS page only via the `dark` class on the root div,
+  // so the login/admin/shop pages are completely unaffected.
+  const [dark, setDark] = useState(false);
+
   return (
-    <div className="min-h-screen bg-[#faf9f5] text-stone-800 antialiased">
-      {/* ───────── Nav ───────── */}
-      <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-6">
-        <span className="flex items-center gap-2.5 font-semibold tracking-tight text-stone-900">
-          <span
-            className="grid h-8 w-8 place-items-center rounded-lg text-sm font-bold text-white"
-            style={{ backgroundColor: CLAY }}
-          >
-            T
+    <div className={dark ? "dark" : ""}>
+      <div className="min-h-screen bg-[#faf9f5] text-stone-800 antialiased dark:bg-stone-950 dark:text-stone-300">
+        {/* ───────── Nav ───────── */}
+        <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-6">
+          <span className="flex items-center gap-2.5 font-semibold tracking-tight text-stone-900 dark:text-stone-100">
+            <span
+              className="grid h-8 w-8 place-items-center rounded-lg text-sm font-bold text-white"
+              style={{ backgroundColor: CLAY }}
+            >
+              T
+            </span>
+            Tamurfood
           </span>
-          Tamurfood
-        </span>
-        <Link
-          to="/login"
-          className="text-sm font-medium text-stone-600 transition hover:text-stone-900"
-        >
-          Log in →
-        </Link>
-      </header>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setDark((d) => !d)}
+              aria-label="Toggle dark mode"
+              className="grid h-9 w-9 place-items-center rounded-lg border border-stone-200 text-stone-600 transition hover:text-stone-900 dark:border-stone-700 dark:text-stone-400 dark:hover:text-stone-100"
+            >
+              {dark ? (
+                <Sun className="h-4 w-4" />
+              ) : (
+                <Moon className="h-4 w-4" />
+              )}
+            </button>
+            <Link
+              to="/login"
+              className="text-sm font-medium text-stone-600 transition hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100"
+            >
+              Log in →
+            </Link>
+          </div>
+        </header>
 
-      {/* ───────── Hero ───────── */}
-      <section className="mx-auto max-w-3xl px-6 pt-16 text-center sm:pt-24">
-        <span
-          className="inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-medium"
-          style={{
-            borderColor: `${CLAY}33`,
-            backgroundColor: `${CLAY}0f`,
-            color: CLAY,
-          }}
-        >
+        {/* ───────── Hero ───────── */}
+        <section className="mx-auto max-w-3xl px-6 pt-16 text-center sm:pt-24">
           <span
-            className="h-1.5 w-1.5 rounded-full"
-            style={{ backgroundColor: CLAY }}
-          />
-          B2B ordering &amp; credit platform
-        </span>
-
-        <h1 className="mt-8 font-serif text-5xl font-medium leading-[1.05] tracking-tight text-stone-900 sm:text-6xl">
-          Ordering &amp; credit,
-          <br />
-          done right for wholesale.
-        </h1>
-
-        <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-stone-600">
-          Tamurfood lets a supplier take orders from many shops, fulfil them
-          live, and track every shop&apos;s dues in a built-in{" "}
-          <span className="font-medium text-stone-900">Khata</span> ledger —
-          replacing the paper credit book and phone-call ordering.
-        </p>
-
-        <div className="mt-9 flex items-center justify-center">
-          <Link
-            to="/login"
-            className="group inline-flex items-center gap-2 rounded-full px-7 py-3.5 font-medium text-white shadow-sm transition hover:brightness-95"
-            style={{ backgroundColor: CLAY }}
+            className="inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-medium"
+            style={{
+              borderColor: `${CLAY}33`,
+              backgroundColor: `${CLAY}0f`,
+              color: CLAY,
+            }}
           >
-            Log in to continue
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-          </Link>
-        </div>
-        <p className="mt-4 text-xs text-stone-400">
-          Invite-only — accounts are created by the administrator.
-        </p>
-      </section>
+            <span
+              className="h-1.5 w-1.5 rounded-full"
+              style={{ backgroundColor: CLAY }}
+            />
+            B2B ordering &amp; credit platform
+          </span>
 
-      {/* ───────── Product showcase ───────── */}
-      <section className="mx-auto max-w-5xl px-6 pb-24 pt-16 sm:pt-20">
-        <div className="relative">
-          <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_30px_80px_-20px_rgba(60,40,20,0.25)]">
-            <div className="flex items-center gap-1.5 border-b border-stone-100 bg-stone-50 px-4 py-3">
-              <span className="h-2.5 w-2.5 rounded-full bg-stone-300" />
-              <span className="h-2.5 w-2.5 rounded-full bg-stone-300" />
-              <span className="h-2.5 w-2.5 rounded-full bg-stone-300" />
-              <span className="ml-3 text-xs text-stone-400">
-                Admin · live orders &amp; analytics
-              </span>
+          <h1 className="mt-8 font-serif text-5xl font-medium leading-[1.05] tracking-tight text-stone-900 dark:text-stone-50 sm:text-6xl">
+            Ordering &amp; credit,
+            <br />
+            done right for wholesale.
+          </h1>
+
+          <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-stone-600 dark:text-stone-400">
+            Tamurfood lets a supplier take orders from many shops, fulfil them
+            live, and track every shop&apos;s dues in a built-in{" "}
+            <span className="font-medium text-stone-900 dark:text-stone-100">
+              Khata
+            </span>{" "}
+            ledger — replacing the paper credit book and phone-call ordering.
+          </p>
+
+          <div className="mt-9 flex items-center justify-center">
+            <Link
+              to="/login"
+              className="group inline-flex items-center gap-2 rounded-full px-7 py-3.5 font-medium text-white shadow-sm transition hover:brightness-95"
+              style={{ backgroundColor: CLAY }}
+            >
+              Log in to continue
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+          </div>
+          <p className="mt-4 text-xs text-stone-400 dark:text-stone-500">
+            Invite-only — accounts are created by the administrator.
+          </p>
+        </section>
+
+        {/* ───────── Product showcase ───────── */}
+        <section className="mx-auto max-w-5xl px-6 pb-24 pt-16 sm:pt-20">
+          <div className="relative">
+            <div className="overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-[0_30px_80px_-20px_rgba(60,40,20,0.25)] dark:border-stone-800 dark:bg-stone-900">
+              <div className="flex items-center gap-1.5 border-b border-stone-100 bg-stone-50 px-4 py-3 dark:border-stone-800 dark:bg-stone-800">
+                <span className="h-2.5 w-2.5 rounded-full bg-stone-300 dark:bg-stone-600" />
+                <span className="h-2.5 w-2.5 rounded-full bg-stone-300 dark:bg-stone-600" />
+                <span className="h-2.5 w-2.5 rounded-full bg-stone-300 dark:bg-stone-600" />
+                <span className="ml-3 text-xs text-stone-400 dark:text-stone-500">
+                  Admin · live orders &amp; analytics
+                </span>
+              </div>
+              <img
+                src="/screenshots/admin-dashboard.png"
+                alt="Admin dashboard with the live order feed and analytics"
+                className="w-full"
+                loading="lazy"
+              />
             </div>
-            <img
-              src="/screenshots/admin-dashboard.png"
-              alt="Admin dashboard with the live order feed and analytics"
-              className="w-full"
-              loading="lazy"
-            />
+            <div className="absolute -bottom-10 -right-3 hidden w-36 overflow-hidden rounded-[2rem] border-[6px] border-stone-900 bg-stone-900 shadow-2xl dark:border-stone-700 md:block lg:w-44">
+              <img
+                src="/screenshots/demo.gif"
+                alt="Placing an order on the shop side"
+                className="w-full rounded-[1.5rem]"
+                loading="lazy"
+              />
+            </div>
           </div>
-          <div className="absolute -bottom-10 -right-3 hidden w-36 overflow-hidden rounded-[2rem] border-[6px] border-stone-900 bg-stone-900 shadow-2xl md:block lg:w-44">
-            <img
-              src="/screenshots/demo.gif"
-              alt="Placing an order on the shop side"
-              className="w-full rounded-[1.5rem]"
-              loading="lazy"
-            />
+        </section>
+
+        {/* ───────── Interactive features ───────── */}
+        <FeatureShowcase />
+
+        {/* ───────── Mobile screens ───────── */}
+        <section className="border-t border-stone-200/70 dark:border-stone-800">
+          <div className="mx-auto max-w-5xl px-6 py-24">
+            <div className="text-center">
+              <h2 className="font-serif text-3xl font-medium tracking-tight text-stone-900 dark:text-stone-50 sm:text-4xl">
+                Built for the shop floor
+              </h2>
+              <p className="mx-auto mt-3 max-w-md text-stone-600 dark:text-stone-400">
+                Shops order, track, and check their balance — all from a phone.
+              </p>
+            </div>
+            <div className="mt-14 flex flex-wrap items-start justify-center gap-6 sm:gap-10">
+              {PHONES.map((s) => (
+                <figure key={s.src} className="w-40 sm:w-48">
+                  <div className="overflow-hidden rounded-[2rem] border-[6px] border-stone-900 bg-stone-900 shadow-xl transition hover:-translate-y-1.5 dark:border-stone-700">
+                    <img
+                      src={s.src}
+                      alt={s.label}
+                      className="w-full rounded-[1.5rem]"
+                      loading="lazy"
+                    />
+                  </div>
+                  <figcaption className="mt-3 text-center text-sm text-stone-500 dark:text-stone-500">
+                    {s.label}
+                  </figcaption>
+                </figure>
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ───────── Interactive features ───────── */}
-      <FeatureShowcase />
-
-      {/* ───────── Mobile screens ───────── */}
-      <section className="border-t border-stone-200/70">
-        <div className="mx-auto max-w-5xl px-6 py-24">
-          <div className="text-center">
-            <h2 className="font-serif text-3xl font-medium tracking-tight text-stone-900 sm:text-4xl">
-              Built for the shop floor
+        {/* ───────── Tech stack ───────── */}
+        <section className="border-t border-stone-200/70 bg-[#f4f2ec] dark:border-stone-800 dark:bg-stone-900">
+          <div className="mx-auto max-w-3xl px-6 py-24 text-center">
+            <h2 className="font-serif text-2xl font-medium tracking-tight text-stone-900 dark:text-stone-50 sm:text-3xl">
+              Built with a modern stack
             </h2>
-            <p className="mx-auto mt-3 max-w-md text-stone-600">
-              Shops order, track, and check their balance — all from a phone.
+            <p className="mt-3 text-stone-600 dark:text-stone-400">
+              A type-safe, full-stack TypeScript monorepo — end to end.
             </p>
+            <div className="mt-9 flex flex-wrap justify-center gap-2.5">
+              {STACK.map((t) => (
+                <span
+                  key={t}
+                  className="rounded-full border border-stone-200 bg-[#faf9f5] px-4 py-2 text-sm text-stone-700 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-300"
+                >
+                  {t}
+                </span>
+              ))}
+            </div>
           </div>
-          <div className="mt-14 flex flex-wrap items-start justify-center gap-6 sm:gap-10">
-            {PHONES.map((s) => (
-              <figure key={s.src} className="w-40 sm:w-48">
-                <div className="overflow-hidden rounded-[2rem] border-[6px] border-stone-900 bg-stone-900 shadow-xl transition hover:-translate-y-1.5">
-                  <img
-                    src={s.src}
-                    alt={s.label}
-                    className="w-full rounded-[1.5rem]"
-                    loading="lazy"
-                  />
-                </div>
-                <figcaption className="mt-3 text-center text-sm text-stone-500">
-                  {s.label}
-                </figcaption>
-              </figure>
-            ))}
-          </div>
-        </div>
-      </section>
+        </section>
 
-      {/* ───────── Tech stack ───────── */}
-      <section className="border-t border-stone-200/70 bg-[#f4f2ec]">
-        <div className="mx-auto max-w-3xl px-6 py-24 text-center">
-          <h2 className="font-serif text-2xl font-medium tracking-tight text-stone-900 sm:text-3xl">
-            Built with a modern stack
-          </h2>
-          <p className="mt-3 text-stone-600">
-            A type-safe, full-stack TypeScript monorepo — end to end.
-          </p>
-          <div className="mt-9 flex flex-wrap justify-center gap-2.5">
-            {STACK.map((t) => (
-              <span
-                key={t}
-                className="rounded-full border border-stone-200 bg-[#faf9f5] px-4 py-2 text-sm text-stone-700"
-              >
-                {t}
-              </span>
-            ))}
+        {/* ───────── CTA + footer ───────── */}
+        <section className="border-t border-stone-200/70 dark:border-stone-800">
+          <div className="mx-auto max-w-2xl px-6 py-24 text-center">
+            <h2 className="font-serif text-3xl font-medium tracking-tight text-stone-900 dark:text-stone-50 sm:text-4xl">
+              Ready to get started?
+            </h2>
+            <p className="mx-auto mt-3 max-w-sm text-stone-600 dark:text-stone-400">
+              Log in with the account created for you by the administrator.
+            </p>
+            <Link
+              to="/login"
+              className="group mt-8 inline-flex items-center gap-2 rounded-full px-7 py-3.5 font-medium text-white shadow-sm transition hover:brightness-95"
+              style={{ backgroundColor: CLAY }}
+            >
+              Log in
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+            </Link>
           </div>
-        </div>
-      </section>
-
-      {/* ───────── CTA + footer ───────── */}
-      <section className="border-t border-stone-200/70">
-        <div className="mx-auto max-w-2xl px-6 py-24 text-center">
-          <h2 className="font-serif text-3xl font-medium tracking-tight text-stone-900 sm:text-4xl">
-            Ready to get started?
-          </h2>
-          <p className="mx-auto mt-3 max-w-sm text-stone-600">
-            Log in with the account created for you by the administrator.
-          </p>
-          <Link
-            to="/login"
-            className="group mt-8 inline-flex items-center gap-2 rounded-full px-7 py-3.5 font-medium text-white shadow-sm transition hover:brightness-95"
-            style={{ backgroundColor: CLAY }}
-          >
-            Log in
-            <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
-          </Link>
-        </div>
-        <footer className="border-t border-stone-200/70 px-6 py-8 text-center text-sm text-stone-400">
-          Tamurfood — B2B bakery ordering &amp; Khata ledger.
-        </footer>
-      </section>
+          <footer className="border-t border-stone-200/70 px-6 py-8 text-center text-sm text-stone-400 dark:border-stone-800 dark:text-stone-500">
+            Tamurfood — B2B bakery ordering &amp; Khata ledger.
+          </footer>
+        </section>
+      </div>
     </div>
   );
 }
@@ -314,13 +338,13 @@ function FeatureShowcase() {
   const Icon = f.icon;
 
   return (
-    <section className="border-t border-stone-200/70 bg-[#f4f2ec]">
+    <section className="border-t border-stone-200/70 bg-[#f4f2ec] dark:border-stone-800 dark:bg-stone-900">
       <div className="mx-auto max-w-5xl px-6 py-24">
         <div className="max-w-2xl">
-          <h2 className="font-serif text-3xl font-medium tracking-tight text-stone-900 sm:text-4xl">
+          <h2 className="font-serif text-3xl font-medium tracking-tight text-stone-900 dark:text-stone-50 sm:text-4xl">
             Everything a wholesale supplier needs
           </h2>
-          <p className="mt-3 text-stone-600">
+          <p className="mt-3 text-stone-600 dark:text-stone-400">
             Tap through the platform — one place for orders, fulfilment, and the
             money in between.
           </p>
@@ -339,7 +363,7 @@ function FeatureShowcase() {
                 className={`inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition ${
                   on
                     ? "border-transparent text-white shadow-sm"
-                    : "border-stone-200 bg-[#faf9f5] text-stone-600 hover:border-stone-300 hover:text-stone-900"
+                    : "border-stone-200 bg-[#faf9f5] text-stone-600 hover:border-stone-300 hover:text-stone-900 dark:border-stone-700 dark:bg-stone-950 dark:text-stone-400 dark:hover:text-stone-100"
                 }`}
                 style={on ? { backgroundColor: CLAY } : undefined}
               >
@@ -351,18 +375,20 @@ function FeatureShowcase() {
         </div>
 
         {/* detail panel for the active feature */}
-        <div className="mt-8 grid items-center gap-10 rounded-2xl border border-stone-200 bg-[#faf9f5] p-8 md:grid-cols-2 md:p-10">
+        <div className="mt-8 grid items-center gap-10 rounded-2xl border border-stone-200 bg-[#faf9f5] p-8 dark:border-stone-800 dark:bg-stone-950 md:grid-cols-2 md:p-10">
           <div>
             <div
               className="grid h-11 w-11 place-items-center rounded-xl"
-              style={{ backgroundColor: `${CLAY}14`, color: CLAY }}
+              style={{ backgroundColor: `${CLAY}22`, color: CLAY }}
             >
               <Icon className="h-5 w-5" />
             </div>
-            <h3 className="mt-4 text-xl font-semibold text-stone-900">
+            <h3 className="mt-4 text-xl font-semibold text-stone-900 dark:text-stone-50">
               {f.title}
             </h3>
-            <p className="mt-1.5 text-stone-600">{f.summary}</p>
+            <p className="mt-1.5 text-stone-600 dark:text-stone-400">
+              {f.summary}
+            </p>
             <ul className="mt-5 space-y-3">
               {f.points.map((p) => (
                 <li key={p} className="flex items-start gap-3 text-sm">
@@ -370,7 +396,9 @@ function FeatureShowcase() {
                     className="mt-0.5 h-4 w-4 flex-shrink-0"
                     style={{ color: CLAY }}
                   />
-                  <span className="text-stone-700">{p}</span>
+                  <span className="text-stone-700 dark:text-stone-300">
+                    {p}
+                  </span>
                 </li>
               ))}
             </ul>
@@ -380,7 +408,7 @@ function FeatureShowcase() {
           <div className="flex justify-center">
             {f.img ? (
               f.phone ? (
-                <div className="w-40 overflow-hidden rounded-[2rem] border-[6px] border-stone-900 bg-stone-900 shadow-xl sm:w-48">
+                <div className="w-40 overflow-hidden rounded-[2rem] border-[6px] border-stone-900 bg-stone-900 shadow-xl dark:border-stone-700 sm:w-48">
                   <img
                     src={f.img}
                     alt={f.title}
@@ -389,11 +417,11 @@ function FeatureShowcase() {
                   />
                 </div>
               ) : (
-                <div className="w-full overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg">
-                  <div className="flex items-center gap-1.5 border-b border-stone-100 bg-stone-50 px-3 py-2">
-                    <span className="h-2 w-2 rounded-full bg-stone-300" />
-                    <span className="h-2 w-2 rounded-full bg-stone-300" />
-                    <span className="h-2 w-2 rounded-full bg-stone-300" />
+                <div className="w-full overflow-hidden rounded-xl border border-stone-200 bg-white shadow-lg dark:border-stone-800 dark:bg-stone-900">
+                  <div className="flex items-center gap-1.5 border-b border-stone-100 bg-stone-50 px-3 py-2 dark:border-stone-800 dark:bg-stone-800">
+                    <span className="h-2 w-2 rounded-full bg-stone-300 dark:bg-stone-600" />
+                    <span className="h-2 w-2 rounded-full bg-stone-300 dark:bg-stone-600" />
+                    <span className="h-2 w-2 rounded-full bg-stone-300 dark:bg-stone-600" />
                   </div>
                   <img
                     src={f.img}
