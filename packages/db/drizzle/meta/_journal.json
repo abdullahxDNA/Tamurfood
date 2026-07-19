@@ -127,6 +127,13 @@
       "when": 1783000540000,
       "tag": "0017_deletable_menu_items",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1783000600000,
+      "tag": "0018_order_item_stock_decremented",
+      "breakpoints": true
     }
   ]
 }

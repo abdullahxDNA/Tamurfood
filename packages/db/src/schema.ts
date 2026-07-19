@@ -153,6 +153,10 @@ export const orderItems = pgTable(
     quantity: integer("quantity").notNull(),
     lineTotal: integer("line_total").notNull(),
     itemNote: varchar("item_note", { length: 200 }),
+    // True iff this line actually decremented tracked stock at placement time.
+    // Used on cancel to restore ONLY what was really deducted — an item that was
+    // untracked when ordered (then later tracked) must not be restored.
+    stockDecremented: boolean("stock_decremented").notNull().default(false),
   },
   (t) => [
     index("order_items_order_id_idx").on(t.orderId),
