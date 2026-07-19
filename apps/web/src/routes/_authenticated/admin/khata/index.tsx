@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { dhakaToday } from "@/lib/date";
 import { OrderRef } from "@/components/order-ref";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -196,9 +197,7 @@ function LedgerSheet({
 
   const [payOpen, setPayOpen] = useState(false);
   const [payAmount, setPayAmount] = useState("");
-  const [payDate, setPayDate] = useState(() =>
-    new Date().toISOString().slice(0, 10),
-  );
+  const [payDate, setPayDate] = useState(() => dhakaToday());
   const [payNote, setPayNote] = useState("");
 
   function invalidateMoney() {
@@ -565,7 +564,7 @@ function LedgerSheet({
 // Cash reconciliation: how much each person collected on a given day, so you
 // can check it against the cash they hand you.
 function CollectionsSummary() {
-  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(() => dhakaToday());
   const { data: rows = [] } = useQuery({
     queryKey: ["khata/collections", date],
     queryFn: () => fetchCollections(date),

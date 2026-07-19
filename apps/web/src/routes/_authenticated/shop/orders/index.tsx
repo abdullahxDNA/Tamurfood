@@ -8,6 +8,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { dhakaToday } from "@/lib/date";
 import { OrderRef } from "@/components/order-ref";
 import { Button } from "@/components/ui/button";
 import {
@@ -54,9 +55,8 @@ interface OrdersResponse {
 }
 
 function getDateParam(filter: DateFilter): string | undefined {
-  const now = new Date();
   if (filter === "today") {
-    return now.toISOString().slice(0, 10);
+    return dhakaToday();
   }
   return undefined;
 }
