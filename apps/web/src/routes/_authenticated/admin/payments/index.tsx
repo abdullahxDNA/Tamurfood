@@ -64,7 +64,11 @@ async function fetchShops(): Promise<Shop[]> {
 }
 
 function todayString() {
-  return new Date().toISOString().slice(0, 10);
+  // Dhaka calendar date, so the default payment date is correct even in the
+  // early-morning window (a UTC date would show yesterday before 6am Dhaka).
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Dhaka" }).format(
+    new Date(),
+  );
 }
 
 function PaymentsPage() {

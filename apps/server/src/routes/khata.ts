@@ -10,6 +10,7 @@ import {
   getShopForUser,
   type Variables,
 } from "../lib/helpers";
+import { dhakaDateStartUTC, dhakaDateString } from "../lib/time";
 import { reconcileCarriedOverOrders } from "../lib/reconcile";
 
 export const khataRouter = new Hono<{ Variables: Variables }>()
@@ -93,15 +94,23 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
       // covered by payments show as paid without waiting for the next payment.
       await reconcileCarriedOverOrders(shopId);
 
-      // Parse month param (default current month)
+      // Parse month param (default current month, in Dhaka time — otherwise
+      // early-morning Dhaka would still show the previous month for ~6 hours).
       const monthParam = c.req.valid("query").month; // YYYY-MM
-      const now = new Date();
-      const month =
-        monthParam ??
-        `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      const month = monthParam ?? dhakaDateString().slice(0, 7);
       const [year, mon] = month.split("-").map(Number);
-      const monthStart = new Date(year, mon - 1, 1);
-      const monthEnd = new Date(year, mon, 1);
+      // Calendar-date strings for payment_date comparisons (payment_date is
+      // stored as the Dhaka calendar date, so compare against plain YYYY-MM-DD).
+      const monthStartStr = `${month}-01`;
+      const nextMonthStr =
+        mon === 12
+          ? `${year + 1}-01-01`
+          : `${year}-${String(mon + 1).padStart(2, "0")}-01`;
+      // UTC instants of the Dhaka month boundaries, for placed_at (timestamp)
+      // comparisons — so an order placed 00:00–06:00 Dhaka on the 1st counts in
+      // the right month, consistent with the rest of the app.
+      const monthStart = dhakaDateStartUTC(monthStartStr);
+      const monthEnd = dhakaDateStartUTC(nextMonthStr);
 
       // All-time totals (for outstanding balance)
       const [[allTimeOrders], [allTimePayments]] = await Promise.all([
@@ -151,7 +160,7 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
               eq(payments.shopId, shopId),
               lt(
                 sql`${payments.paymentDate}::date`,
-                sql`${monthStart.toISOString().slice(0, 10)}::date`,
+                sql`${monthStartStr}::date`,
               ),
             ),
           ),
@@ -197,11 +206,11 @@ export const khataRouter = new Hono<{ Variables: Variables }>()
               eq(payments.shopId, shopId),
               gte(
                 sql`${payments.paymentDate}::date`,
-                sql`${monthStart.toISOString().slice(0, 10)}::date`,
+                sql`${monthStartStr}::date`,
               ),
               lt(
                 sql`${payments.paymentDate}::date`,
-                sql`${monthEnd.toISOString().slice(0, 10)}::date`,
+                sql`${nextMonthStr}::date`,
               ),
             ),
           ),
