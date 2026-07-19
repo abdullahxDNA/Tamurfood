@@ -12,6 +12,7 @@ import {
 } from "@tamurfood/db/schema";
 import { requireSession, getShopForUser, type Variables } from "../lib/helpers";
 import { restoreStockForCancelledOrders } from "../lib/stock";
+import { dhakaDateStartUTC, addDays } from "../lib/time";
 import {
   orderEvents,
   type NewOrderEvent,
@@ -343,8 +344,11 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
     // Build where conditions
     const conditions = [eq(orders.shopId, shop.id)];
     if (dateParam) {
-      const start = new Date(`${dateParam}T00:00:00`);
-      const end = new Date(`${dateParam}T23:59:59.999`);
+      // Interpret the date as a Dhaka calendar day → [00:00, next 00:00) Dhaka,
+      // matching the admin order filter (server runs in UTC, so a naive parse
+      // would use UTC day boundaries and misplace early-morning orders).
+      const start = dhakaDateStartUTC(dateParam);
+      const end = addDays(start, 1);
       conditions.push(gte(orders.placedAt, start));
       conditions.push(lt(orders.placedAt, end));
     }
