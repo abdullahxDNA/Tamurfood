@@ -98,7 +98,9 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
       );
     }
 
-    // Build order items with price snapshots
+    // Build order items with price snapshots. stockDecremented records whether
+    // this line will actually deduct tracked stock (item was tracked at order
+    // time), so a later cancel restores only what was really taken.
     const lineItems = body.items.map((reqItem) => {
       const item = foundMap.get(reqItem.menuItemId)!;
       return {
@@ -107,6 +109,7 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
         itemPrice: item.price,
         quantity: reqItem.quantity,
         lineTotal: item.price * reqItem.quantity,
+        stockDecremented: item.stockQuantity !== null,
       };
     });
 
@@ -175,6 +178,7 @@ export const ordersRouter = new Hono<{ Variables: Variables }>()
             quantity: li.quantity,
             lineTotal: li.lineTotal,
             itemNote: null,
+            stockDecremented: li.stockDecremented,
           })),
         );
 
