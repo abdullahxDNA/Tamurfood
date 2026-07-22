@@ -157,14 +157,6 @@ const GRADIENTS = [
   "from-yellow-100 to-amber-200",
 ];
 
-const MOCK_TAGLINES = [
-  "Freshly made daily",
-  "Baked this morning",
-  "House favourite",
-  "Made to order",
-  "Crispy & fresh",
-];
-
 // Deterministic pick so a given item always looks the same.
 function hashPick<T>(id: string, arr: T[]): T {
   let h = 0;
@@ -245,7 +237,18 @@ function ShopMenu() {
       if (data.totalAmount !== totalAmount) {
         setPriceMismatch(data.totalAmount);
       } else {
+        // Reset any stale mismatch from a prior order, otherwise its banner can
+        // reappear on this order's success screen (sheet dismissed via outside
+        // tap doesn't clear it — only the "New Order" button does).
         setPriceMismatch(null);
+      }
+      try {
+        const raw = localStorage.getItem("shop-new-orders");
+        const ids = new Set<string>(raw ? (JSON.parse(raw) as string[]) : []);
+        ids.add(data.id);
+        localStorage.setItem("shop-new-orders", JSON.stringify([...ids]));
+      } catch {
+        /* ignore */
       }
       setSuccessOrder({
         orderNumber: data.orderNumber,
@@ -489,17 +492,17 @@ function ShopMenu() {
 
       {/* Sticky category bar — jump to a category, plus repeat-last-order */}
       {categoryKeys.length > 0 && (
-        <div className="sticky top-0 z-20 -mx-6 border-b bg-background/95 px-6 py-2 backdrop-blur">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="sticky top-[3.75rem] z-20 -mx-4 sm:-mx-6 border-b border-stone-200/60 dark:border-stone-800/60 bg-white/90 dark:bg-stone-950/90 px-4 sm:px-6 py-2.5 backdrop-blur-md">
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center">
             <div className="flex gap-2 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-1 [&::-webkit-scrollbar]:hidden">
               {categoryKeys.map((cat) => (
                 <button
                   key={cat}
                   onClick={() => scrollToCategory(cat)}
-                  className={`shrink-0 whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${
+                  className={`shrink-0 whitespace-nowrap rounded-full px-3.5 py-1.5 text-xs font-semibold transition-all ${
                     activeCategory === cat
-                      ? "bg-foreground text-background"
-                      : "hover:bg-muted"
+                      ? "bg-amber-700 text-white shadow-xs dark:bg-amber-600"
+                      : "bg-stone-100 text-stone-600 hover:bg-stone-200/80 dark:bg-stone-900 dark:text-stone-400 dark:hover:bg-stone-800"
                   }`}
                 >
                   {cat}
@@ -510,16 +513,16 @@ function ShopMenu() {
               <button
                 onClick={handleRepeatLastOrder}
                 title={`Repeat last order — ৳${lastOrder.totalAmount}`}
-                className="flex shrink-0 items-center gap-1 self-start whitespace-nowrap rounded-full border px-3 py-1.5 text-sm font-medium transition-colors hover:bg-muted sm:self-auto"
+                className="flex shrink-0 items-center gap-1.5 self-start whitespace-nowrap rounded-full border border-amber-600/30 bg-amber-600/10 px-3.5 py-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300 transition-all hover:bg-amber-600/20 sm:self-auto shadow-xs"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  width="15"
-                  height="15"
+                  width="14"
+                  height="14"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth="2"
+                  strokeWidth="2.5"
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >
@@ -535,11 +538,11 @@ function ShopMenu() {
 
       {/* Stock-out warning after server 409 */}
       {unavailableWarning.length > 0 && (
-        <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3.5 text-xs text-red-600 dark:text-red-400 font-medium">
           Stock out — removed from your cart: {unavailableWarning.join(", ")}.
           Please choose another.
           <button
-            className="ml-2 underline"
+            className="ml-2 underline font-semibold"
             onClick={() => setUnavailableWarning([])}
           >
             Dismiss
@@ -549,12 +552,12 @@ function ShopMenu() {
 
       {/* No search results */}
       {q && Object.keys(grouped).length === 0 && (
-        <p className="text-muted-foreground text-sm">
+        <p className="text-stone-500 text-xs py-8 text-center">
           No items match "{search}".
         </p>
       )}
 
-      {/* Menu categories — Foodpanda-style photo grid, 3 per row */}
+      {/* Menu categories — Foodpanda/Toast style photo grid */}
       {Object.entries(grouped).map(([category, catItems]) => (
         <div
           key={category}
@@ -562,10 +565,17 @@ function ShopMenu() {
             sectionRefs.current[category] = el;
           }}
           data-category={category}
-          className="scroll-mt-16 space-y-3"
+          className="scroll-mt-24 space-y-3.5"
         >
-          <h2 className="text-lg font-semibold border-b pb-1">{category}</h2>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+          <div className="flex items-center gap-2 border-b border-stone-200/60 dark:border-stone-800/60 pb-2">
+            <h2 className="text-base font-bold tracking-tight text-stone-900 dark:text-stone-100">
+              {category}
+            </h2>
+            <span className="text-xs text-stone-400 font-mono">
+              ({catItems.length})
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4">
             {catItems.map((item) => {
               const qty = cart[item.id]?.quantity ?? 0;
               const soldOut = !item.isAvailable || item.stockQuantity === 0;
@@ -578,78 +588,80 @@ function ShopMenu() {
               return (
                 <div
                   key={item.id}
-                  className={`card-light flex flex-col overflow-hidden rounded-xl border bg-card transition-shadow hover:shadow-md ${soldOut ? "opacity-50" : ""}`}
+                  className={`group relative flex flex-col overflow-hidden rounded-2xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-stone-900 transition-all hover:shadow-lg hover:-translate-y-0.5 ${soldOut ? "opacity-60 grayscale-[30%]" : ""}`}
                 >
-                  {/* Food photo — real upload if present, else a stock photo;
-                      emoji shows through if the image fails to load. */}
+                  {/* Food photo */}
                   <div
-                    className={`relative flex aspect-[4/3] items-center justify-center bg-gradient-to-br ${hashPick(
+                    className={`relative flex aspect-[4/3] items-center justify-center overflow-hidden bg-gradient-to-br ${hashPick(
                       item.id,
                       GRADIENTS,
                     )}`}
                   >
-                    <span className="text-4xl sm:text-5xl">
+                    <span className="text-4xl sm:text-5xl transition-transform group-hover:scale-110">
                       {foodEmoji(item.name)}
                     </span>
                     <img
                       src={item.imageUrl ?? foodImage(item.name)}
                       alt={item.name}
                       loading="lazy"
-                      className="absolute inset-0 h-full w-full object-cover"
+                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                       onError={(e) => {
                         e.currentTarget.style.display = "none";
                       }}
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-60" />
+
+                    {/* Price Tag Badge */}
+                    <span className="absolute bottom-2 left-2.5 rounded-lg bg-black/60 backdrop-blur-md px-2 py-0.5 text-xs font-bold text-white shadow-xs">
+                      ৳{item.price}
+                    </span>
                   </div>
 
                   {/* Body */}
-                  <div className="flex flex-1 flex-col gap-0.5 p-2">
-                    <span className="line-clamp-1 text-sm font-medium leading-tight">
+                  <div className="flex flex-1 flex-col gap-1 p-3">
+                    <span className="line-clamp-2 text-xs font-bold text-stone-900 dark:text-stone-100">
                       {item.name}
                     </span>
-                    <p className="line-clamp-1 flex-1 text-xs text-muted-foreground">
-                      {hashPick(item.id, MOCK_TAGLINES)}
-                    </p>
-                    {soldOut ? (
-                      <Badge
-                        variant="destructive"
-                        className="w-fit text-[10px]"
-                      >
-                        Stock Out
-                      </Badge>
-                    ) : item.stockQuantity !== null ? (
-                      lowStock ? (
-                        <Badge className="w-fit border-amber-400 bg-amber-100 text-[10px] text-amber-800 hover:bg-amber-100">
-                          Only {item.stockQuantity} left
-                        </Badge>
-                      ) : (
+                    <div className="min-h-5 mt-0.5">
+                      {soldOut ? (
                         <Badge
-                          variant="secondary"
-                          className="w-fit text-[10px]"
+                          variant="destructive"
+                          className="w-fit text-[9px] px-1.5 py-0 font-semibold"
                         >
-                          {item.stockQuantity} left
+                          Stock Out
                         </Badge>
-                      )
-                    ) : null}
-                    <div className="mt-1 flex items-center justify-between">
-                      <span className="text-sm font-semibold">
-                        ৳{item.price}
-                      </span>
+                      ) : item.stockQuantity !== null ? (
+                        lowStock ? (
+                          <Badge className="w-fit border-amber-400 bg-amber-100 text-[9px] font-semibold text-amber-800 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-300">
+                            Only {item.stockQuantity} left
+                          </Badge>
+                        ) : (
+                          <Badge
+                            variant="secondary"
+                            className="w-fit text-[9px] px-1.5 py-0 text-stone-500"
+                          >
+                            {item.stockQuantity} in stock
+                          </Badge>
+                        )
+                      ) : null}
+                    </div>
+
+                    <div className="mt-auto pt-2 flex items-center justify-end">
                       {!soldOut &&
                         (qty === 0 ? (
                           <button
-                            className="h-8 rounded-md bg-foreground px-3 text-sm font-medium text-background transition-colors hover:opacity-90"
+                            className="h-7 rounded-lg bg-stone-900 dark:bg-stone-100 px-3 text-xs font-bold text-white dark:text-stone-900 shadow-xs transition-all hover:brightness-110 active:scale-95"
                             onClick={() =>
                               setQty(item.id, item.name, item.price, 1)
                             }
                             aria-label={`Add ${item.name}`}
                           >
-                            Add
+                            + Add
                           </button>
                         ) : (
-                          <div className="flex items-center gap-1">
+                          <div className="flex items-center gap-1 rounded-lg border border-stone-200 dark:border-stone-800 bg-stone-100/60 dark:bg-stone-800/60 p-0.5">
                             <button
-                              className="flex h-8 w-8 items-center justify-center rounded-md border text-lg font-medium transition-colors hover:bg-muted"
+                              className="flex h-6 w-6 items-center justify-center rounded-md text-xs font-bold hover:bg-white dark:hover:bg-stone-700 transition-colors"
                               onClick={() =>
                                 setQty(
                                   item.id,
@@ -662,11 +674,11 @@ function ShopMenu() {
                             >
                               −
                             </button>
-                            <span className="w-5 text-center text-sm font-medium tabular-nums">
+                            <span className="w-4 text-center text-xs font-bold tabular-nums">
                               {qty}
                             </span>
                             <button
-                              className="flex h-8 w-8 items-center justify-center rounded-md border text-lg font-medium transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-40"
+                              className="flex h-6 w-6 items-center justify-center rounded-md text-xs font-bold hover:bg-white dark:hover:bg-stone-700 transition-colors disabled:opacity-40"
                               disabled={atMax}
                               onClick={() =>
                                 setQty(item.id, item.name, item.price, qty + 1)
@@ -691,21 +703,21 @@ function ShopMenu() {
 
       {/* Floating cart bar */}
       {totalItems > 0 && (
-        <div className="fixed bottom-[4.5rem] left-4 right-4 z-10 flex items-stretch gap-2">
+        <div className="fixed bottom-[4.75rem] left-4 right-4 z-40 flex items-stretch gap-2.5 max-w-lg mx-auto">
           <button
             onClick={handleClearCart}
             aria-label="Clear all items"
             title="Clear all items"
-            className="flex items-center justify-center rounded-2xl border bg-card px-4 text-card-foreground shadow-xl transition-colors hover:bg-muted"
+            className="flex items-center justify-center rounded-2xl border border-stone-200/80 bg-white text-stone-700 dark:bg-stone-900 dark:border-stone-800 dark:text-stone-300 shadow-xl transition-all hover:bg-stone-100 dark:hover:bg-stone-800 active:scale-95 px-4"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
+              width="18"
+              height="18"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
-              strokeWidth="2"
+              strokeWidth="2.2"
               strokeLinecap="round"
               strokeLinejoin="round"
             >
@@ -716,17 +728,24 @@ function ShopMenu() {
             </svg>
           </button>
           <button
-            className="flex flex-1 items-center justify-between rounded-2xl bg-foreground px-6 py-4 text-base font-semibold text-background shadow-xl transition-transform active:scale-[0.99]"
+            className="flex flex-1 items-center justify-between rounded-2xl text-white shadow-xl shadow-amber-900/20 px-5 py-3.5 text-sm font-bold transition-all hover:brightness-105 active:scale-[0.99] border border-amber-800/20"
+            style={{ backgroundColor: "#c15f3c" }}
             onClick={() => {
               setSuccessOrder(null);
               setConfirmOpen(true);
             }}
           >
-            <span>
-              {totalItems} item{totalItems !== 1 ? "s" : ""} &mdash; ৳
-              {totalAmount}
+            <div className="flex items-center gap-2.5">
+              <span className="grid h-6 w-6 place-items-center rounded-full bg-white text-[#c15f3c] text-xs font-black shadow-xs">
+                {totalItems}
+              </span>
+              <span className="text-white font-extrabold tracking-tight">
+                Total: ৳{totalAmount}
+              </span>
+            </div>
+            <span className="flex items-center gap-1.5 text-amber-100 font-extrabold group-hover:translate-x-0.5 transition-transform">
+              Place Order →
             </span>
-            <span>Place Order →</span>
           </button>
         </div>
       )}
@@ -743,48 +762,49 @@ function ShopMenu() {
       >
         <SheetContent
           side="bottom"
-          // Flex column with a fixed header, a scrollable middle, and a pinned
-          // footer button — so the action button is always on screen no matter
-          // how many items are in the cart. `dvh` (not `vh`) accounts for the
-          // mobile browser toolbar, which otherwise pushes the footer off-screen.
-          className="flex max-h-[85dvh] flex-col"
-          // Don't auto-focus the Note textarea on open — it pops the mobile
-          // keyboard for an optional field. Keep focus on the sheet itself.
+          className="flex max-h-[85dvh] flex-col rounded-t-3xl border-t border-stone-200/80 dark:border-stone-800 bg-white dark:bg-stone-950 p-0 overflow-hidden shadow-2xl"
           onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          <SheetHeader className="shrink-0">
-            <SheetTitle>
-              {successOrder ? "Order Placed!" : "Confirm Order"}
+          <SheetHeader className="shrink-0 border-b border-stone-100 dark:border-stone-800 px-6 py-4">
+            <SheetTitle className="text-base font-bold font-serif text-stone-900 dark:text-stone-100">
+              {successOrder
+                ? "🎉 Order Placed Successfully!"
+                : "Confirm Your Order"}
             </SheetTitle>
           </SheetHeader>
 
           {successOrder ? (
             <>
-              <div className="mt-4 flex-1 space-y-4 overflow-y-auto px-4">
+              <div className="mt-4 flex-1 space-y-4 overflow-y-auto px-6">
                 {priceMismatch !== null && (
-                  <div className="rounded-md border border-blue-300 bg-blue-50 p-3 text-sm text-blue-800">
+                  <div className="rounded-xl border border-blue-300 bg-blue-50/80 p-3 text-xs font-medium text-blue-800">
                     Price updated by server: ৳{priceMismatch}
                   </div>
                 )}
-                <div className="rounded-md border bg-muted/50 p-4 text-center space-y-1">
-                  <p className="text-lg font-semibold">
+                <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 text-center space-y-1.5">
+                  <span className="inline-block text-2xl">⚡</span>
+                  <p className="text-xl font-extrabold text-stone-900 dark:text-stone-100">
                     Order #
                     {successOrder.dailyNumber ?? successOrder.orderNumber}
-                    <span className="text-sm font-normal text-muted-foreground">
+                    <span className="text-xs font-normal text-stone-500">
                       {" "}
                       · today
                     </span>
                   </p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-stone-400 font-mono">
                     Ref #{successOrder.orderNumber}
                   </p>
-                  <p className="text-muted-foreground">
-                    Total: ৳{successOrder.totalAmount}
+                  <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400 pt-1">
+                    Total Amount: ৳{successOrder.totalAmount}
                   </p>
                 </div>
               </div>
-              <div className="mt-4 shrink-0 border-t px-4 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+2rem)]">
-                <Button className="w-full" onClick={handleNewOrder}>
+              <div className="mt-4 shrink-0 border-t border-stone-100 dark:border-stone-800 px-6 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)]">
+                <Button
+                  className="w-full rounded-xl py-3 font-bold text-white shadow-md transition-all hover:brightness-105"
+                  style={{ backgroundColor: "#c15f3c" }}
+                  onClick={handleNewOrder}
+                >
                   New Order
                 </Button>
               </div>
@@ -792,17 +812,21 @@ function ShopMenu() {
           ) : (
             <>
               {/* Scrollable middle: cart items, total, note, error */}
-              <div className="mt-4 flex-1 space-y-4 overflow-y-auto px-4">
-                <div className="divide-y rounded-md border overflow-hidden">
+              <div className="mt-4 flex-1 space-y-4 overflow-y-auto px-6">
+                <div className="divide-y divide-stone-100 dark:divide-stone-800 rounded-2xl border border-stone-200/80 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-900/50 overflow-hidden">
                   {Object.entries(cart).map(([id, entry]) => (
                     <div
                       key={id}
-                      className="flex items-center justify-between px-4 py-2 text-sm"
+                      className="flex items-center justify-between px-4 py-2.5 text-xs"
                     >
-                      <span className="font-medium">{entry.name}</span>
-                      <div className="flex items-center gap-4 text-muted-foreground">
-                        <span>×{entry.quantity}</span>
-                        <span className="tabular-nums">
+                      <span className="font-semibold text-stone-800 dark:text-stone-200">
+                        {entry.name}
+                      </span>
+                      <div className="flex items-center gap-4 text-stone-500">
+                        <span className="font-mono bg-stone-200/60 dark:bg-stone-800 px-1.5 py-0.5 rounded text-[10px]">
+                          ×{entry.quantity}
+                        </span>
+                        <span className="tabular-nums font-bold text-stone-900 dark:text-stone-100">
                           ৳{entry.price * entry.quantity}
                         </span>
                       </div>
@@ -810,21 +834,24 @@ function ShopMenu() {
                   ))}
                 </div>
 
-                <div className="flex items-center justify-between font-semibold text-base px-1">
-                  <span>Total</span>
-                  <span>৳{totalAmount}</span>
+                <div className="flex items-center justify-between font-bold text-sm px-1 text-stone-900 dark:text-stone-100 pt-1">
+                  <span>Grand Total</span>
+                  <span className="text-base text-amber-700 dark:text-amber-500 font-mono font-extrabold">
+                    ৳{totalAmount}
+                  </span>
                 </div>
 
                 <Textarea
-                  placeholder="Note (optional)..."
+                  placeholder="Order Note (optional - e.g. extra napkins, deliver to 2nd floor counter)..."
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   rows={2}
                   maxLength={500}
+                  className="rounded-xl border-stone-200 dark:border-stone-800 text-xs bg-stone-50/50 dark:bg-stone-900/50"
                 />
 
                 {mutation.isError && (
-                  <div className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+                  <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-600 dark:text-red-400 font-medium">
                     {(mutation.error as Error & { status?: number })?.status ===
                     409
                       ? "Some items just went stock out and were removed from your cart. Please review and try again."
@@ -833,15 +860,17 @@ function ShopMenu() {
                 )}
               </div>
 
-              {/* Pinned footer — always visible, lifted clear of the screen's
-                  bottom edge (safe-area inset + extra breathing room). */}
-              <div className="mt-4 shrink-0 border-t px-4 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+2rem)]">
+              {/* Pinned footer */}
+              <div className="mt-4 shrink-0 border-t border-stone-100 dark:border-stone-800 px-6 pt-4 pb-[calc(env(safe-area-inset-bottom,0px)+1.5rem)]">
                 <Button
-                  className="w-full"
+                  className="w-full rounded-xl py-3 font-bold text-white shadow-lg shadow-amber-900/15 transition-all hover:brightness-105 active:scale-[0.99]"
+                  style={{ backgroundColor: "#c15f3c" }}
                   onClick={handleConfirmOrder}
                   disabled={mutation.isPending}
                 >
-                  {mutation.isPending ? "Placing order..." : "Confirm Order"}
+                  {mutation.isPending
+                    ? "Placing Order..."
+                    : "Confirm & Send Order"}
                 </Button>
               </div>
             </>

@@ -243,6 +243,11 @@ function OrderCard({
     >
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-wrap items-center gap-2">
+          {isNew && (
+            <span className="animate-pulse rounded-full bg-amber-600 px-2 py-0.5 text-[9px] font-bold text-white shadow-xs">
+              NEW
+            </span>
+          )}
           <button
             type="button"
             className="font-semibold hover:underline text-left"
@@ -639,18 +644,25 @@ function AdminDashboard() {
 
       {/* Header row */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Orders</h1>
+        <div>
+          <h1 className="text-xl font-bold font-serif tracking-tight text-stone-900 dark:text-stone-100">
+            Live Orders & Counter
+          </h1>
+          <p className="text-xs text-stone-500 dark:text-stone-400">
+            Manage real-time delivery requests from neighbourhood shops
+          </p>
+        </div>
         <div className="flex items-center gap-2">
           {/* Date filter */}
-          <div className="flex items-center rounded-md border overflow-hidden text-sm">
+          <div className="flex items-center rounded-xl border border-stone-200/80 dark:border-stone-800/80 overflow-hidden text-xs bg-stone-100/50 dark:bg-stone-900/50 p-0.5">
             <button
-              className={`px-3 py-1.5 ${isToday ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${isToday ? "bg-amber-700 text-white shadow-xs dark:bg-amber-600" : "text-stone-600 dark:text-stone-400 hover:text-stone-900"}`}
               onClick={() => setDate(todayDate())}
             >
               Today
             </button>
             <button
-              className={`px-3 py-1.5 border-l ${isYesterday ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}
+              className={`px-3 py-1.5 rounded-lg font-semibold transition-all ${isYesterday ? "bg-amber-700 text-white shadow-xs dark:bg-amber-600" : "text-stone-600 dark:text-stone-400 hover:text-stone-900"}`}
               onClick={() => setDate(yesterdayDate())}
             >
               Yesterday
@@ -659,7 +671,7 @@ function AdminDashboard() {
               type="date"
               value={!isToday && !isYesterday ? date : ""}
               onChange={(e) => e.target.value && setDate(e.target.value)}
-              className="px-2 py-1.5 border-l bg-transparent text-xs w-36 cursor-pointer dark:[color-scheme:dark]"
+              className="px-2 py-1 bg-transparent text-xs w-32 cursor-pointer dark:[color-scheme:dark]"
               placeholder="Pick date"
             />
           </div>
@@ -668,6 +680,7 @@ function AdminDashboard() {
             variant="outline"
             size="sm"
             onClick={() => setMuted((m) => !m)}
+            className="h-8 text-xs rounded-xl border-stone-200/80 dark:border-stone-800"
             title={muted ? "Unmute alerts" : "Mute alerts"}
           >
             {muted ? "🔇 Muted" : "🔔 Sound"}
@@ -676,47 +689,61 @@ function AdminDashboard() {
       </div>
 
       {/* ── At-a-glance summary strip ── */}
-      <div className="grid grid-cols-3 gap-2 sm:gap-3">
-        <div className="rounded-lg border bg-card p-3">
-          <p className="text-xs text-muted-foreground">Pending</p>
-          <p className="mt-0.5 text-2xl font-bold leading-none">
-            {pending.length}
-          </p>
-          <p className="mt-1 text-[11px] text-muted-foreground">to deliver</p>
+      <div className="grid grid-cols-3 gap-3">
+        <div className="rounded-2xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-stone-900 p-4 shadow-xs">
+          <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">
+            Pending Orders
+          </span>
+          <div className="mt-1 flex items-baseline gap-2">
+            <span className="text-3xl font-extrabold text-amber-700 dark:text-amber-500 font-mono">
+              {pending.length}
+            </span>
+            <span className="text-xs text-stone-500 font-medium">
+              to deliver
+            </span>
+          </div>
         </div>
-        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/20">
-          <p className="text-xs text-amber-700 dark:text-amber-400">
-            To collect
-          </p>
-          <p className="mt-0.5 text-2xl font-bold leading-none text-amber-700 dark:text-amber-300">
-            ৳{unpaidTotal.toLocaleString()}
-          </p>
-          <p className="mt-1 text-[11px] text-amber-700/70 dark:text-amber-400/70">
-            {unpaid.length} unpaid
-          </p>
+        <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 shadow-xs">
+          <span className="text-xs font-bold text-amber-800 dark:text-amber-300 uppercase tracking-wider">
+            To Collect
+          </span>
+          <div className="mt-1 flex items-baseline gap-2">
+            <span className="text-3xl font-extrabold text-amber-800 dark:text-amber-300 font-mono">
+              ৳{unpaidTotal.toLocaleString()}
+            </span>
+            <span className="text-xs text-amber-700/80 dark:text-amber-400 font-medium">
+              {unpaid.length} unpaid
+            </span>
+          </div>
         </div>
-        <div className="rounded-lg border bg-card p-3">
-          <p className="text-xs text-muted-foreground">Completed</p>
-          <p className="mt-0.5 text-2xl font-bold leading-none">
-            {done.length}
-          </p>
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            paid / cancelled
-          </p>
+        <div className="rounded-2xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-stone-900 p-4 shadow-xs">
+          <span className="text-xs font-bold text-stone-400 uppercase tracking-wider">
+            Completed
+          </span>
+          <div className="mt-1 flex items-baseline gap-2">
+            <span className="text-3xl font-extrabold text-stone-900 dark:text-stone-100 font-mono">
+              {done.length}
+            </span>
+            <span className="text-xs text-stone-500 font-medium">
+              paid / done
+            </span>
+          </div>
         </div>
       </div>
 
       {/* ── Pending (needs action) ── */}
-      <section className="rounded-lg border">
-        <div className="flex items-center gap-2 border-b bg-muted/40 px-4 py-2.5">
-          <h2 className="text-sm font-semibold">Pending</h2>
+      <section className="rounded-2xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-stone-900 overflow-hidden shadow-xs">
+        <div className="flex items-center gap-2 border-b border-stone-200/60 dark:border-stone-800/60 bg-stone-50/70 dark:bg-stone-950/70 px-4 py-3">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-stone-800 dark:text-stone-200">
+            Pending Orders
+          </h2>
           {pending.length > 0 && (
-            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-bold text-primary-foreground">
+            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-600 px-2 text-[10px] font-bold text-white shadow-xs animate-pulse">
               {pending.length}
             </span>
           )}
-          <span className="ml-auto text-xs text-muted-foreground">
-            Mark Delivered once handed over
+          <span className="ml-auto text-xs text-stone-400">
+            Click Mark Delivered once handed over
           </span>
         </div>
         <div className="space-y-3 p-3">

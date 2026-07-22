@@ -138,83 +138,89 @@ function LandingPage() {
     <div className={dark ? "dark" : ""}>
       <div className="min-h-screen bg-[#faf9f5] text-stone-800 antialiased dark:bg-stone-950 dark:text-stone-300">
         {/* ───────── Nav ───────── */}
-        <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-6">
-          <span className="flex items-center gap-2.5 font-semibold tracking-tight text-stone-900 dark:text-stone-100">
-            <span
-              className="grid h-8 w-8 place-items-center rounded-lg text-sm font-bold text-white"
-              style={{ backgroundColor: CLAY }}
-            >
-              T
+        <header className="sticky top-0 z-50 backdrop-blur-md bg-[#faf9f5]/80 dark:bg-stone-950/80 border-b border-stone-200/50 dark:border-stone-800/50 transition-colors">
+          <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+            <span className="flex items-center gap-2.5 font-semibold tracking-tight text-stone-900 dark:text-stone-100 group cursor-pointer">
+              <span
+                className="grid h-9 w-9 place-items-center rounded-xl text-sm font-bold text-white shadow-md shadow-amber-900/10 transition-transform group-hover:scale-105"
+                style={{ backgroundColor: CLAY }}
+              >
+                T
+              </span>
+              <span className="text-lg font-serif tracking-tight">
+                Tamurfood
+              </span>
             </span>
-            Tamurfood
-          </span>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setDark((d) => !d)}
-              aria-label="Toggle dark mode"
-              className="grid h-9 w-9 place-items-center rounded-lg border border-stone-200 text-stone-600 transition hover:text-stone-900 dark:border-stone-700 dark:text-stone-400 dark:hover:text-stone-100"
-            >
-              {dark ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
-            </button>
-            <Link
-              to="/login"
-              className="text-sm font-medium text-stone-600 transition hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100"
-            >
-              Log in →
-            </Link>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setDark((d) => !d)}
+                aria-label="Toggle dark mode"
+                className="grid h-9 w-9 place-items-center rounded-xl border border-stone-200/80 bg-white/50 text-stone-600 shadow-xs backdrop-blur-sm transition-all hover:bg-stone-100 hover:text-stone-900 dark:border-stone-800 dark:bg-stone-900/50 dark:text-stone-400 dark:hover:bg-stone-800 dark:hover:text-stone-100"
+              >
+                {dark ? (
+                  <Sun className="h-4 w-4 text-amber-400" />
+                ) : (
+                  <Moon className="h-4 w-4" />
+                )}
+              </button>
+              <Link
+                to="/login"
+                className="text-sm font-medium text-stone-600 transition hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-100 px-3 py-1.5 rounded-lg hover:bg-stone-100/60 dark:hover:bg-stone-800/60"
+              >
+                Log in →
+              </Link>
+            </div>
           </div>
         </header>
 
         {/* ───────── Hero ───────── */}
-        <section className="mx-auto max-w-3xl px-6 pb-20 pt-16 text-center sm:pt-24">
+        <section className="mx-auto max-w-4xl px-6 pb-20 pt-14 text-center sm:pt-20">
           <span
-            className="inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-medium"
+            className="inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-semibold tracking-wide uppercase shadow-xs transition-all hover:scale-105"
             style={{
-              borderColor: `${CLAY}33`,
-              backgroundColor: `${CLAY}0f`,
+              borderColor: `${CLAY}40`,
+              backgroundColor: `${CLAY}12`,
               color: CLAY,
             }}
           >
             <span
-              className="h-1.5 w-1.5 rounded-full"
+              className="h-2 w-2 rounded-full animate-pulse"
               style={{ backgroundColor: CLAY }}
             />
-            Neighbourhood bakery · instant delivery
+            ⚡ Neighbourhood bakery · instant delivery
           </span>
 
-          <h1 className="mt-8 font-serif text-5xl font-medium leading-[1.05] tracking-tight text-stone-900 dark:text-stone-50 sm:text-6xl">
+          <h1 className="mt-8 font-serif text-5xl font-medium leading-[1.08] tracking-tight text-stone-900 dark:text-stone-50 sm:text-6xl md:text-7xl">
             Fresh snacks,
             <br />
-            delivered to your shop.
+            <span className="bg-gradient-to-r from-stone-900 via-stone-800 to-stone-600 dark:from-stone-50 dark:via-stone-200 dark:to-stone-400 bg-clip-text text-transparent">
+              delivered to your shop.
+            </span>
           </h1>
 
-          <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-stone-600 dark:text-stone-400">
+          <p className="mx-auto mt-6 max-w-2xl text-lg leading-relaxed text-stone-600 dark:text-stone-400 sm:text-xl">
             Tamurfood is the bakery next door. The shops around us order snacks
             and meals for their team — and our own staff bring it over in
             minutes. No more leaving the counter; just tap, and it arrives. Keep
             a running{" "}
-            <span className="font-medium text-stone-900 dark:text-stone-100">
+            <span className="font-semibold text-stone-900 dark:text-stone-100 underline decoration-amber-600/30 decoration-2 underline-offset-4">
               Khata
             </span>{" "}
             and settle up whenever.
           </p>
 
-          <div className="mt-9 flex items-center justify-center">
+          <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               to="/login"
-              className="group inline-flex items-center gap-2 rounded-full px-7 py-3.5 font-medium text-white shadow-sm transition hover:brightness-95"
+              className="group inline-flex items-center gap-2.5 rounded-full px-8 py-4 font-semibold text-white shadow-lg shadow-amber-900/20 transition-all hover:scale-[1.02] hover:brightness-105 active:scale-[0.98]"
               style={{ backgroundColor: CLAY }}
             >
-              Log in to continue
-              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
+              <span>Log in to continue</span>
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
           </div>
-          <p className="mt-4 text-xs text-stone-400 dark:text-stone-500">
+          <p className="mt-4 text-xs font-medium text-stone-400 dark:text-stone-500">
             For nearby shops — the bakery sets up your account.
           </p>
         </section>
