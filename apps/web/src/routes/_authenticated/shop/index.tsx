@@ -701,14 +701,15 @@ function ShopMenu() {
       {/* Spacer so the last row isn't hidden behind the floating cart bar */}
       {totalItems > 0 && <div aria-hidden className="h-24" />}
 
-      {/* Floating cart bar */}
+      {/* Floating cart bar — sits in a soft grayish glass tray so it reads as one
+          grounded panel against the light background instead of loose buttons. */}
       {totalItems > 0 && (
-        <div className="fixed bottom-[4.75rem] left-4 right-4 z-40 flex items-stretch gap-2.5 max-w-lg mx-auto">
+        <div className="fixed bottom-[4.75rem] left-4 right-4 z-40 mx-auto flex max-w-lg items-stretch gap-2 rounded-[1.4rem] border border-stone-300/70 bg-stone-200/80 p-1.5 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.28)] backdrop-blur-xl dark:border-stone-700/60 dark:bg-stone-800/85">
           <button
             onClick={handleClearCart}
             aria-label="Clear all items"
             title="Clear all items"
-            className="flex items-center justify-center rounded-2xl border border-stone-200/80 bg-white text-stone-700 dark:bg-stone-900 dark:border-stone-800 dark:text-stone-300 shadow-xl transition-all hover:bg-stone-100 dark:hover:bg-stone-800 active:scale-95 px-4"
+            className="flex items-center justify-center rounded-[1.05rem] border border-stone-300/80 bg-white text-stone-500 shadow-sm dark:bg-stone-900 dark:border-stone-700 dark:text-stone-300 transition-all hover:text-red-600 hover:border-red-200 dark:hover:bg-stone-800 active:scale-95 px-4"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
@@ -728,7 +729,7 @@ function ShopMenu() {
             </svg>
           </button>
           <button
-            className="flex flex-1 items-center justify-between rounded-2xl text-white shadow-xl shadow-amber-900/20 px-5 py-3.5 text-sm font-bold transition-all hover:brightness-105 active:scale-[0.99] border border-amber-800/20"
+            className="flex flex-1 items-center justify-between rounded-[1.05rem] text-white shadow-sm shadow-amber-900/20 px-5 py-3.5 text-sm font-bold transition-all hover:brightness-105 active:scale-[0.99] border border-amber-800/20"
             style={{ backgroundColor: "#c15f3c" }}
             onClick={() => {
               setSuccessOrder(null);
