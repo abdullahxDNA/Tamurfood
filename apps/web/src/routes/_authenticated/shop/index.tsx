@@ -383,25 +383,38 @@ function ShopMenu() {
   const categoryKeys = Object.keys(grouped);
   const categoryKey = categoryKeys.join("|");
 
-  // Highlight the category currently in view (scroll-spy).
+  // Highlight the category currently in view (scroll-spy). Recompute from the
+  // sections' LIVE positions on every scroll so it stays correct in BOTH
+  // directions — a prior IntersectionObserver only reacted to sections whose
+  // visibility *changed*, so scrolling back up (where the newly-active section
+  // was already visible and fired nothing) failed to update the highlight.
+  // The active category is the last section whose top has scrolled up past the
+  // sticky bar (rAF-throttled so it stays cheap).
   useEffect(() => {
     const cats = categoryKey ? categoryKey.split("|") : [];
     if (cats.length === 0) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        const cat = visible[0]?.target.getAttribute("data-category");
-        if (cat) setActiveCategory(cat);
-      },
-      { rootMargin: "-64px 0px -70% 0px" },
-    );
-    for (const cat of cats) {
-      const el = sectionRefs.current[cat];
-      if (el) observer.observe(el);
-    }
-    return () => observer.disconnect();
+
+    let raf = 0;
+    const compute = () => {
+      raf = 0;
+      const line = 120; // just below the sticky category bar
+      let current = cats[0];
+      for (const cat of cats) {
+        const el = sectionRefs.current[cat];
+        if (el && el.getBoundingClientRect().top <= line) current = cat;
+      }
+      setActiveCategory(current);
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(compute);
+    };
+
+    compute(); // set initial highlight
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
   }, [categoryKey]);
 
   if (isLoading) {
