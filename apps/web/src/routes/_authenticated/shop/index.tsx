@@ -622,19 +622,18 @@ function ShopMenu() {
                         e.currentTarget.style.display = "none";
                       }}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-60" />
-
-                    {/* Price Tag Badge */}
-                    <span className="absolute bottom-2 left-2 rounded-lg bg-black/75 px-2.5 py-1 text-sm font-extrabold text-white shadow-md ring-1 ring-white/15 backdrop-blur-md">
-                      ৳{item.price}
-                    </span>
                   </div>
 
                   {/* Body */}
                   <div className="flex flex-1 flex-col gap-1 p-3">
-                    <span className="line-clamp-2 text-xs font-bold text-stone-900 dark:text-stone-100">
-                      {item.name}
-                    </span>
+                    <div className="flex items-start justify-between gap-2">
+                      <span className="line-clamp-2 text-xs font-bold text-stone-900 dark:text-stone-100">
+                        {item.name}
+                      </span>
+                      <span className="shrink-0 text-sm font-extrabold text-[#c15f3c] dark:text-amber-400">
+                        ৳{item.price}
+                      </span>
+                    </div>
                     <div className="min-h-5 mt-0.5">
                       {soldOut ? (
                         <Badge
