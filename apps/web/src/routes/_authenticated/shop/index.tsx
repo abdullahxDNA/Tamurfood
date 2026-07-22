@@ -383,25 +383,38 @@ function ShopMenu() {
   const categoryKeys = Object.keys(grouped);
   const categoryKey = categoryKeys.join("|");
 
-  // Highlight the category currently in view (scroll-spy).
+  // Highlight the category currently in view (scroll-spy). Recompute from the
+  // sections' LIVE positions on every scroll so it stays correct in BOTH
+  // directions — a prior IntersectionObserver only reacted to sections whose
+  // visibility *changed*, so scrolling back up (where the newly-active section
+  // was already visible and fired nothing) failed to update the highlight.
+  // The active category is the last section whose top has scrolled up past the
+  // sticky bar (rAF-throttled so it stays cheap).
   useEffect(() => {
     const cats = categoryKey ? categoryKey.split("|") : [];
     if (cats.length === 0) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries
-          .filter((e) => e.isIntersecting)
-          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        const cat = visible[0]?.target.getAttribute("data-category");
-        if (cat) setActiveCategory(cat);
-      },
-      { rootMargin: "-64px 0px -70% 0px" },
-    );
-    for (const cat of cats) {
-      const el = sectionRefs.current[cat];
-      if (el) observer.observe(el);
-    }
-    return () => observer.disconnect();
+
+    let raf = 0;
+    const compute = () => {
+      raf = 0;
+      const line = 120; // just below the sticky category bar
+      let current = cats[0];
+      for (const cat of cats) {
+        const el = sectionRefs.current[cat];
+        if (el && el.getBoundingClientRect().top <= line) current = cat;
+      }
+      setActiveCategory(current);
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(compute);
+    };
+
+    compute(); // set initial highlight
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
   }, [categoryKey]);
 
   if (isLoading) {
@@ -612,7 +625,7 @@ function ShopMenu() {
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-60" />
 
                     {/* Price Tag Badge */}
-                    <span className="absolute bottom-2 left-2.5 rounded-lg bg-black/60 backdrop-blur-md px-2 py-0.5 text-xs font-bold text-white shadow-xs">
+                    <span className="absolute bottom-2 left-2 rounded-lg bg-black/75 px-2.5 py-1 text-sm font-extrabold text-white shadow-md ring-1 ring-white/15 backdrop-blur-md">
                       ৳{item.price}
                     </span>
                   </div>
@@ -659,9 +672,9 @@ function ShopMenu() {
                             + Add
                           </button>
                         ) : (
-                          <div className="flex items-center gap-1 rounded-lg border border-stone-200 dark:border-stone-800 bg-stone-100/60 dark:bg-stone-800/60 p-0.5">
+                          <div className="flex items-center gap-1 rounded-xl border border-stone-200 dark:border-stone-800 bg-stone-100/60 dark:bg-stone-800/60 p-1">
                             <button
-                              className="flex h-6 w-6 items-center justify-center rounded-md text-xs font-bold hover:bg-white dark:hover:bg-stone-700 transition-colors"
+                              className="flex h-8 w-8 items-center justify-center rounded-lg text-lg font-bold leading-none hover:bg-white dark:hover:bg-stone-700 transition-colors active:scale-95"
                               onClick={() =>
                                 setQty(
                                   item.id,
@@ -674,11 +687,11 @@ function ShopMenu() {
                             >
                               −
                             </button>
-                            <span className="w-4 text-center text-xs font-bold tabular-nums">
+                            <span className="w-6 text-center text-sm font-bold tabular-nums">
                               {qty}
                             </span>
                             <button
-                              className="flex h-6 w-6 items-center justify-center rounded-md text-xs font-bold hover:bg-white dark:hover:bg-stone-700 transition-colors disabled:opacity-40"
+                              className="flex h-8 w-8 items-center justify-center rounded-lg text-lg font-bold leading-none hover:bg-white dark:hover:bg-stone-700 transition-colors active:scale-95 disabled:opacity-40"
                               disabled={atMax}
                               onClick={() =>
                                 setQty(item.id, item.name, item.price, qty + 1)
@@ -815,24 +828,67 @@ function ShopMenu() {
               {/* Scrollable middle: cart items, total, note, error */}
               <div className="mt-4 flex-1 space-y-4 overflow-y-auto px-6">
                 <div className="divide-y divide-stone-100 dark:divide-stone-800 rounded-2xl border border-stone-200/80 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-900/50 overflow-hidden">
-                  {Object.entries(cart).map(([id, entry]) => (
-                    <div
-                      key={id}
-                      className="flex items-center justify-between px-4 py-2.5 text-xs"
-                    >
-                      <span className="font-semibold text-stone-800 dark:text-stone-200">
-                        {entry.name}
-                      </span>
-                      <div className="flex items-center gap-4 text-stone-500">
-                        <span className="font-mono bg-stone-200/60 dark:bg-stone-800 px-1.5 py-0.5 rounded text-[10px]">
-                          ×{entry.quantity}
+                  {Object.entries(cart).map(([id, entry]) => {
+                    // Respect the item's remaining stock when adjusting from the
+                    // cart, same as the menu card (server also re-checks on order).
+                    const stock =
+                      items.find((i) => i.id === id)?.stockQuantity ?? null;
+                    const atMax = stock !== null && entry.quantity >= stock;
+                    return (
+                      <div
+                        key={id}
+                        className="flex items-center justify-between gap-3 px-4 py-2.5 text-xs"
+                      >
+                        <span className="min-w-0 flex-1 truncate font-semibold text-stone-800 dark:text-stone-200">
+                          {entry.name}
                         </span>
-                        <span className="tabular-nums font-bold text-stone-900 dark:text-stone-100">
-                          ৳{entry.price * entry.quantity}
-                        </span>
+                        <div className="flex shrink-0 items-center gap-3">
+                          <div className="flex items-center gap-1 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-800 p-0.5">
+                            <button
+                              type="button"
+                              className="flex h-8 w-8 items-center justify-center rounded-md text-lg font-bold leading-none transition-colors hover:bg-stone-100 dark:hover:bg-stone-700 active:scale-95"
+                              onClick={() => {
+                                setQty(
+                                  id,
+                                  entry.name,
+                                  entry.price,
+                                  Math.max(0, entry.quantity - 1),
+                                );
+                                // Removing the last unit of the last item empties
+                                // the cart — close the sheet, nothing to order.
+                                if (totalItems === 1) setConfirmOpen(false);
+                              }}
+                              aria-label={`Decrease ${entry.name}`}
+                            >
+                              −
+                            </button>
+                            <span className="w-6 text-center text-sm font-bold tabular-nums">
+                              {entry.quantity}
+                            </span>
+                            <button
+                              type="button"
+                              disabled={atMax}
+                              className="flex h-8 w-8 items-center justify-center rounded-md text-lg font-bold leading-none transition-colors hover:bg-stone-100 dark:hover:bg-stone-700 active:scale-95 disabled:opacity-40"
+                              onClick={() =>
+                                setQty(
+                                  id,
+                                  entry.name,
+                                  entry.price,
+                                  entry.quantity + 1,
+                                )
+                              }
+                              aria-label={`Increase ${entry.name}`}
+                            >
+                              +
+                            </button>
+                          </div>
+                          <span className="w-14 text-right tabular-nums font-bold text-stone-900 dark:text-stone-100">
+                            ৳{entry.price * entry.quantity}
+                          </span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <div className="flex items-center justify-between font-bold text-sm px-1 text-stone-900 dark:text-stone-100 pt-1">
