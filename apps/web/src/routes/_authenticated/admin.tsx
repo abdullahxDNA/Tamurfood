@@ -55,21 +55,21 @@ function NavLinks({
   onNavigate?: () => void;
 }) {
   return (
-    <nav className="flex flex-col gap-1">
+    <nav className="flex flex-col gap-1.5">
       {items.map((item) => (
         <Link
           key={item.to}
           to={item.to}
-          className="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent transition-colors flex items-center justify-between"
+          className="px-3.5 py-2.5 rounded-xl text-xs font-medium text-stone-600 dark:text-stone-400 hover:text-stone-900 dark:hover:text-stone-100 hover:bg-stone-100/80 dark:hover:bg-stone-800/60 transition-all flex items-center justify-between group"
           activeProps={{
             className:
-              "px-3 py-2 rounded-md text-sm font-medium bg-accent text-foreground flex items-center justify-between",
+              "px-3.5 py-2.5 rounded-xl text-xs font-semibold bg-amber-600/10 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400 flex items-center justify-between border border-amber-600/20 shadow-xs",
           }}
           onClick={onNavigate}
         >
           <span>{item.label}</span>
           {item.to === "/admin/menu" && pendingCount > 0 && (
-            <span className="ml-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-xs font-medium text-destructive-foreground">
+            <span className="ml-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-600 px-1.5 text-[10px] font-bold text-white shadow-xs animate-pulse">
               {pendingCount}
             </span>
           )}
@@ -108,18 +108,36 @@ function AdminLayout() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Top header */}
-      <header className="border-b px-4 py-3 flex items-center justify-between">
+    <div className="min-h-screen flex flex-col bg-[#faf9f5]/40 dark:bg-stone-950/40 text-stone-900 dark:text-stone-100">
+      {/* Top Glass Header */}
+      <header className="sticky top-0 z-30 backdrop-blur-md bg-white/85 dark:bg-stone-950/85 border-b border-stone-200/60 dark:border-stone-800/60 px-4 py-3 flex items-center justify-between shadow-xs">
         <div className="flex items-center gap-3">
           {/* Mobile hamburger */}
           <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden h-9 w-9 rounded-xl"
+              >
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-56 pt-10">
+            <SheetContent
+              side="left"
+              className="w-64 pt-10 border-stone-200/80 dark:border-stone-800"
+            >
+              <div className="mb-6 px-3 flex items-center gap-2">
+                <span
+                  className="grid h-7 w-7 place-items-center rounded-lg text-xs font-bold text-white shadow-xs"
+                  style={{ backgroundColor: "#c15f3c" }}
+                >
+                  T
+                </span>
+                <span className="font-serif font-semibold text-base">
+                  Tamurfood {isAdmin ? "Admin" : "Staff"}
+                </span>
+              </div>
               <NavLinks
                 items={navItems}
                 pendingCount={pendingCount}
@@ -127,28 +145,56 @@ function AdminLayout() {
               />
             </SheetContent>
           </Sheet>
-          <span className="font-semibold">
-            Tamurfood {isAdmin ? "Admin" : "Staff"}
-          </span>
+
+          <Link to="/admin" className="flex items-center gap-2.5">
+            <span
+              className="grid h-8 w-8 place-items-center rounded-xl text-xs font-bold text-white shadow-xs"
+              style={{ backgroundColor: "#c15f3c" }}
+            >
+              T
+            </span>
+            <span className="font-serif font-bold text-base tracking-tight hidden sm:inline-block">
+              Tamurfood{" "}
+              <span className="font-sans font-medium text-xs text-stone-500 bg-stone-100 dark:bg-stone-800 px-2 py-0.5 rounded-md ml-1 border border-stone-200/50 dark:border-stone-700/50">
+                {isAdmin ? "Admin Console" : "Staff Portal"}
+              </span>
+            </span>
+          </Link>
+
+          {/* Live Counter Badge Indicator */}
+          <div className="hidden md:flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+            </span>
+            <span>Live Feed Active</span>
+          </div>
         </div>
-        <div className="flex items-center gap-4">
+
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link
             to="/profile"
-            className="text-sm text-muted-foreground hover:text-foreground"
+            className="text-xs font-medium text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 transition-colors hidden sm:inline-block"
           >
-            Change Password
+            Password
           </Link>
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={toggleTheme}
+            className="h-8 w-8 p-0 rounded-lg"
             aria-label={
               theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
             }
           >
             {theme === "dark" ? "☀️" : "🌙"}
           </Button>
-          <Button variant="outline" size="sm" onClick={handleLogout}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleLogout}
+            className="h-8 text-xs rounded-xl border-stone-200/80 dark:border-stone-800"
+          >
             Logout
           </Button>
         </div>
@@ -156,12 +202,15 @@ function AdminLayout() {
 
       <div className="flex flex-1">
         {/* Desktop sidebar */}
-        <aside className="hidden md:flex w-56 border-r flex-col p-4 sticky top-0 h-[calc(100vh-3.5rem)]">
+        <aside className="hidden md:flex w-60 border-r border-stone-200/60 dark:border-stone-800/60 bg-white/40 dark:bg-stone-950/40 flex-col p-4 sticky top-[3.5rem] h-[calc(100vh-3.5rem)]">
+          <div className="mb-3 px-3 text-[10px] font-bold uppercase tracking-wider text-stone-400">
+            Navigation
+          </div>
           <NavLinks items={navItems} pendingCount={pendingCount} />
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 p-6 min-w-0">
+        <main className="flex-1 p-4 sm:p-6 min-w-0">
           <Outlet />
         </main>
       </div>

@@ -252,36 +252,47 @@ function ShopKhataPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-2xl font-bold">Khata</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold font-serif tracking-tight">
+          Khata Credit Ledger
+        </h1>
+        <span className="text-xs text-stone-400 font-mono">
+          Running Balance
+        </span>
+      </div>
 
       {(!myShop || isLoading) && (
-        <p className="text-muted-foreground text-sm">Loading…</p>
+        <div className="rounded-2xl bg-stone-100 dark:bg-stone-900 p-8 text-center animate-pulse">
+          <p className="text-stone-500 text-xs font-medium">
+            Loading ledger...
+          </p>
+        </div>
       )}
 
       {/* Balance hero — the number the shop cares about most (all-time). */}
       {data && (
         <div
-          className={`rounded-xl border p-5 text-center ${
+          className={`rounded-3xl border p-6 text-center shadow-xs backdrop-blur-md ${
             owe > 0
-              ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/20"
-              : "border-green-200 bg-green-50 dark:border-green-900 dark:bg-green-950/20"
+              ? "border-red-500/30 bg-red-500/5 dark:bg-red-950/20"
+              : "border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/20"
           }`}
         >
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">
-            Your balance
+          <p className="text-[11px] font-bold uppercase tracking-wider text-stone-400">
+            Total Outstanding Balance
           </p>
           <p
-            className={`mt-1 text-4xl font-bold ${
+            className={`mt-1.5 text-4xl font-extrabold font-mono tracking-tight ${
               owe > 0
                 ? "text-red-600 dark:text-red-400"
-                : "text-green-600 dark:text-green-400"
+                : "text-emerald-600 dark:text-emerald-400"
             }`}
           >
             ৳{Math.abs(owe).toLocaleString()}
           </p>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-1.5 text-xs font-medium text-stone-500 dark:text-stone-400">
             {owe > 0
-              ? "you owe the bakery"
+              ? "you owe the bakery for snacks delivered"
               : owe < 0
                 ? "overpaid — credit in your favour"
                 : "all settled ✓"}
@@ -289,19 +300,23 @@ function ShopKhataPage() {
         </div>
       )}
 
-      {/* Unpaid orders (all-time) — one boxed section with a red marker;
-          collapsible, tap a row to see its items */}
+      {/* Unpaid orders (all-time) */}
       {data && data.unpaidOrders.length > 0 && (
-        <div className="rounded-lg border border-red-200 dark:border-red-900">
+        <div className="rounded-2xl border border-red-500/30 bg-white dark:bg-stone-900 overflow-hidden shadow-xs">
           <button
             type="button"
             onClick={() => setUnpaidOpen((v) => !v)}
-            className="flex w-full items-center gap-2 px-4 py-2.5 text-left"
+            className="flex w-full items-center gap-2.5 px-4.5 py-3 text-left hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors"
           >
             <Chevron open={unpaidOpen} />
-            <span aria-hidden className="h-2.5 w-2.5 rounded-sm bg-red-500" />
-            <h2 className="text-sm font-semibold">Unpaid orders</h2>
-            <span className="ml-auto text-xs text-muted-foreground">
+            <span
+              aria-hidden
+              className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse"
+            />
+            <h2 className="text-xs font-bold text-stone-900 dark:text-stone-100">
+              Unpaid Orders
+            </h2>
+            <span className="ml-auto text-xs font-semibold text-red-600 dark:text-red-400 font-mono">
               {data.unpaidOrders.length} order
               {data.unpaidOrders.length === 1 ? "" : "s"} · ৳
               {data.unpaidOrders
@@ -311,26 +326,29 @@ function ShopKhataPage() {
           </button>
 
           {unpaidOpen && (
-            <div className="space-y-2 border-t border-red-200 p-3 dark:border-red-900">
+            <div className="space-y-2 border-t border-red-500/20 p-3 bg-red-500/5 dark:bg-red-950/10">
               {data.unpaidOrders.map((o) => {
                 const expanded = expandedOrders.has(o.id);
                 return (
-                  <div key={o.id} className="overflow-hidden rounded-lg border">
+                  <div
+                    key={o.id}
+                    className="overflow-hidden rounded-xl border border-stone-200/80 dark:border-stone-800 bg-white dark:bg-stone-900"
+                  >
                     <button
                       type="button"
                       onClick={() => toggleOrder(o.id)}
-                      className="flex w-full items-center justify-between px-4 py-3 text-left"
+                      className="flex w-full items-center justify-between px-3.5 py-2.5 text-left"
                     >
                       <div className="flex items-center gap-2">
                         <Chevron open={expanded} />
                         <div>
                           <OrderRef
-                            className="text-sm"
+                            className="text-xs font-bold font-mono"
                             withLabel
                             dailyNumber={o.dailyNumber}
                             orderNumber={o.orderNumber}
                           />
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-[10px] text-stone-400 font-mono">
                             {new Date(o.placedAt).toLocaleDateString("en-BD", {
                               day: "numeric",
                               month: "short",
@@ -339,22 +357,22 @@ function ShopKhataPage() {
                           </p>
                         </div>
                       </div>
-                      <span className="text-sm font-semibold">
+                      <span className="text-xs font-bold text-stone-900 dark:text-stone-100 font-mono">
                         ৳{o.amount.toLocaleString()}
                       </span>
                     </button>
 
                     {expanded && (
-                      <div className="space-y-1 border-t px-4 py-2.5">
+                      <div className="space-y-1 border-t border-stone-100 dark:border-stone-800 px-3.5 py-2 bg-stone-50/50 dark:bg-stone-950/50">
                         {o.items.map((it, i) => (
                           <div
                             key={i}
-                            className="flex items-center justify-between text-sm"
+                            className="flex items-center justify-between text-xs"
                           >
-                            <span className="text-muted-foreground">
+                            <span className="text-stone-600 dark:text-stone-400">
                               {it.quantity}× {it.itemName}
                             </span>
-                            <span className="tabular-nums">
+                            <span className="tabular-nums font-semibold text-stone-800 dark:text-stone-200">
                               ৳{it.lineTotal.toLocaleString()}
                             </span>
                           </div>
@@ -373,15 +391,17 @@ function ShopKhataPage() {
       <div className="flex items-center justify-between">
         <button
           type="button"
-          className="text-sm px-3 py-1.5 rounded-full border hover:bg-accent"
+          className="text-xs font-semibold px-3.5 py-1.5 rounded-full border border-stone-200/80 dark:border-stone-800 bg-white dark:bg-stone-900 hover:bg-stone-100 dark:hover:bg-stone-800 transition-all"
           onClick={() => setMonth(prevMonth(month))}
         >
           ‹ Prev
         </button>
-        <span className="text-sm font-semibold">{fmtMonthLabel(month)}</span>
+        <span className="text-xs font-bold font-serif tracking-tight text-stone-900 dark:text-stone-100">
+          {fmtMonthLabel(month)}
+        </span>
         <button
           type="button"
-          className="text-sm px-3 py-1.5 rounded-full border hover:bg-accent disabled:opacity-40 disabled:cursor-not-allowed"
+          className="text-xs font-semibold px-3.5 py-1.5 rounded-full border border-stone-200/80 dark:border-stone-800 bg-white dark:bg-stone-900 hover:bg-stone-100 dark:hover:bg-stone-800 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           onClick={() => setMonth(nextMonth(month))}
           disabled={month >= cur}
         >
@@ -392,15 +412,19 @@ function ShopKhataPage() {
       {/* This month at a glance */}
       {data && (
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-lg border bg-card p-3">
-            <p className="text-xs text-muted-foreground">Ordered this month</p>
-            <p className="mt-0.5 text-xl font-bold">
+          <div className="rounded-2xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-stone-900 p-3.5 shadow-xs">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
+              Ordered this month
+            </p>
+            <p className="mt-1 text-xl font-extrabold text-stone-900 dark:text-stone-100 font-mono">
               ৳{data.monthOrdered.toLocaleString()}
             </p>
           </div>
-          <div className="rounded-lg border bg-card p-3">
-            <p className="text-xs text-muted-foreground">Paid this month</p>
-            <p className="mt-0.5 text-xl font-bold text-green-600 dark:text-green-400">
+          <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/20 p-3.5 shadow-xs">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+              Paid this month
+            </p>
+            <p className="mt-1 text-xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
               ৳{data.monthPaid.toLocaleString()}
             </p>
           </div>
@@ -409,38 +433,40 @@ function ShopKhataPage() {
 
       {/* Transactions */}
       {data && (
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           <div className="flex items-baseline justify-between">
-            <h2 className="text-sm font-semibold">Transactions</h2>
+            <h2 className="text-xs font-bold uppercase tracking-wider text-stone-400">
+              Ledger Statement
+            </h2>
             {data.openingBalance !== 0 && data.entries.length > 0 && (
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs font-medium text-stone-400 font-mono">
                 Opening: ৳{data.openingBalance.toLocaleString()}
               </span>
             )}
           </div>
 
           {data.entries.length === 0 && (
-            <p className="rounded-lg border border-dashed py-8 text-center text-sm text-muted-foreground">
-              No transactions this month.
+            <p className="rounded-2xl border border-dashed border-stone-200 dark:border-stone-800 py-8 text-center text-xs text-stone-400">
+              No transactions recorded for {fmtMonthLabel(month)}.
             </p>
           )}
 
           {data.entries.map((entry) => (
             <div
               key={entry.id}
-              className={`flex items-center justify-between rounded-lg border px-4 py-3 text-sm transition-all ${
+              className={`flex items-center justify-between rounded-2xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-stone-900 px-4 py-3 text-xs transition-all shadow-xs ${
                 highlightedIds.has(entry.id)
-                  ? "ring-2 ring-primary bg-primary/5"
+                  ? "ring-2 ring-amber-600/50 bg-amber-500/5"
                   : ""
               }`}
             >
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <span
-                    className={`inline-block text-xs font-medium px-1.5 py-0.5 rounded ${
+                    className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full ${
                       entry.type === "order"
-                        ? "bg-orange-100 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300"
-                        : "bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-300"
+                        ? "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300"
+                        : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-300"
                     }`}
                   >
                     {entry.type === "order"
@@ -450,45 +476,45 @@ function ShopKhataPage() {
                         : "Payment received"}
                   </span>
                   {entry.type === "order" && entry.dailyNumber != null && (
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-[10px] text-stone-400 font-mono">
                       Ref #{entry.orderNumber}
                     </span>
                   )}
                   {entry.type === "payment" &&
                     entry.paidOrderNumber != null &&
                     entry.paidDailyNumber != null && (
-                      <span className="text-[10px] text-muted-foreground">
+                      <span className="text-[10px] text-stone-400 font-mono">
                         Ref #{entry.paidOrderNumber}
                       </span>
                     )}
                   {highlightedIds.has(entry.id) && (
-                    <span className="animate-pulse rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-none text-primary-foreground">
+                    <span className="animate-pulse rounded-full bg-amber-600 px-1.5 py-0.5 text-[9px] font-bold leading-none text-white">
                       NEW
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[10px] text-stone-400 font-mono">
                   {fmtEntryWhen(entry)}
                 </p>
                 {entry.note && (
-                  <p className="text-xs text-muted-foreground italic">
+                  <p className="text-[11px] text-stone-500 italic">
                     "{entry.note}"
                   </p>
                 )}
               </div>
               <div className="text-right space-y-0.5">
                 <p
-                  className={`font-medium ${
+                  className={`font-bold font-mono text-xs ${
                     entry.type === "order"
                       ? "text-red-600 dark:text-red-400"
-                      : "text-green-600 dark:text-green-400"
+                      : "text-emerald-600 dark:text-emerald-400"
                   }`}
                 >
                   {entry.type === "order"
                     ? `+৳${entry.debit}`
                     : `−৳${entry.credit}`}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[10px] text-stone-400 font-mono">
                   bal: ৳{entry.balance.toLocaleString()}
                 </p>
               </div>

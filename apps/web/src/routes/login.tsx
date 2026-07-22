@@ -72,52 +72,113 @@ function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle className="text-2xl">Tamurfood</CardTitle>
-          <CardDescription>Sign in to your account</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="phoneNumber">Phone Number</Label>
-              <Input
-                id="phoneNumber"
-                type="tel"
-                placeholder="01700000000"
-                autoComplete="username"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Signing in..." : "Sign In"}
-            </Button>
-            <div className="text-center">
-              <Link
-                to="/forgot-password"
-                className="text-sm text-muted-foreground hover:text-foreground"
+    <div className="relative flex min-h-screen items-center justify-center p-4 bg-[#faf9f5] dark:bg-stone-950 text-stone-900 dark:text-stone-100 overflow-hidden">
+      {/* Subtle Background Glow Spheres */}
+      <div
+        className="absolute -top-24 -left-24 h-96 w-96 rounded-full opacity-20 blur-3xl pointer-events-none"
+        style={{ backgroundColor: "#c15f3c" }}
+      />
+      <div className="absolute -bottom-24 -right-24 h-96 w-96 rounded-full opacity-15 blur-3xl pointer-events-none bg-amber-500" />
+
+      <div className="w-full max-w-sm space-y-6 relative z-10">
+        {/* Header Logo */}
+        <div className="text-center space-y-2">
+          <Link to="/" className="inline-flex items-center gap-2.5 group">
+            <span
+              className="grid h-10 w-10 place-items-center rounded-xl text-base font-bold text-white shadow-md shadow-amber-900/20 transition-transform group-hover:scale-105"
+              style={{ backgroundColor: "#c15f3c" }}
+            >
+              T
+            </span>
+            <span className="text-2xl font-serif tracking-tight font-medium">
+              Tamurfood
+            </span>
+          </Link>
+          <p className="text-xs text-stone-500 dark:text-stone-400">
+            Neighbourhood Bakery & Instant Shop Delivery
+          </p>
+        </div>
+
+        <Card className="border-stone-200/80 dark:border-stone-800/80 bg-white/80 dark:bg-stone-900/80 shadow-xl backdrop-blur-md rounded-2xl">
+          <CardHeader className="space-y-1 pb-4">
+            <CardTitle className="text-xl font-semibold tracking-tight text-center">
+              Sign in to your account
+            </CardTitle>
+            <CardDescription className="text-center text-xs">
+              Enter your registered phone number & password
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-1.5">
+                <Label
+                  htmlFor="phoneNumber"
+                  className="text-xs font-medium text-stone-700 dark:text-stone-300"
+                >
+                  Phone Number
+                </Label>
+                <Input
+                  id="phoneNumber"
+                  type="tel"
+                  placeholder="01700000000"
+                  autoComplete="username"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  required
+                  className="rounded-xl border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-950/50 focus-visible:ring-amber-600/30"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <Label
+                    htmlFor="password"
+                    className="text-xs font-medium text-stone-700 dark:text-stone-300"
+                  >
+                    Password
+                  </Label>
+                  <Link
+                    to="/forgot-password"
+                    className="text-xs text-amber-700 dark:text-amber-500 hover:underline font-medium"
+                  >
+                    Forgot?
+                  </Link>
+                </div>
+                <Input
+                  id="password"
+                  type="password"
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="rounded-xl border-stone-200 dark:border-stone-800 bg-stone-50/50 dark:bg-stone-950/50 focus-visible:ring-amber-600/30"
+                />
+              </div>
+              {error && (
+                <div className="rounded-xl bg-red-500/10 border border-red-500/20 p-2.5 text-xs text-red-600 dark:text-red-400 font-medium">
+                  {error}
+                </div>
+              )}
+              <Button
+                type="submit"
+                className="w-full rounded-xl py-2.5 font-semibold text-white shadow-md shadow-amber-900/15 transition-all hover:brightness-105 active:scale-[0.99]"
+                style={{ backgroundColor: "#c15f3c" }}
+                disabled={loading}
               >
-                Forgot password?
-              </Link>
-            </div>
-          </form>
-        </CardContent>
-      </Card>
+                {loading ? "Signing in..." : "Sign In"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+
+        <div className="text-center">
+          <Link
+            to="/"
+            className="text-xs font-medium text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 transition-colors"
+          >
+            ← Back to Home
+          </Link>
+        </div>
+      </div>
     </div>
   );
 }

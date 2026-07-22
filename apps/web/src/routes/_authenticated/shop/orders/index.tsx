@@ -127,8 +127,7 @@ function StepNode({
   );
 }
 
-// Live status of a shop's order. Two real milestones (Placed → Delivered) plus a
-// terminal Cancelled state — matching the staff's single "Mark Delivered" action.
+// Live status of a shop's order.
 function OrderStatusTracker({
   isDone,
   isCancelled,
@@ -138,34 +137,33 @@ function OrderStatusTracker({
 }) {
   if (isCancelled) {
     return (
-      <div className="flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2">
-        <span className="text-sm font-bold text-destructive">✕</span>
-        <span className="text-sm font-medium text-destructive">
-          Order cancelled
+      <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5">
+        <span className="text-xs font-bold text-red-600 dark:text-red-400">
+          ✕ Order Cancelled
         </span>
       </div>
     );
   }
   return (
-    <div className="rounded-md border bg-muted/30 px-3 py-2.5">
+    <div className="rounded-xl border border-stone-200/60 dark:border-stone-800/60 bg-stone-50/50 dark:bg-stone-950/50 p-3">
       <div className="flex items-center">
         <StepNode done label="Placed" />
         <div
           className={cn(
-            "mx-2 h-0.5 flex-1 rounded",
-            isDone ? "bg-green-500" : "bg-muted-foreground/25",
+            "mx-2.5 h-1 flex-1 rounded-full transition-all",
+            isDone ? "bg-emerald-500" : "bg-stone-200 dark:bg-stone-800",
           )}
         />
         <StepNode
           done={isDone}
           pending={!isDone}
-          label={isDone ? "Delivered" : "Waiting"}
+          label={isDone ? "Delivered" : "Pending"}
         />
       </div>
-      <p className="mt-2 text-xs text-muted-foreground">
+      <p className="mt-2 text-[11px] font-medium text-stone-500 dark:text-stone-400">
         {isDone
-          ? "✅ Delivered — enjoy your food!"
-          : "⏳ Waiting for the bakery to confirm your order…"}
+          ? "✅ Delivered to your shop!"
+          : "⏳ Waiting for bakery approval"}
       </p>
     </div>
   );
@@ -207,21 +205,12 @@ function OrderHistory() {
         ? pages.length + 1
         : undefined,
     staleTime: 0,
-    // Status changes arrive instantly over SSE (see effect below). This poll is
-    // just a fallback for when the stream is down — hence the relaxed interval.
     refetchInterval: filter === "today" ? 20_000 : false,
-    // Refetch the moment the shop returns to the tab, so status is fresh
-    // immediately instead of waiting for the next poll tick.
     refetchOnWindowFocus: true,
   });
 
-  // Derived from the cache — always in sync, even when returning to a filter.
   const allOrders = data?.pages.flatMap((p) => p.orders) ?? [];
 
-  // Orders that changed recently get a "NEW" marker for a few seconds. The timer
-  // starts when the shop actually sees it — either the moment a live event
-  // arrives while on this page, or when the page opens for events stashed by the
-  // layout while the shop was on another tab.
   const [highlightedIds, setHighlightedIds] = useState<Set<string>>(new Set());
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
     new Map(),
@@ -271,9 +260,6 @@ function OrderHistory() {
     return () => clearTimeout(t);
   }, [markNew]);
 
-  // Live status via SSE: refetch the instant staff accept/cancel an order for
-  // this shop, so the tracker flips with no polling delay, and flash the changed
-  // order as NEW. EventSource auto-reconnects; the poll above covers any gap.
   useEffect(() => {
     const source = new EventSource("/api/v1/orders/stream");
     source.addEventListener("order_status", (e) => {
@@ -290,7 +276,8 @@ function OrderHistory() {
     return () => source.close();
   }, [queryClient, markNew]);
 
-  // Toast when an order transitions from pending → done
+  // Toast when an order transitions from pending → done, so the shop is notified
+  // the moment their food is delivered even if they aren't watching the tracker.
   useEffect(() => {
     const orders = data?.pages.flatMap((p) => p.orders) ?? [];
     if (orders.length === 0) return;
@@ -310,6 +297,13 @@ function OrderHistory() {
     prevStatusRef.current = new Map(orders.map((o) => [o.id, o.isDone]));
   }, [data]);
 
+  const handleFilterChange = (f: DateFilter) => {
+    setFilter(f);
+    // Reset baseline so switching filters doesn't false-fire delivery toasts.
+    isFirstLoadRef.current = true;
+    prevStatusRef.current = new Map();
+  };
+
   const cancelMutation = useMutation({
     mutationFn: async (id: string) => {
       const res = await api.api.v1.orders[":id"].cancel.$patch({
@@ -319,40 +313,44 @@ function OrderHistory() {
       return res.json();
     },
     onSuccess: () => {
-      toast.success("Order cancelled.");
+      toast.success("Order cancelled");
       setConfirmCancelId(null);
       queryClient.invalidateQueries({ queryKey: ["orders"] });
+      // Reset baseline so the cancel's cache update doesn't false-fire a toast.
       isFirstLoadRef.current = true;
       prevStatusRef.current = new Map();
     },
-    onError: (err) => toast.error((err as Error).message),
+    onError: () => {
+      toast.error("Could not cancel order");
+    },
   });
 
-  function handleFilterChange(newFilter: DateFilter) {
-    setFilter(newFilter);
-    isFirstLoadRef.current = true;
-    prevStatusRef.current = new Map();
-  }
-
-  function handleReorder(order: Order) {
+  const handleReorder = (order: Order) => {
     for (const item of order.items) {
       setQty(item.menuItemId, item.itemName, item.itemPrice, item.quantity);
     }
+    toast.success("Items added to cart");
     navigate({ to: "/shop" });
-  }
+  };
 
-  // Client-side date filter for week/month
+  const start = getStartDate(filter);
   const filteredOrders =
     filter === "today"
       ? allOrders
       : allOrders.filter((o) => {
-          const start = getStartDate(filter);
           return new Date(o.placedAt) >= start;
         });
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">Orders</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold font-serif tracking-tight">
+          Your Order History
+        </h1>
+        <span className="text-xs text-stone-400 font-mono">
+          {filteredOrders.length} orders
+        </span>
+      </div>
 
       {/* Date filter buttons */}
       <div className="flex gap-2">
@@ -360,10 +358,10 @@ function OrderHistory() {
           <button
             key={f}
             onClick={() => handleFilterChange(f)}
-            className={`px-4 py-1.5 rounded-full text-sm font-medium border transition-colors ${
+            className={`px-4 py-1.5 rounded-full text-xs font-semibold transition-all ${
               filter === f
-                ? "bg-foreground text-background border-foreground"
-                : "bg-transparent text-muted-foreground border-border hover:text-foreground"
+                ? "bg-amber-700 text-white shadow-xs dark:bg-amber-600"
+                : "bg-stone-100 text-stone-600 hover:bg-stone-200/80 dark:bg-stone-900 dark:text-stone-400"
             }`}
           >
             {f === "today"
@@ -378,17 +376,20 @@ function OrderHistory() {
       {isLoading && (
         <div className="space-y-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-24 rounded-md bg-muted animate-pulse" />
+            <div
+              key={i}
+              className="h-28 rounded-2xl bg-stone-100 dark:bg-stone-900 animate-pulse"
+            />
           ))}
         </div>
       )}
 
       {isError && (
-        <p className="text-destructive text-sm">
+        <p className="text-red-500 text-xs py-4">
           Failed to load orders.{" "}
           <button
             onClick={() => refetch()}
-            className="underline hover:no-underline"
+            className="underline hover:no-underline font-semibold"
           >
             Try again
           </button>
@@ -396,36 +397,38 @@ function OrderHistory() {
       )}
 
       {!isLoading && !isError && filteredOrders.length === 0 && (
-        <div className="text-center py-16 space-y-2">
-          <p className="text-muted-foreground">No orders yet.</p>
-          <p className="text-sm text-muted-foreground">
-            Place your first order from the menu!
+        <div className="text-center py-16 space-y-2 rounded-2xl border border-dashed border-stone-200 dark:border-stone-800">
+          <p className="text-stone-500 text-sm font-medium">No orders yet.</p>
+          <p className="text-xs text-stone-400">
+            Place your first order from the menu tab!
           </p>
         </div>
       )}
 
-      <div className="space-y-3">
+      <div className="space-y-3.5">
         {filteredOrders.map((order) => (
           <div
             key={order.id}
-            className={`rounded-lg border p-4 space-y-3 transition-all ${
+            className={`rounded-2xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-stone-900 p-4.5 space-y-3.5 shadow-xs transition-all ${
               highlightedIds.has(order.id)
-                ? "ring-2 ring-primary bg-primary/5"
+                ? "ring-2 ring-amber-600/50 bg-amber-500/5"
                 : ""
             }`}
           >
-            <div className="flex items-center gap-2">
-              <OrderRef
-                className="text-sm"
-                dailyNumber={order.dailyNumber}
-                orderNumber={order.orderNumber}
-              />
-              {highlightedIds.has(order.id) && (
-                <span className="animate-pulse rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-none text-primary-foreground">
-                  NEW
-                </span>
-              )}
-              <span className="text-xs text-muted-foreground">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <OrderRef
+                  className="text-xs font-bold font-mono"
+                  dailyNumber={order.dailyNumber}
+                  orderNumber={order.orderNumber}
+                />
+                {highlightedIds.has(order.id) && (
+                  <span className="animate-pulse rounded-full bg-amber-600 px-2 py-0.5 text-[9px] font-bold text-white shadow-xs">
+                    NEW
+                  </span>
+                )}
+              </div>
+              <span className="text-[11px] text-stone-400 font-mono">
                 {new Date(order.placedAt).toLocaleDateString("en-GB", {
                   day: "numeric",
                   month: "short",
@@ -441,42 +444,52 @@ function OrderHistory() {
               isCancelled={order.isCancelled}
             />
 
-            <div className="space-y-1">
+            <div className="space-y-1.5 divide-y divide-stone-100 dark:divide-stone-800/50 pt-1">
               {order.items.map((item, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center justify-between text-sm"
+                  className="flex items-center justify-between text-xs pt-1.5"
                 >
-                  <span className="text-muted-foreground">
-                    {item.itemName} ×{item.quantity}
+                  <span className="text-stone-700 dark:text-stone-300 font-medium">
+                    {item.itemName}{" "}
+                    <span className="text-stone-400 font-normal">
+                      ×{item.quantity}
+                    </span>
                   </span>
-                  <span className="tabular-nums">৳{item.lineTotal}</span>
+                  <span className="tabular-nums font-semibold text-stone-900 dark:text-stone-100">
+                    ৳{item.lineTotal}
+                  </span>
                 </div>
               ))}
             </div>
 
             {order.note && (
-              <p className="text-xs text-muted-foreground italic">
+              <p className="text-[11px] text-stone-500 italic bg-stone-50 dark:bg-stone-950 p-2 rounded-lg">
                 Note: {order.note}
               </p>
             )}
 
             {order.isCancelled && order.cancelReason && (
-              <p className="rounded-md border border-destructive/40 bg-destructive/10 px-2.5 py-1.5 text-xs text-destructive">
-                Cancelled: {order.cancelReason}
+              <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs text-red-600 dark:text-red-400">
+                Reason: {order.cancelReason}
               </p>
             )}
 
-            <div className="flex items-center justify-between pt-1 border-t">
-              <span className="font-semibold text-sm">
-                ৳{order.totalAmount}
-              </span>
+            <div className="flex items-center justify-between pt-2 border-t border-stone-100 dark:border-stone-800/80">
+              <div className="text-xs">
+                <span className="text-stone-400 text-[10px] uppercase font-bold block">
+                  Total Amount
+                </span>
+                <span className="font-extrabold text-sm text-stone-900 dark:text-stone-100">
+                  ৳{order.totalAmount}
+                </span>
+              </div>
               <div className="flex items-center gap-2">
                 {!order.isCancelled && !order.isDone && (
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="text-destructive hover:text-destructive"
+                    className="h-8 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950 rounded-xl"
                     onClick={() => setConfirmCancelId(order.id)}
                   >
                     Cancel
@@ -485,6 +498,7 @@ function OrderHistory() {
                 <Button
                   size="sm"
                   variant="outline"
+                  className="h-8 text-xs rounded-xl font-semibold border-stone-200/80 dark:border-stone-800"
                   onClick={() => handleReorder(order)}
                 >
                   Reorder

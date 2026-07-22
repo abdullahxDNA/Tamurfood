@@ -170,19 +170,37 @@ function ShopLayout() {
 
   return (
     <CartProvider>
-      <div className="min-h-screen overflow-x-clip pb-[calc(4rem+env(safe-area-inset-bottom))]">
-        <header className="border-b px-6 py-4 flex items-center justify-between gap-3">
-          <span className="text-lg font-extrabold tracking-tight whitespace-nowrap">
-            তামুরফুড <span className="text-muted-foreground">·</span> Tamurfood
-          </span>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <span className="hidden sm:inline text-sm text-muted-foreground truncate max-w-[10rem]">
-              {session.name}
+      <div className="min-h-screen overflow-x-clip pb-[calc(4.5rem+env(safe-area-inset-bottom))] bg-[#faf9f5]/50 dark:bg-stone-950/50">
+        {/* Sticky Glass Header */}
+        <header className="sticky top-0 z-30 backdrop-blur-md bg-white/80 dark:bg-stone-950/80 border-b border-stone-200/60 dark:border-stone-800/60 px-5 py-3.5 flex items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <span
+              className="grid h-8 w-8 place-items-center rounded-lg text-xs font-bold text-white shadow-xs"
+              style={{ backgroundColor: "#c15f3c" }}
+            >
+              T
             </span>
+            <span className="text-base font-bold tracking-tight whitespace-nowrap font-serif">
+              তামুরফুড{" "}
+              <span className="text-stone-400 font-sans font-normal">·</span>{" "}
+              <span className="font-sans font-semibold text-stone-900 dark:text-stone-100">
+                Tamurfood
+              </span>
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {session.name && (
+              <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium bg-stone-100 dark:bg-stone-800 text-stone-700 dark:text-stone-300 px-2.5 py-1 rounded-full border border-stone-200/50 dark:border-stone-700/50">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                {session.name}
+              </span>
+            )}
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={toggleTheme}
+              className="h-8 w-8 p-0 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800"
               aria-label={
                 theme === "dark"
                   ? "Switch to light mode"
@@ -191,58 +209,82 @@ function ShopLayout() {
             >
               {theme === "dark" ? "☀️" : "🌙"}
             </Button>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="h-8 text-xs rounded-lg border-stone-200/80 dark:border-stone-800"
+            >
               Logout
             </Button>
           </div>
         </header>
-        <main className="mx-auto max-w-5xl p-6">
+
+        <main className="mx-auto max-w-5xl p-4 sm:p-6">
           <Outlet />
         </main>
-        {/* Bottom navigation */}
+
+        {/* Floating Glass Bottom Navigation */}
         <nav
           aria-label="Primary"
-          className="fixed inset-x-0 bottom-0 z-40 box-content flex h-16 border-t bg-background pb-[env(safe-area-inset-bottom)]"
+          className="fixed inset-x-0 bottom-0 z-40 box-content flex h-16 border-t border-stone-200/80 dark:border-stone-800/80 bg-white/85 dark:bg-stone-950/85 backdrop-blur-xl pb-[env(safe-area-inset-bottom)] shadow-lg"
         >
           <Link
             to="/shop"
-            className="flex-1 flex flex-col items-center justify-center gap-1 text-xs font-medium transition-colors select-none active:bg-muted/50"
-            activeProps={{ className: "text-primary", "aria-current": "page" }}
-            inactiveProps={{ className: "text-muted-foreground" }}
+            className="flex-1 flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-all select-none group"
+            activeProps={{
+              className:
+                "text-amber-700 dark:text-amber-500 font-semibold scale-105",
+              "aria-current": "page",
+            }}
+            inactiveProps={{
+              className:
+                "text-stone-500 hover:text-stone-800 dark:hover:text-stone-200",
+            }}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
+              width="19"
+              height="19"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
+              className="transition-transform group-active:scale-90"
             >
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
               <polyline points="9 22 9 12 15 12 15 22" />
             </svg>
-            Menu
+            <span>Menu</span>
           </Link>
+
           <Link
             to="/shop/orders"
-            className="flex-1 flex flex-col items-center justify-center gap-1 text-xs font-medium transition-colors select-none active:bg-muted/50"
-            activeProps={{ className: "text-primary", "aria-current": "page" }}
-            inactiveProps={{ className: "text-muted-foreground" }}
+            className="flex-1 flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-all select-none group"
+            activeProps={{
+              className:
+                "text-amber-700 dark:text-amber-500 font-semibold scale-105",
+              "aria-current": "page",
+            }}
+            inactiveProps={{
+              className:
+                "text-stone-500 hover:text-stone-800 dark:hover:text-stone-200",
+            }}
           >
             <span className="relative">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
+                width="19"
+                height="19"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                className="transition-transform group-active:scale-90"
               >
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                 <polyline points="14 2 14 8 20 8" />
@@ -252,25 +294,34 @@ function ShopLayout() {
               </svg>
               <NavBadge count={ordersUnseen} />
             </span>
-            Orders
+            <span>Orders</span>
           </Link>
+
           <Link
             to="/shop/khata"
-            className="flex-1 flex flex-col items-center justify-center gap-1 text-xs font-medium transition-colors select-none active:bg-muted/50"
-            activeProps={{ className: "text-primary", "aria-current": "page" }}
-            inactiveProps={{ className: "text-muted-foreground" }}
+            className="flex-1 flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-all select-none group"
+            activeProps={{
+              className:
+                "text-amber-700 dark:text-amber-500 font-semibold scale-105",
+              "aria-current": "page",
+            }}
+            inactiveProps={{
+              className:
+                "text-stone-500 hover:text-stone-800 dark:hover:text-stone-200",
+            }}
           >
             <span className="relative">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
+                width="19"
+                height="19"
                 viewBox="0 0 24 24"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="2"
                 strokeLinecap="round"
                 strokeLinejoin="round"
+                className="transition-transform group-active:scale-90"
               >
                 <rect x="2" y="3" width="20" height="14" rx="2" />
                 <line x1="8" y1="21" x2="16" y2="21" />
@@ -278,29 +329,38 @@ function ShopLayout() {
               </svg>
               <NavBadge count={khataUnseen} />
             </span>
-            Khata
+            <span>Khata</span>
           </Link>
+
           <Link
             to="/shop/profile"
-            className="flex-1 flex flex-col items-center justify-center gap-1 text-xs font-medium transition-colors select-none active:bg-muted/50"
-            activeProps={{ className: "text-primary", "aria-current": "page" }}
-            inactiveProps={{ className: "text-muted-foreground" }}
+            className="flex-1 flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-all select-none group"
+            activeProps={{
+              className:
+                "text-amber-700 dark:text-amber-500 font-semibold scale-105",
+              "aria-current": "page",
+            }}
+            inactiveProps={{
+              className:
+                "text-stone-500 hover:text-stone-800 dark:hover:text-stone-200",
+            }}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
+              width="19"
+              height="19"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
               strokeLinecap="round"
               strokeLinejoin="round"
+              className="transition-transform group-active:scale-90"
             >
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
               <circle cx="12" cy="7" r="4" />
             </svg>
-            Profile
+            <span>Profile</span>
           </Link>
         </nav>
       </div>
