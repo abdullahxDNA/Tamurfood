@@ -234,6 +234,10 @@ function ShopLayout() {
           <div className="mx-auto flex h-16 w-full max-w-7xl px-2 sm:px-4">
             <Link
               to="/shop"
+              // Exact match only — otherwise "/shop" counts as active on every
+              // /shop/* sub-route (Orders, Khata, Profile), leaving Menu always
+              // highlighted alongside the real active tab.
+              activeOptions={{ exact: true }}
               className="flex-1 flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-all select-none group"
               activeProps={{
                 className:
