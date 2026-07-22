@@ -132,8 +132,6 @@ const FOOD_MAP: { keywords: string[]; emoji: string; img: string }[] = [
   { keywords: ["dim", "egg", "anda"], emoji: "🥚", img: "1482049016688-2d3e1b311543" }, // prettier-ignore
 ];
 
-const DEFAULT_IMG = "1504674900247-0877df9cc836"; // generic food flatlay
-
 function foodMatch(name: string) {
   const n = name.toLowerCase();
   return FOOD_MAP.find((f) => f.keywords.some((k) => n.includes(k)));
@@ -141,11 +139,6 @@ function foodMatch(name: string) {
 
 function foodEmoji(name: string): string {
   return foodMatch(name)?.emoji ?? "🍽️";
-}
-
-function foodImage(name: string): string {
-  const id = foodMatch(name)?.img ?? DEFAULT_IMG;
-  return `https://images.unsplash.com/photo-${id}?w=400&h=300&fit=crop&q=80`;
 }
 
 const GRADIENTS = [
@@ -613,15 +606,22 @@ function ShopMenu() {
                     <span className="text-4xl sm:text-5xl transition-transform group-hover:scale-110">
                       {foodEmoji(item.name)}
                     </span>
-                    <img
-                      src={item.imageUrl ?? foodImage(item.name)}
-                      alt={item.name}
-                      loading="lazy"
-                      className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                      onError={(e) => {
-                        e.currentTarget.style.display = "none";
-                      }}
-                    />
+                    {/* Only load an image when the admin has uploaded a real
+                        photo. Otherwise show the instant emoji + gradient so we
+                        don't fetch a remote stock photo per card (that was 16
+                        third-party requests, tanking LCP and causing layout
+                        shift). Uploaded photos appear here automatically. */}
+                    {item.imageUrl && (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name}
+                        loading="lazy"
+                        className="absolute inset-0 h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                    )}
                   </div>
 
                   {/* Body */}
