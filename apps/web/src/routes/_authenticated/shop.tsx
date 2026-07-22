@@ -173,7 +173,7 @@ function ShopLayout() {
       <div className="min-h-screen overflow-x-clip pb-[calc(4.5rem+env(safe-area-inset-bottom))] bg-[#faf9f5]/50 dark:bg-stone-950/50">
         {/* Sticky Glass Header */}
         <header className="sticky top-0 z-30 backdrop-blur-md bg-white/80 dark:bg-stone-950/80 border-b border-stone-200/60 dark:border-stone-800/60 py-3.5 shadow-xs">
-          <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 px-4 sm:px-6">
+          <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
             <div className="flex items-center gap-2.5">
               <span
                 className="grid h-8 w-8 place-items-center rounded-lg text-xs font-bold text-white shadow-xs"
@@ -222,7 +222,7 @@ function ShopLayout() {
           </div>
         </header>
 
-        <main className="mx-auto max-w-5xl p-4 sm:p-6">
+        <main className="mx-auto max-w-7xl p-4 sm:p-6">
           <Outlet />
         </main>
 
@@ -231,7 +231,7 @@ function ShopLayout() {
           aria-label="Primary"
           className="fixed inset-x-0 bottom-0 z-40 box-content border-t border-stone-200/80 dark:border-stone-800/80 bg-white/85 dark:bg-stone-950/85 backdrop-blur-xl pb-[env(safe-area-inset-bottom)] shadow-lg"
         >
-          <div className="mx-auto flex h-16 w-full max-w-5xl px-2 sm:px-4">
+          <div className="mx-auto flex h-16 w-full max-w-7xl px-2 sm:px-4">
             <Link
               to="/shop"
               className="flex-1 flex flex-col items-center justify-center gap-1 text-[11px] font-medium transition-all select-none group"
