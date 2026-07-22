@@ -1265,6 +1265,45 @@ function MenuPage() {
   );
 }
 
+// Downscale + re-encode an uploaded image in the browser BEFORE it hits the
+// server, so a raw multi-MB phone photo becomes a ~50–90KB WebP. This keeps the
+// shop menu fast no matter what gets uploaded (cards only show a small
+// thumbnail, so 900px is plenty). Falls back to the original file on any
+// failure — the server still enforces the 5MiB / type limits.
+async function resizeImageForUpload(
+  file: File,
+  maxSize = 900,
+  quality = 0.82,
+): Promise<File> {
+  try {
+    // `from-image` respects EXIF orientation so portrait phone photos aren't
+    // rotated sideways after re-encoding.
+    const bitmap = await createImageBitmap(file, {
+      imageOrientation: "from-image",
+    });
+    const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
+    const w = Math.round(bitmap.width * scale);
+    const h = Math.round(bitmap.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0, w, h);
+    bitmap.close?.();
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/webp", quality),
+    );
+    if (!blob) return file;
+    // Keep whichever is smaller (an already-tiny image can grow when re-encoded).
+    if (blob.size >= file.size) return file;
+    const name = file.name.replace(/\.\w+$/, "") + ".webp";
+    return new File([blob], name, { type: "image/webp" });
+  } catch {
+    return file;
+  }
+}
+
 // ─── Item dialog ──────────────────────────────────────────────────────────────
 
 function MenuItemDialog({
@@ -1336,8 +1375,15 @@ function MenuItemDialog({
     setUploading(true);
     setUploadError(null);
     try {
+      // Shrink in the browser first so large photos don't slow the shop menu.
+      const optimized = await resizeImageForUpload(file);
+      if (optimized.size > 5 * 1024 * 1024) {
+        throw new Error(
+          "Image is too large even after resizing — please pick a smaller photo.",
+        );
+      }
       const fd = new FormData();
-      fd.append("file", file);
+      fd.append("file", optimized);
       const res = await fetch("/api/v1/menu/upload", {
         method: "POST",
         body: fd,
