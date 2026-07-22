@@ -160,15 +160,6 @@ function AdminLayout() {
               </span>
             </span>
           </Link>
-
-          {/* Live Counter Badge Indicator */}
-          <div className="hidden md:flex items-center gap-2 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-3 py-1 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-            </span>
-            <span>Live Feed Active</span>
-          </div>
         </div>
 
         <div className="flex items-center gap-2 sm:gap-3">
