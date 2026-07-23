@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { CartProvider } from "@/lib/cart-context";
 import { useTheme } from "@/lib/theme";
+import { useLang } from "@/lib/i18n";
 
 // Per-device unread counters for the bottom-nav notification badges. They
 // increment on live SSE events while the shop is away from that tab, and reset
@@ -76,6 +77,7 @@ function ShopLayout() {
   const queryClient = useQueryClient();
   const { session } = Route.useRouteContext();
   const { theme, toggleTheme } = useTheme();
+  const { t, lang, toggleLang } = useLang();
   const [confirmLogout, setConfirmLogout] = useState(false);
 
   // ── Notification badges ──────────────────────────────────────────────────
@@ -208,6 +210,15 @@ function ShopLayout() {
               <Button
                 variant="ghost"
                 size="sm"
+                onClick={toggleLang}
+                className="h-8 px-2 text-xs font-semibold rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800"
+                aria-label="Switch language"
+              >
+                {lang === "bn" ? "EN" : "বাংলা"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={toggleTheme}
                 className="h-8 w-8 p-0 rounded-lg hover:bg-stone-100 dark:hover:bg-stone-800"
                 aria-label={
@@ -224,7 +235,7 @@ function ShopLayout() {
                 onClick={() => setConfirmLogout(true)}
                 className="h-8 text-xs rounded-lg border-stone-200/80 dark:border-stone-800"
               >
-                Logout
+                {t("Logout", "লগআউট")}
               </Button>
             </div>
           </div>
@@ -272,7 +283,7 @@ function ShopLayout() {
                 <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
                 <polyline points="9 22 9 12 15 12 15 22" />
               </svg>
-              <span>Menu</span>
+              <span>{t("Menu", "মেনু")}</span>
             </Link>
 
             <Link
@@ -309,7 +320,7 @@ function ShopLayout() {
                 </svg>
                 <NavBadge count={ordersUnseen} />
               </span>
-              <span>Orders</span>
+              <span>{t("Orders", "অর্ডার")}</span>
             </Link>
 
             <Link
@@ -344,7 +355,7 @@ function ShopLayout() {
                 </svg>
                 <NavBadge count={khataUnseen} />
               </span>
-              <span>Khata</span>
+              <span>{t("Khata", "খাতা")}</span>
             </Link>
 
             <Link
@@ -375,7 +386,7 @@ function ShopLayout() {
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                 <circle cx="12" cy="7" r="4" />
               </svg>
-              <span>Profile</span>
+              <span>{t("Profile", "প্রোফাইল")}</span>
             </Link>
           </div>
         </nav>
@@ -384,17 +395,20 @@ function ShopLayout() {
         <Dialog open={confirmLogout} onOpenChange={setConfirmLogout}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Log out?</DialogTitle>
+              <DialogTitle>{t("Log out?", "লগআউট করবেন?")}</DialogTitle>
             </DialogHeader>
             <p className="text-sm text-muted-foreground">
-              You&apos;ll need to sign in again to place orders.
+              {t(
+                "You'll need to sign in again to place orders.",
+                "অর্ডার করতে আবার লগইন করতে হবে।",
+              )}
             </p>
             <DialogFooter>
               <Button variant="outline" onClick={() => setConfirmLogout(false)}>
-                Cancel
+                {t("Cancel", "বাতিল")}
               </Button>
               <Button variant="destructive" onClick={handleLogout}>
-                Log out
+                {t("Log out", "লগআউট")}
               </Button>
             </DialogFooter>
           </DialogContent>

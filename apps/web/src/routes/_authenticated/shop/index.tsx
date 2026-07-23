@@ -21,6 +21,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useCart } from "@/lib/cart-context";
+import { useLang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated/shop/")({
   component: ShopMenu,
@@ -166,6 +167,7 @@ function hashPick<T>(id: string, arr: T[]): T {
 
 function ShopMenu() {
   const { cart, setQty, clearCart, totalItems, totalAmount } = useCart();
+  const { t } = useLang();
   const queryClient = useQueryClient();
 
   const [search, setSearch] = useState("");
@@ -287,7 +289,12 @@ function ShopMenu() {
       setQty(item.menuItemId, item.itemName, item.itemPrice, item.quantity);
     }
     if (warned.length > 0) {
-      toast(`Skipped unavailable: ${warned.join(", ")}`);
+      toast(
+        t(
+          `Skipped unavailable: ${warned.join(", ")}`,
+          `বাদ দেওয়া হয়েছে (স্টক নেই): ${warned.join(", ")}`,
+        ),
+      );
     }
   }
 
@@ -324,10 +331,10 @@ function ShopMenu() {
       ...entry,
     }));
     clearCart();
-    const id = toast("Cart cleared", {
+    const id = toast(t("Cart cleared", "কার্ট খালি করা হয়েছে"), {
       duration: 5000,
       action: {
-        label: "Undo",
+        label: t("Undo", "ফিরিয়ে আনুন"),
         onClick: () => {
           for (const item of snapshot) {
             setQty(item.id, item.name, item.price, item.quantity);
@@ -355,7 +362,12 @@ function ShopMenu() {
     if (nowOut.length === 0) return;
     for (const [id, entry] of nowOut) {
       setQty(id, "", 0, 0);
-      toast(`${entry.name} is now stock out — removed from your cart`);
+      toast(
+        t(
+          `${entry.name} is now stock out — removed from your cart`,
+          `${entry.name} এর স্টক শেষ — কার্ট থেকে বাদ দেওয়া হয়েছে`,
+        ),
+      );
     }
   }, [items, cart, setQty]);
 
@@ -438,13 +450,21 @@ function ShopMenu() {
     >
       <div className="px-6 py-6 sm:px-8 sm:py-7">
         <p className="text-[11px] font-medium uppercase tracking-wide opacity-90">
-          {banner?.subtitle ?? "Today's special"}
+          {banner?.subtitle ?? t("Today's special", "আজকের বিশেষ")}
         </p>
         <h2 className="mt-0.5 text-xl font-bold leading-tight sm:text-3xl">
-          {banner?.title ?? "Fresh bakery items, baked daily 🥐"}
+          {banner?.title ??
+            t(
+              "Fresh bakery items, baked daily 🥐",
+              "টাটকা বেকারি আইটেম, প্রতিদিন তৈরি 🥐",
+            )}
         </h2>
         <p className="mt-1.5 text-xs opacity-90 sm:text-sm">
-          {banner?.tagline ?? "Order before 10 AM for same-day delivery"}
+          {banner?.tagline ??
+            t(
+              "Order before 10 AM for same-day delivery",
+              "একই দিনে ডেলিভারি পেতে সকাল ১০টার আগে অর্ডার করুন",
+            )}
         </p>
       </div>
       {!banner?.imageUrl && (
@@ -457,10 +477,10 @@ function ShopMenu() {
 
   const menuHeader = (
     <div className="space-y-3">
-      <h1 className="text-2xl font-bold">Menu</h1>
+      <h1 className="text-2xl font-bold">{t("Menu", "মেনু")}</h1>
       <Input
         type="search"
-        placeholder="Search items..."
+        placeholder={t("Search items...", "আইটেম খুঁজুন...")}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
@@ -495,14 +515,14 @@ function ShopMenu() {
   if (isError) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold">Menu</h1>
+        <h1 className="text-2xl font-bold">{t("Menu", "মেনু")}</h1>
         <p className="text-destructive">
-          Failed to load menu.{" "}
+          {t("Failed to load menu.", "মেনু লোড করা যায়নি।")}{" "}
           <button
             onClick={() => refetch()}
             className="underline hover:no-underline"
           >
-            Try again
+            {t("Try again", "আবার চেষ্টা করুন")}
           </button>
         </p>
       </div>
@@ -512,9 +532,12 @@ function ShopMenu() {
   if (items.length === 0) {
     return (
       <div className="space-y-4">
-        <h1 className="text-2xl font-bold">Menu</h1>
+        <h1 className="text-2xl font-bold">{t("Menu", "মেনু")}</h1>
         <p className="text-muted-foreground">
-          No menu items available right now.
+          {t(
+            "No menu items available right now.",
+            "এই মুহূর্তে কোনো মেনু আইটেম নেই।",
+          )}
         </p>
       </div>
     );
@@ -547,7 +570,10 @@ function ShopMenu() {
             {lastOrder && (
               <button
                 onClick={handleRepeatLastOrder}
-                title={`Repeat last order — ৳${lastOrder.totalAmount}`}
+                title={t(
+                  `Repeat last order — ৳${lastOrder.totalAmount}`,
+                  `শেষ অর্ডার আবার দিন — ৳${lastOrder.totalAmount}`,
+                )}
                 className="flex shrink-0 items-center gap-1.5 self-start whitespace-nowrap rounded-full border border-amber-600/30 bg-amber-600/10 px-3.5 py-1.5 text-xs font-semibold text-amber-800 dark:text-amber-300 transition-all hover:bg-amber-600/20 sm:self-auto shadow-xs"
               >
                 <svg
@@ -564,7 +590,8 @@ function ShopMenu() {
                   <path d="M3 2v6h6" />
                   <path d="M3 13a9 9 0 1 0 3-7.7L3 8" />
                 </svg>
-                Repeat last order · ৳{lastOrder.totalAmount}
+                {t("Repeat last order", "শেষ অর্ডার আবার")} · ৳
+                {lastOrder.totalAmount}
               </button>
             )}
           </div>
@@ -574,13 +601,15 @@ function ShopMenu() {
       {/* Stock-out warning after server 409 */}
       {unavailableWarning.length > 0 && (
         <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3.5 text-xs text-red-600 dark:text-red-400 font-medium">
-          Stock out — removed from your cart: {unavailableWarning.join(", ")}.
-          Please choose another.
+          {t(
+            `Stock out — removed from your cart: ${unavailableWarning.join(", ")}. Please choose another.`,
+            `স্টক শেষ — কার্ট থেকে বাদ দেওয়া হয়েছে: ${unavailableWarning.join(", ")}। অন্য কিছু বেছে নিন।`,
+          )}
           <button
             className="ml-2 underline font-semibold"
             onClick={() => setUnavailableWarning([])}
           >
-            Dismiss
+            {t("Dismiss", "বন্ধ করুন")}
           </button>
         </div>
       )}
@@ -588,7 +617,7 @@ function ShopMenu() {
       {/* No search results */}
       {q && Object.keys(grouped).length === 0 && (
         <p className="text-stone-500 text-xs py-8 text-center">
-          No items match "{search}".
+          {t(`No items match "${search}".`, `"${search}" এর সাথে কিছু মেলেনি।`)}
         </p>
       )}
 
@@ -669,19 +698,25 @@ function ShopMenu() {
                           variant="destructive"
                           className="w-fit text-[9px] px-1.5 py-0 font-semibold"
                         >
-                          Stock Out
+                          {t("Stock Out", "স্টক শেষ")}
                         </Badge>
                       ) : item.stockQuantity !== null ? (
                         lowStock ? (
                           <Badge className="w-fit border-amber-400 bg-amber-100 text-[9px] font-semibold text-amber-800 hover:bg-amber-100 dark:bg-amber-900/40 dark:text-amber-300">
-                            Only {item.stockQuantity} left
+                            {t(
+                              `Only ${item.stockQuantity} left`,
+                              `মাত্র ${item.stockQuantity}টি বাকি`,
+                            )}
                           </Badge>
                         ) : (
                           <Badge
                             variant="secondary"
                             className="w-fit text-[9px] px-1.5 py-0 text-stone-500"
                           >
-                            {item.stockQuantity} in stock
+                            {t(
+                              `${item.stockQuantity} in stock`,
+                              `${item.stockQuantity}টি আছে`,
+                            )}
                           </Badge>
                         )
                       ) : null}
@@ -697,7 +732,7 @@ function ShopMenu() {
                             }
                             aria-label={`Add ${item.name}`}
                           >
-                            + Add
+                            + {t("Add", "যোগ")}
                           </button>
                         ) : (
                           <div className="flex items-center gap-1 rounded-xl border border-stone-200 dark:border-stone-800 bg-stone-100/60 dark:bg-stone-800/60 p-1">
@@ -782,11 +817,11 @@ function ShopMenu() {
                 {totalItems}
               </span>
               <span className="text-white font-extrabold tracking-tight">
-                Total: ৳{totalAmount}
+                {t("Total", "মোট")}: ৳{totalAmount}
               </span>
             </div>
             <span className="flex items-center gap-1.5 text-amber-100 font-extrabold group-hover:translate-x-0.5 transition-transform">
-              Place Order →
+              {t("Place Order", "অর্ডার করুন")} →
             </span>
           </button>
         </div>
@@ -810,8 +845,8 @@ function ShopMenu() {
           <SheetHeader className="shrink-0 border-b border-stone-100 dark:border-stone-800 px-6 py-4">
             <SheetTitle className="text-base font-bold font-serif text-stone-900 dark:text-stone-100">
               {successOrder
-                ? "🎉 Order Placed Successfully!"
-                : "Confirm Your Order"}
+                ? t("🎉 Order Placed Successfully!", "🎉 অর্ডার সফল হয়েছে!")
+                : t("Confirm Your Order", "অর্ডার নিশ্চিত করুন")}
             </SheetTitle>
           </SheetHeader>
 
@@ -820,24 +855,25 @@ function ShopMenu() {
               <div className="mt-4 flex-1 space-y-4 overflow-y-auto px-6">
                 {priceMismatch !== null && (
                   <div className="rounded-xl border border-blue-300 bg-blue-50/80 p-3 text-xs font-medium text-blue-800">
-                    Price updated by server: ৳{priceMismatch}
+                    {t("Price updated by server", "সার্ভারে দাম আপডেট হয়েছে")}:
+                    ৳{priceMismatch}
                   </div>
                 )}
                 <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 text-center space-y-1.5">
                   <span className="inline-block text-2xl">⚡</span>
                   <p className="text-xl font-extrabold text-stone-900 dark:text-stone-100">
-                    Order #
+                    {t("Order", "অর্ডার")} #
                     {successOrder.dailyNumber ?? successOrder.orderNumber}
                     <span className="text-xs font-normal text-stone-500">
                       {" "}
-                      · today
+                      · {t("today", "আজ")}
                     </span>
                   </p>
                   <p className="text-xs text-stone-400 font-mono">
-                    Ref #{successOrder.orderNumber}
+                    {t("Ref", "রেফ")} #{successOrder.orderNumber}
                   </p>
                   <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400 pt-1">
-                    Total Amount: ৳{successOrder.totalAmount}
+                    {t("Total Amount", "মোট টাকা")}: ৳{successOrder.totalAmount}
                   </p>
                 </div>
               </div>
@@ -847,7 +883,7 @@ function ShopMenu() {
                   style={{ backgroundColor: "#c15f3c" }}
                   onClick={handleNewOrder}
                 >
-                  New Order
+                  {t("New Order", "নতুন অর্ডার")}
                 </Button>
               </div>
             </>
@@ -920,14 +956,17 @@ function ShopMenu() {
                 </div>
 
                 <div className="flex items-center justify-between font-bold text-sm px-1 text-stone-900 dark:text-stone-100 pt-1">
-                  <span>Grand Total</span>
+                  <span>{t("Grand Total", "সর্বমোট")}</span>
                   <span className="text-base text-amber-700 dark:text-amber-500 font-mono font-extrabold">
                     ৳{totalAmount}
                   </span>
                 </div>
 
                 <Textarea
-                  placeholder="Order Note (optional - e.g. extra napkins, deliver to 2nd floor counter)..."
+                  placeholder={t(
+                    "Order Note (optional - e.g. extra napkins, deliver to 2nd floor counter)...",
+                    "অর্ডার নোট (ঐচ্ছিক - যেমন: অতিরিক্ত ন্যাপকিন, ২য় তলায় ডেলিভারি)...",
+                  )}
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   rows={2}
@@ -939,8 +978,14 @@ function ShopMenu() {
                   <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-600 dark:text-red-400 font-medium">
                     {(mutation.error as Error & { status?: number })?.status ===
                     409
-                      ? "Some items just went stock out and were removed from your cart. Please review and try again."
-                      : "Failed to place order. Please try again."}
+                      ? t(
+                          "Some items just went stock out and were removed from your cart. Please review and try again.",
+                          "কিছু আইটেমের স্টক শেষ হয়ে যাওয়ায় কার্ট থেকে বাদ দেওয়া হয়েছে। দেখে আবার চেষ্টা করুন।",
+                        )
+                      : t(
+                          "Failed to place order. Please try again.",
+                          "অর্ডার করা যায়নি। আবার চেষ্টা করুন।",
+                        )}
                   </div>
                 )}
               </div>
@@ -954,8 +999,8 @@ function ShopMenu() {
                   disabled={mutation.isPending}
                 >
                   {mutation.isPending
-                    ? "Placing Order..."
-                    : "Confirm & Send Order"}
+                    ? t("Placing Order...", "অর্ডার করা হচ্ছে...")
+                    : t("Confirm & Send Order", "নিশ্চিত করে অর্ডার পাঠান")}
                 </Button>
               </div>
             </>
@@ -967,15 +1012,19 @@ function ShopMenu() {
       <Dialog open={confirmClear} onOpenChange={setConfirmClear}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Clear your cart?</DialogTitle>
+            <DialogTitle>
+              {t("Clear your cart?", "কার্ট খালি করবেন?")}
+            </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            This removes all {totalItems} item{totalItems !== 1 ? "s" : ""} from
-            your cart.
+            {t(
+              `This removes all ${totalItems} item${totalItems !== 1 ? "s" : ""} from your cart.`,
+              `আপনার কার্ট থেকে সব ${totalItems}টি আইটেম মুছে যাবে।`,
+            )}
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setConfirmClear(false)}>
-              Keep Cart
+              {t("Keep Cart", "কার্ট রাখুন")}
             </Button>
             <Button
               variant="destructive"
@@ -984,7 +1033,7 @@ function ShopMenu() {
                 setConfirmClear(false);
               }}
             >
-              Clear Cart
+              {t("Clear Cart", "কার্ট খালি করুন")}
             </Button>
           </DialogFooter>
         </DialogContent>

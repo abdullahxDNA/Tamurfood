@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { OrderRef } from "@/components/order-ref";
+import { useLang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated/shop/khata/")({
   component: ShopKhataPage,
@@ -130,6 +131,7 @@ function Chevron({ open }: { open: boolean }) {
 }
 
 function ShopKhataPage() {
+  const { t } = useLang();
   const [month, setMonth] = useState(currentMonth);
   const [unpaidOpen, setUnpaidOpen] = useState(true);
   const [expandedOrders, setExpandedOrders] = useState<Set<string>>(new Set());
@@ -254,17 +256,17 @@ function ShopKhataPage() {
     <div className="space-y-5">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold font-serif tracking-tight">
-          Khata Credit Ledger
+          {t("Khata Credit Ledger", "খাতা / বাকির হিসাব")}
         </h1>
         <span className="text-xs text-stone-400 font-mono">
-          Running Balance
+          {t("Running Balance", "চলতি ব্যালেন্স")}
         </span>
       </div>
 
       {(!myShop || isLoading) && (
         <div className="rounded-2xl bg-stone-100 dark:bg-stone-900 p-8 text-center animate-pulse">
           <p className="text-stone-500 text-xs font-medium">
-            Loading ledger...
+            {t("Loading ledger...", "হিসাব লোড হচ্ছে...")}
           </p>
         </div>
       )}
@@ -279,7 +281,7 @@ function ShopKhataPage() {
           }`}
         >
           <p className="text-[11px] font-bold uppercase tracking-wider text-stone-400">
-            Total Outstanding Balance
+            {t("Total Outstanding Balance", "মোট বাকির পরিমাণ")}
           </p>
           <p
             className={`mt-1.5 text-4xl font-extrabold font-mono tracking-tight ${
@@ -292,10 +294,16 @@ function ShopKhataPage() {
           </p>
           <p className="mt-1.5 text-xs font-medium text-stone-500 dark:text-stone-400">
             {owe > 0
-              ? "you owe the bakery for snacks delivered"
+              ? t(
+                  "you owe the bakery for snacks delivered",
+                  "ডেলিভারি হওয়া স্ন্যাকসের জন্য আপনি বেকারিকে বাকি আছেন",
+                )
               : owe < 0
-                ? "overpaid — credit in your favour"
-                : "all settled ✓"}
+                ? t(
+                    "overpaid — credit in your favour",
+                    "বেশি পরিশোধ — আপনার পক্ষে জমা আছে",
+                  )
+                : t("all settled ✓", "সব পরিশোধিত ✓")}
           </p>
         </div>
       )}
@@ -314,11 +322,14 @@ function ShopKhataPage() {
               className="h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse"
             />
             <h2 className="text-xs font-bold text-stone-900 dark:text-stone-100">
-              Unpaid Orders
+              {t("Unpaid Orders", "বকেয়া অর্ডার")}
             </h2>
             <span className="ml-auto text-xs font-semibold text-red-600 dark:text-red-400 font-mono">
-              {data.unpaidOrders.length} order
-              {data.unpaidOrders.length === 1 ? "" : "s"} · ৳
+              {t(
+                `${data.unpaidOrders.length} order${data.unpaidOrders.length === 1 ? "" : "s"}`,
+                `${data.unpaidOrders.length}টি অর্ডার`,
+              )}{" "}
+              · ৳
               {data.unpaidOrders
                 .reduce((s, o) => s + o.amount, 0)
                 .toLocaleString()}
@@ -394,7 +405,7 @@ function ShopKhataPage() {
           className="text-xs font-semibold px-3.5 py-1.5 rounded-full border border-stone-200/80 dark:border-stone-800 bg-white dark:bg-stone-900 hover:bg-stone-100 dark:hover:bg-stone-800 transition-all"
           onClick={() => setMonth(prevMonth(month))}
         >
-          ‹ Prev
+          ‹ {t("Prev", "আগের")}
         </button>
         <span className="text-xs font-bold font-serif tracking-tight text-stone-900 dark:text-stone-100">
           {fmtMonthLabel(month)}
@@ -405,7 +416,7 @@ function ShopKhataPage() {
           onClick={() => setMonth(nextMonth(month))}
           disabled={month >= cur}
         >
-          Next ›
+          {t("Next", "পরের")} ›
         </button>
       </div>
 
@@ -414,7 +425,7 @@ function ShopKhataPage() {
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-2xl border border-stone-200/80 dark:border-stone-800/80 bg-white dark:bg-stone-900 p-3.5 shadow-xs">
             <p className="text-[10px] font-bold uppercase tracking-wider text-stone-400">
-              Ordered this month
+              {t("Ordered this month", "এ মাসে অর্ডার")}
             </p>
             <p className="mt-1 text-xl font-extrabold text-stone-900 dark:text-stone-100 font-mono">
               ৳{data.monthOrdered.toLocaleString()}
@@ -422,7 +433,7 @@ function ShopKhataPage() {
           </div>
           <div className="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 dark:bg-emerald-950/20 p-3.5 shadow-xs">
             <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
-              Paid this month
+              {t("Paid this month", "এ মাসে পরিশোধ")}
             </p>
             <p className="mt-1 text-xl font-extrabold text-emerald-600 dark:text-emerald-400 font-mono">
               ৳{data.monthPaid.toLocaleString()}
@@ -436,18 +447,22 @@ function ShopKhataPage() {
         <div className="space-y-2.5">
           <div className="flex items-baseline justify-between">
             <h2 className="text-xs font-bold uppercase tracking-wider text-stone-400">
-              Ledger Statement
+              {t("Ledger Statement", "লেনদেনের বিবরণ")}
             </h2>
             {data.openingBalance !== 0 && data.entries.length > 0 && (
               <span className="text-xs font-medium text-stone-400 font-mono">
-                Opening: ৳{data.openingBalance.toLocaleString()}
+                {t("Opening", "প্রারম্ভিক")}: ৳
+                {data.openingBalance.toLocaleString()}
               </span>
             )}
           </div>
 
           {data.entries.length === 0 && (
             <p className="rounded-2xl border border-dashed border-stone-200 dark:border-stone-800 py-8 text-center text-xs text-stone-400">
-              No transactions recorded for {fmtMonthLabel(month)}.
+              {t(
+                `No transactions recorded for ${fmtMonthLabel(month)}.`,
+                `${fmtMonthLabel(month)} মাসে কোনো লেনদেন নেই।`,
+              )}
             </p>
           )}
 
@@ -470,10 +485,16 @@ function ShopKhataPage() {
                     }`}
                   >
                     {entry.type === "order"
-                      ? `Order #${entry.dailyNumber ?? entry.orderNumber}`
+                      ? t(
+                          `Order #${entry.dailyNumber ?? entry.orderNumber}`,
+                          `অর্ডার #${entry.dailyNumber ?? entry.orderNumber}`,
+                        )
                       : entry.paidOrderNumber != null
-                        ? `Paid — Order #${entry.paidDailyNumber ?? entry.paidOrderNumber}`
-                        : "Payment received"}
+                        ? t(
+                            `Paid — Order #${entry.paidDailyNumber ?? entry.paidOrderNumber}`,
+                            `পরিশোধ — অর্ডার #${entry.paidDailyNumber ?? entry.paidOrderNumber}`,
+                          )
+                        : t("Payment received", "পেমেন্ট গৃহীত")}
                   </span>
                   {entry.type === "order" && entry.dailyNumber != null && (
                     <span className="text-[10px] text-stone-400 font-mono">
@@ -515,7 +536,7 @@ function ShopKhataPage() {
                     : `−৳${entry.credit}`}
                 </p>
                 <p className="text-[10px] text-stone-400 font-mono">
-                  bal: ৳{entry.balance.toLocaleString()}
+                  {t("bal", "ব্যালেন্স")}: ৳{entry.balance.toLocaleString()}
                 </p>
               </div>
             </div>
