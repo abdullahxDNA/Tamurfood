@@ -18,6 +18,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { useLang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/login")({
   beforeLoad: ({ context }) => {
@@ -32,6 +33,7 @@ export const Route = createFileRoute("/login")({
 function LoginPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
+  const { t, lang, toggleLang } = useLang();
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +50,9 @@ function LoginPage() {
     });
 
     if (result.error) {
-      setError("Wrong phone number or password.");
+      setError(
+        t("Wrong phone number or password.", "ফোন নম্বর বা পাসওয়ার্ড ভুল।"),
+      );
       setLoading(false);
       return;
     }
@@ -95,17 +99,30 @@ function LoginPage() {
             </span>
           </Link>
           <p className="text-xs text-stone-500 dark:text-stone-400">
-            Neighbourhood Bakery & Instant Shop Delivery
+            {t(
+              "Neighbourhood Bakery & Instant Shop Delivery",
+              "পাড়ার বেকারি ও দ্রুত দোকান ডেলিভারি",
+            )}
           </p>
+          <button
+            type="button"
+            onClick={toggleLang}
+            className="text-xs font-semibold text-amber-700 dark:text-amber-500 hover:underline"
+          >
+            {lang === "bn" ? "English" : "বাংলা"}
+          </button>
         </div>
 
         <Card className="border-stone-200/80 dark:border-stone-800/80 bg-white/80 dark:bg-stone-900/80 shadow-xl backdrop-blur-md rounded-2xl">
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="text-xl font-semibold tracking-tight text-center">
-              Sign in to your account
+              {t("Sign in to your account", "আপনার অ্যাকাউন্টে সাইন ইন করুন")}
             </CardTitle>
             <CardDescription className="text-center text-xs">
-              Enter your registered phone number & password
+              {t(
+                "Enter your registered phone number & password",
+                "আপনার নিবন্ধিত ফোন নম্বর ও পাসওয়ার্ড দিন",
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -115,7 +132,7 @@ function LoginPage() {
                   htmlFor="phoneNumber"
                   className="text-xs font-medium text-stone-700 dark:text-stone-300"
                 >
-                  Phone Number
+                  {t("Phone Number", "ফোন নম্বর")}
                 </Label>
                 <Input
                   id="phoneNumber"
@@ -134,13 +151,13 @@ function LoginPage() {
                     htmlFor="password"
                     className="text-xs font-medium text-stone-700 dark:text-stone-300"
                   >
-                    Password
+                    {t("Password", "পাসওয়ার্ড")}
                   </Label>
                   <Link
                     to="/forgot-password"
                     className="text-xs text-amber-700 dark:text-amber-500 hover:underline font-medium"
                   >
-                    Forgot?
+                    {t("Forgot?", "ভুলে গেছেন?")}
                   </Link>
                 </div>
                 <Input
@@ -164,7 +181,9 @@ function LoginPage() {
                 style={{ backgroundColor: "#c15f3c" }}
                 disabled={loading}
               >
-                {loading ? "Signing in..." : "Sign In"}
+                {loading
+                  ? t("Signing in...", "সাইন ইন হচ্ছে...")
+                  : t("Sign In", "সাইন ইন")}
               </Button>
             </form>
           </CardContent>
@@ -175,7 +194,7 @@ function LoginPage() {
             to="/"
             className="text-xs font-medium text-stone-500 hover:text-stone-800 dark:hover:text-stone-200 transition-colors"
           >
-            ← Back to Home
+            ← {t("Back to Home", "হোমে ফিরুন")}
           </Link>
         </div>
       </div>

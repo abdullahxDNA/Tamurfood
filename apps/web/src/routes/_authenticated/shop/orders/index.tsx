@@ -19,6 +19,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { useCart } from "@/lib/cart-context";
+import { useLang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated/shop/orders/")({
   component: OrderHistory,
@@ -135,11 +136,12 @@ function OrderStatusTracker({
   isDone: boolean;
   isCancelled: boolean;
 }) {
+  const { t } = useLang();
   if (isCancelled) {
     return (
       <div className="flex items-center gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-3.5 py-2.5">
         <span className="text-xs font-bold text-red-600 dark:text-red-400">
-          ✕ Order Cancelled
+          ✕ {t("Order Cancelled", "অর্ডার বাতিল")}
         </span>
       </div>
     );
@@ -147,7 +149,7 @@ function OrderStatusTracker({
   return (
     <div className="rounded-xl border border-stone-200/60 dark:border-stone-800/60 bg-stone-50/50 dark:bg-stone-950/50 p-3">
       <div className="flex items-center">
-        <StepNode done label="Placed" />
+        <StepNode done label={t("Placed", "অর্ডার হয়েছে")} />
         <div
           className={cn(
             "mx-2.5 h-1 flex-1 rounded-full transition-all",
@@ -157,13 +159,18 @@ function OrderStatusTracker({
         <StepNode
           done={isDone}
           pending={!isDone}
-          label={isDone ? "Delivered" : "Pending"}
+          label={
+            isDone ? t("Delivered", "ডেলিভারড") : t("Pending", "অপেক্ষমাণ")
+          }
         />
       </div>
       <p className="mt-2 text-[11px] font-medium text-stone-500 dark:text-stone-400">
         {isDone
-          ? "✅ Delivered to your shop!"
-          : "⏳ Waiting for bakery approval"}
+          ? t("✅ Delivered to your shop!", "✅ আপনার দোকানে পৌঁছে গেছে!")
+          : t(
+              "⏳ Waiting for bakery approval",
+              "⏳ বেকারির অনুমোদনের অপেক্ষায়",
+            )}
       </p>
     </div>
   );
@@ -177,6 +184,7 @@ const NEW_MARKER_MS = 10000;
 
 function OrderHistory() {
   const { setQty } = useCart();
+  const { t } = useLang();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<DateFilter>("today");
@@ -287,7 +295,10 @@ function OrderHistory() {
       for (const order of orders) {
         if (prev.get(order.id) === false && order.isDone) {
           toast.success(
-            `Order #${order.orderNumber} delivered — enjoy your food!`,
+            t(
+              `Order #${order.orderNumber} delivered — enjoy your food!`,
+              `অর্ডার #${order.orderNumber} পৌঁছে গেছে — উপভোগ করুন!`,
+            ),
           );
         }
       }
@@ -313,7 +324,7 @@ function OrderHistory() {
       return res.json();
     },
     onSuccess: () => {
-      toast.success("Order cancelled");
+      toast.success(t("Order cancelled", "অর্ডার বাতিল হয়েছে"));
       setConfirmCancelId(null);
       queryClient.invalidateQueries({ queryKey: ["orders"] });
       // Reset baseline so the cancel's cache update doesn't false-fire a toast.
@@ -321,7 +332,7 @@ function OrderHistory() {
       prevStatusRef.current = new Map();
     },
     onError: () => {
-      toast.error("Could not cancel order");
+      toast.error(t("Could not cancel order", "অর্ডার বাতিল করা যায়নি"));
     },
   });
 
@@ -329,7 +340,7 @@ function OrderHistory() {
     for (const item of order.items) {
       setQty(item.menuItemId, item.itemName, item.itemPrice, item.quantity);
     }
-    toast.success("Items added to cart");
+    toast.success(t("Items added to cart", "কার্টে যোগ হয়েছে"));
     navigate({ to: "/shop" });
   };
 
@@ -345,10 +356,13 @@ function OrderHistory() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-xl font-bold font-serif tracking-tight">
-          Your Order History
+          {t("Your Order History", "আপনার অর্ডার হিস্টরি")}
         </h1>
         <span className="text-xs text-stone-400 font-mono">
-          {filteredOrders.length} orders
+          {t(
+            `${filteredOrders.length} orders`,
+            `${filteredOrders.length}টি অর্ডার`,
+          )}
         </span>
       </div>
 
@@ -365,10 +379,10 @@ function OrderHistory() {
             }`}
           >
             {f === "today"
-              ? "Today"
+              ? t("Today", "আজ")
               : f === "week"
-                ? "This Week"
-                : "This Month"}
+                ? t("This Week", "এই সপ্তাহ")
+                : t("This Month", "এই মাস")}
           </button>
         ))}
       </div>
@@ -386,21 +400,26 @@ function OrderHistory() {
 
       {isError && (
         <p className="text-red-500 text-xs py-4">
-          Failed to load orders.{" "}
+          {t("Failed to load orders.", "অর্ডার লোড করা যায়নি।")}{" "}
           <button
             onClick={() => refetch()}
             className="underline hover:no-underline font-semibold"
           >
-            Try again
+            {t("Try again", "আবার চেষ্টা করুন")}
           </button>
         </p>
       )}
 
       {!isLoading && !isError && filteredOrders.length === 0 && (
         <div className="text-center py-16 space-y-2 rounded-2xl border border-dashed border-stone-200 dark:border-stone-800">
-          <p className="text-stone-500 text-sm font-medium">No orders yet.</p>
+          <p className="text-stone-500 text-sm font-medium">
+            {t("No orders yet.", "এখনো কোনো অর্ডার নেই।")}
+          </p>
           <p className="text-xs text-stone-400">
-            Place your first order from the menu tab!
+            {t(
+              "Place your first order from the menu tab!",
+              "মেনু ট্যাব থেকে আপনার প্রথম অর্ডার দিন!",
+            )}
           </p>
         </div>
       )}
@@ -465,20 +484,20 @@ function OrderHistory() {
 
             {order.note && (
               <p className="text-[11px] text-stone-500 italic bg-stone-50 dark:bg-stone-950 p-2 rounded-lg">
-                Note: {order.note}
+                {t("Note", "নোট")}: {order.note}
               </p>
             )}
 
             {order.isCancelled && order.cancelReason && (
               <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-3 py-1.5 text-xs text-red-600 dark:text-red-400">
-                Reason: {order.cancelReason}
+                {t("Reason", "কারণ")}: {order.cancelReason}
               </p>
             )}
 
             <div className="flex items-center justify-between pt-2 border-t border-stone-100 dark:border-stone-800/80">
               <div className="text-xs">
                 <span className="text-stone-400 text-[10px] uppercase font-bold block">
-                  Total Amount
+                  {t("Total Amount", "মোট টাকা")}
                 </span>
                 <span className="font-extrabold text-sm text-stone-900 dark:text-stone-100">
                   ৳{order.totalAmount}
@@ -492,7 +511,7 @@ function OrderHistory() {
                     className="h-8 text-xs text-red-600 hover:bg-red-50 dark:hover:bg-red-950 rounded-xl"
                     onClick={() => setConfirmCancelId(order.id)}
                   >
-                    Cancel
+                    {t("Cancel", "বাতিল")}
                   </Button>
                 )}
                 <Button
@@ -501,7 +520,7 @@ function OrderHistory() {
                   className="h-8 text-xs rounded-xl font-semibold border-stone-200/80 dark:border-stone-800"
                   onClick={() => handleReorder(order)}
                 >
-                  Reorder
+                  {t("Reorder", "আবার অর্ডার")}
                 </Button>
               </div>
             </div>
@@ -516,7 +535,9 @@ function OrderHistory() {
           onClick={() => fetchNextPage()}
           disabled={isFetchingNextPage}
         >
-          {isFetchingNextPage ? "Loading..." : "Load more"}
+          {isFetchingNextPage
+            ? t("Loading...", "লোড হচ্ছে...")
+            : t("Load more", "আরও দেখুন")}
         </Button>
       )}
 
@@ -529,10 +550,15 @@ function OrderHistory() {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cancel this order?</DialogTitle>
+            <DialogTitle>
+              {t("Cancel this order?", "এই অর্ডার বাতিল করবেন?")}
+            </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            This cannot be undone. The order will be marked as cancelled.
+            {t(
+              "This cannot be undone. The order will be marked as cancelled.",
+              "এটি আর ফেরানো যাবে না। অর্ডারটি বাতিল হিসেবে চিহ্নিত হবে।",
+            )}
           </p>
           <DialogFooter>
             <Button
@@ -540,7 +566,7 @@ function OrderHistory() {
               onClick={() => setConfirmCancelId(null)}
               disabled={cancelMutation.isPending}
             >
-              Keep Order
+              {t("Keep Order", "অর্ডার রাখুন")}
             </Button>
             <Button
               variant="destructive"
@@ -549,7 +575,9 @@ function OrderHistory() {
               }
               disabled={cancelMutation.isPending}
             >
-              {cancelMutation.isPending ? "Cancelling..." : "Yes, Cancel"}
+              {cancelMutation.isPending
+                ? t("Cancelling...", "বাতিল হচ্ছে...")
+                : t("Yes, Cancel", "হ্যাঁ, বাতিল")}
             </Button>
           </DialogFooter>
         </DialogContent>
