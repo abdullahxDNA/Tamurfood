@@ -469,10 +469,12 @@ function ShopMenu() {
 
   return (
     <div className="space-y-6">
-      {/* Full-width hero banner — content managed from Admin → Banner */}
+      {/* Hero banner — a contained, rounded block the same width as the menu
+          content (not full-bleed), so it lines up with the cards and doesn't
+          stretch edge-to-edge on desktop. Content managed from Admin → Banner. */}
       {banner?.enabled !== false && (
         <div
-          className="relative left-1/2 -mt-6 flex min-h-[200px] w-screen -translate-x-1/2 items-center overflow-hidden bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-sm sm:min-h-[260px]"
+          className="relative flex min-h-[180px] items-center overflow-hidden rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-sm sm:min-h-[220px]"
           style={
             banner?.imageUrl
               ? {
@@ -483,7 +485,7 @@ function ShopMenu() {
               : undefined
           }
         >
-          <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 sm:py-16">
+          <div className="px-6 py-10 sm:px-10 sm:py-12">
             <p className="text-xs font-medium uppercase tracking-wide opacity-90">
               {banner?.subtitle ?? "Today's special"}
             </p>
