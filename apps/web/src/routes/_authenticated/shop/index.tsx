@@ -417,7 +417,7 @@ function ShopMenu() {
   // loading and loaded states (near-zero CLS).
   const bannerBlock = banner?.enabled !== false && (
     <div
-      className="relative flex min-h-[180px] items-center overflow-hidden rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-sm sm:min-h-[220px]"
+      className="relative flex min-h-[120px] items-center overflow-hidden rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-sm sm:min-h-[150px]"
       style={
         banner?.imageUrl
           ? {
@@ -428,14 +428,14 @@ function ShopMenu() {
           : undefined
       }
     >
-      <div className="px-6 py-10 sm:px-10 sm:py-12">
-        <p className="text-xs font-medium uppercase tracking-wide opacity-90">
+      <div className="px-6 py-6 sm:px-8 sm:py-7">
+        <p className="text-[11px] font-medium uppercase tracking-wide opacity-90">
           {banner?.subtitle ?? "Today's special"}
         </p>
-        <h2 className="mt-1 text-2xl font-bold leading-tight sm:text-4xl">
+        <h2 className="mt-0.5 text-xl font-bold leading-tight sm:text-3xl">
           {banner?.title ?? "Fresh bakery items, baked daily 🥐"}
         </h2>
-        <p className="mt-2 text-sm opacity-90 sm:text-base">
+        <p className="mt-1.5 text-xs opacity-90 sm:text-sm">
           {banner?.tagline ?? "Order before 10 AM for same-day delivery"}
         </p>
       </div>
