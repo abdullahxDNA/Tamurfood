@@ -11,6 +11,13 @@ import { useQueryClient } from "@tanstack/react-query";
 import { authClient } from "@/lib/auth-client";
 import type { SessionUser } from "@/lib/session";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { CartProvider } from "@/lib/cart-context";
 import { useTheme } from "@/lib/theme";
 
@@ -69,6 +76,7 @@ function ShopLayout() {
   const queryClient = useQueryClient();
   const { session } = Route.useRouteContext();
   const { theme, toggleTheme } = useTheme();
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   // ── Notification badges ──────────────────────────────────────────────────
   const pathname = useLocation({ select: (l) => l.pathname });
@@ -213,7 +221,7 @@ function ShopLayout() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleLogout}
+                onClick={() => setConfirmLogout(true)}
                 className="h-8 text-xs rounded-lg border-stone-200/80 dark:border-stone-800"
               >
                 Logout
@@ -371,6 +379,26 @@ function ShopLayout() {
             </Link>
           </div>
         </nav>
+
+        {/* Confirm before logging out. */}
+        <Dialog open={confirmLogout} onOpenChange={setConfirmLogout}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Log out?</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              You&apos;ll need to sign in again to place orders.
+            </p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setConfirmLogout(false)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleLogout}>
+                Log out
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </CartProvider>
   );

@@ -13,6 +13,13 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useCart } from "@/lib/cart-context";
 
 export const Route = createFileRoute("/_authenticated/shop/")({
@@ -171,6 +178,7 @@ function ShopMenu() {
   } | null>(null);
   const [priceMismatch, setPriceMismatch] = useState<number | null>(null);
   const [unavailableWarning, setUnavailableWarning] = useState<string[]>([]);
+  const [confirmClear, setConfirmClear] = useState(false);
 
   // Sticky category bar: refs to each section + the currently-visible category
   const sectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -739,7 +747,7 @@ function ShopMenu() {
       {totalItems > 0 && (
         <div className="fixed bottom-[4.75rem] left-4 right-4 z-40 mx-auto flex max-w-lg items-stretch gap-2 rounded-[1.4rem] border border-stone-300/70 bg-stone-200/80 p-1.5 shadow-[0_10px_40px_-12px_rgba(0,0,0,0.28)] backdrop-blur-xl dark:border-stone-700/60 dark:bg-stone-800/85">
           <button
-            onClick={handleClearCart}
+            onClick={() => setConfirmClear(true)}
             aria-label="Clear all items"
             title="Clear all items"
             className="flex items-center justify-center rounded-[1.05rem] border border-stone-300/80 bg-white text-stone-500 shadow-sm dark:bg-stone-900 dark:border-stone-700 dark:text-stone-300 transition-all hover:text-red-600 hover:border-red-200 dark:hover:bg-stone-800 active:scale-95 px-4"
@@ -954,6 +962,33 @@ function ShopMenu() {
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Confirm before clearing the whole cart — easy to hit by accident. */}
+      <Dialog open={confirmClear} onOpenChange={setConfirmClear}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Clear your cart?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This removes all {totalItems} item{totalItems !== 1 ? "s" : ""} from
+            your cart.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmClear(false)}>
+              Keep Cart
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                handleClearCart();
+                setConfirmClear(false);
+              }}
+            >
+              Clear Cart
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
