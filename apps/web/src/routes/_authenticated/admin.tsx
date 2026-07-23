@@ -11,6 +11,13 @@ import { useRouter } from "@tanstack/react-router";
 import type { SessionUser } from "@/lib/session";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Menu } from "lucide-react";
 import { api } from "@/lib/api";
 import { useTheme } from "@/lib/theme";
@@ -83,6 +90,7 @@ function AdminLayout() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
   const { session } = Route.useRouteContext();
   const { theme, toggleTheme } = useTheme();
   const isAdmin = session.role === "admin";
@@ -183,7 +191,7 @@ function AdminLayout() {
           <Button
             variant="outline"
             size="sm"
-            onClick={handleLogout}
+            onClick={() => setConfirmLogout(true)}
             className="h-8 text-xs rounded-xl border-stone-200/80 dark:border-stone-800"
           >
             Logout
@@ -205,6 +213,26 @@ function AdminLayout() {
           <Outlet />
         </main>
       </div>
+
+      {/* Confirm before logging out. */}
+      <Dialog open={confirmLogout} onOpenChange={setConfirmLogout}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Log out?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            You&apos;ll need to sign in again to manage orders.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setConfirmLogout(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleLogout}>
+              Log out
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
