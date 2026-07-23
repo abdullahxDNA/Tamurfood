@@ -13,12 +13,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { useLang } from "@/lib/i18n";
 
 export const Route = createFileRoute("/_authenticated/shop/profile/")({
   component: ShopProfilePage,
 });
 
 function ShopProfilePage() {
+  const { t } = useLang();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -37,12 +39,19 @@ function ShopProfilePage() {
     e.preventDefault();
 
     if (newPassword.length < 6) {
-      toast.error("New password must be at least 6 characters.");
+      toast.error(
+        t(
+          "New password must be at least 6 characters.",
+          "নতুন পাসওয়ার্ড কমপক্ষে ৬ অক্ষরের হতে হবে।",
+        ),
+      );
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      toast.error("New passwords do not match.");
+      toast.error(
+        t("New passwords do not match.", "নতুন পাসওয়ার্ড দুটি মেলেনি।"),
+      );
       return;
     }
 
@@ -53,13 +62,16 @@ function ShopProfilePage() {
     });
 
     if (res.ok) {
-      toast.success("Password changed!");
+      toast.success(t("Password changed!", "পাসওয়ার্ড পরিবর্তন হয়েছে!"));
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } else {
       const data = (await res.json()) as { error: string };
-      toast.error(data.error ?? "Failed to change password.");
+      toast.error(
+        data.error ??
+          t("Failed to change password.", "পাসওয়ার্ড পরিবর্তন করা যায়নি।"),
+      );
     }
 
     setLoading(false);
@@ -69,24 +81,32 @@ function ShopProfilePage() {
     <div className="max-w-md space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Shop Info</CardTitle>
-          <CardDescription>Your shop details.</CardDescription>
+          <CardTitle>{t("Shop Info", "দোকানের তথ্য")}</CardTitle>
+          <CardDescription>
+            {t("Your shop details.", "আপনার দোকানের বিবরণ।")}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">Shop Name</p>
+            <p className="text-xs text-muted-foreground">
+              {t("Shop Name", "দোকানের নাম")}
+            </p>
             <p className="text-sm font-medium">{shopInfo?.shopName ?? "—"}</p>
           </div>
           <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">Owner</p>
+            <p className="text-xs text-muted-foreground">
+              {t("Owner", "মালিক")}
+            </p>
             <p className="text-sm font-medium">{shopInfo?.ownerName ?? "—"}</p>
           </div>
           <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">Phone</p>
+            <p className="text-xs text-muted-foreground">{t("Phone", "ফোন")}</p>
             <p className="text-sm font-medium">{shopInfo?.phone ?? "—"}</p>
           </div>
           <div className="space-y-1">
-            <p className="text-xs text-muted-foreground">Address</p>
+            <p className="text-xs text-muted-foreground">
+              {t("Address", "ঠিকানা")}
+            </p>
             <p className="text-sm font-medium">{shopInfo?.address ?? "—"}</p>
           </div>
         </CardContent>
@@ -94,13 +114,20 @@ function ShopProfilePage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Change Password</CardTitle>
-          <CardDescription>Update your account password.</CardDescription>
+          <CardTitle>{t("Change Password", "পাসওয়ার্ড পরিবর্তন")}</CardTitle>
+          <CardDescription>
+            {t(
+              "Update your account password.",
+              "আপনার অ্যাকাউন্টের পাসওয়ার্ড আপডেট করুন।",
+            )}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="currentPassword">Current Password</Label>
+              <Label htmlFor="currentPassword">
+                {t("Current Password", "বর্তমান পাসওয়ার্ড")}
+              </Label>
               <Input
                 id="currentPassword"
                 type="password"
@@ -110,7 +137,9 @@ function ShopProfilePage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="newPassword">New Password</Label>
+              <Label htmlFor="newPassword">
+                {t("New Password", "নতুন পাসওয়ার্ড")}
+              </Label>
               <Input
                 id="newPassword"
                 type="password"
@@ -121,7 +150,9 @@ function ShopProfilePage() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm New Password</Label>
+              <Label htmlFor="confirmPassword">
+                {t("Confirm New Password", "নতুন পাসওয়ার্ড নিশ্চিত করুন")}
+              </Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -131,7 +162,9 @@ function ShopProfilePage() {
               />
             </div>
             <Button type="submit" disabled={loading} className="w-full">
-              {loading ? "Saving..." : "Change Password"}
+              {loading
+                ? t("Saving...", "সংরক্ষণ হচ্ছে...")
+                : t("Change Password", "পাসওয়ার্ড পরিবর্তন")}
             </Button>
           </form>
         </CardContent>

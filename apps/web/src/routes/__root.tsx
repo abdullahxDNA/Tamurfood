@@ -1,6 +1,7 @@
 import { Outlet, createRootRouteWithContext } from "@tanstack/react-router";
 import { QueryClient } from "@tanstack/react-query";
 import { sessionQueryOptions, type SessionUser } from "@/lib/session";
+import { LangProvider } from "@/lib/i18n";
 import { Toaster } from "sonner";
 
 type RouterContext = {
@@ -15,10 +16,12 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     return { session: session as SessionUser | null };
   },
   component: () => (
-    <div className="min-h-screen bg-background text-foreground">
-      <Outlet />
-      {/* top-center so toasts never cover the shop's bottom nav bar */}
-      <Toaster richColors closeButton position="top-center" />
-    </div>
+    <LangProvider>
+      <div className="min-h-screen bg-background text-foreground">
+        <Outlet />
+        {/* top-center so toasts never cover the shop's bottom nav bar */}
+        <Toaster richColors closeButton position="top-center" />
+      </div>
+    </LangProvider>
   ),
 });
