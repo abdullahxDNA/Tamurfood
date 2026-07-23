@@ -410,17 +410,62 @@ function ShopMenu() {
     };
   }, [categoryKey]);
 
+  // The hero banner has its own query (with defaults) and doesn't depend on the
+  // menu data, so render it — and the heading/search — immediately, even while
+  // the menu is still loading. This paints a real LCP element right away instead
+  // of waiting on the menu API, and keeps the layout identical between the
+  // loading and loaded states (near-zero CLS).
+  const bannerBlock = banner?.enabled !== false && (
+    <div
+      className="relative flex min-h-[180px] items-center overflow-hidden rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-sm sm:min-h-[220px]"
+      style={
+        banner?.imageUrl
+          ? {
+              backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.5), rgba(0,0,0,0.15)), url(${banner.imageUrl})`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+            }
+          : undefined
+      }
+    >
+      <div className="px-6 py-10 sm:px-10 sm:py-12">
+        <p className="text-xs font-medium uppercase tracking-wide opacity-90">
+          {banner?.subtitle ?? "Today's special"}
+        </p>
+        <h2 className="mt-1 text-2xl font-bold leading-tight sm:text-4xl">
+          {banner?.title ?? "Fresh bakery items, baked daily 🥐"}
+        </h2>
+        <p className="mt-2 text-sm opacity-90 sm:text-base">
+          {banner?.tagline ?? "Order before 10 AM for same-day delivery"}
+        </p>
+      </div>
+      {!banner?.imageUrl && (
+        <span className="pointer-events-none absolute -right-6 -top-8 text-[9rem] opacity-20">
+          🍩
+        </span>
+      )}
+    </div>
+  );
+
+  const menuHeader = (
+    <div className="space-y-3">
+      <h1 className="text-2xl font-bold">Menu</h1>
+      <Input
+        type="search"
+        placeholder="Search items..."
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+    </div>
+  );
+
   if (isLoading) {
-    // Skeleton mirrors the real layout (full-width banner + category chips +
-    // card grid) so when the data arrives the content swaps in place instead
-    // of shifting everything down (keeps CLS low).
+    // Banner + header paint immediately; only the grid is a skeleton. The
+    // skeleton mirrors the real card grid so content swaps in place (low CLS).
     return (
       <div className="space-y-6">
-        <div className="relative left-1/2 -mt-6 h-[200px] w-screen -translate-x-1/2 animate-pulse bg-muted sm:h-[260px]" />
-        <div className="flex gap-2">
-          <div className="h-8 w-28 animate-pulse rounded-full bg-muted" />
-          <div className="h-8 w-28 animate-pulse rounded-full bg-muted" />
-        </div>
+        {bannerBlock}
+        {menuHeader}
         <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {Array.from({ length: 10 }).map((_, i) => (
             <div
@@ -469,50 +514,8 @@ function ShopMenu() {
 
   return (
     <div className="space-y-6">
-      {/* Hero banner — a contained, rounded block the same width as the menu
-          content (not full-bleed), so it lines up with the cards and doesn't
-          stretch edge-to-edge on desktop. Content managed from Admin → Banner. */}
-      {banner?.enabled !== false && (
-        <div
-          className="relative flex min-h-[180px] items-center overflow-hidden rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-sm sm:min-h-[220px]"
-          style={
-            banner?.imageUrl
-              ? {
-                  backgroundImage: `linear-gradient(to right, rgba(0,0,0,0.5), rgba(0,0,0,0.15)), url(${banner.imageUrl})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                }
-              : undefined
-          }
-        >
-          <div className="px-6 py-10 sm:px-10 sm:py-12">
-            <p className="text-xs font-medium uppercase tracking-wide opacity-90">
-              {banner?.subtitle ?? "Today's special"}
-            </p>
-            <h2 className="mt-1 text-2xl font-bold leading-tight sm:text-4xl">
-              {banner?.title ?? "Fresh bakery items, baked daily 🥐"}
-            </h2>
-            <p className="mt-2 text-sm opacity-90 sm:text-base">
-              {banner?.tagline ?? "Order before 10 AM for same-day delivery"}
-            </p>
-          </div>
-          {!banner?.imageUrl && (
-            <span className="pointer-events-none absolute -right-6 -top-8 text-[9rem] opacity-20">
-              🍩
-            </span>
-          )}
-        </div>
-      )}
-
-      <div className="space-y-3">
-        <h1 className="text-2xl font-bold">Menu</h1>
-        <Input
-          type="search"
-          placeholder="Search items..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-      </div>
+      {bannerBlock}
+      {menuHeader}
 
       {/* Sticky category bar — jump to a category, plus repeat-last-order */}
       {categoryKeys.length > 0 && (
