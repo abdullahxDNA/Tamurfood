@@ -411,12 +411,28 @@ function ShopMenu() {
   }, [categoryKey]);
 
   if (isLoading) {
+    // Skeleton mirrors the real layout (full-width banner + category chips +
+    // card grid) so when the data arrives the content swaps in place instead
+    // of shifting everything down (keeps CLS low).
     return (
-      <div className="space-y-4">
-        <h1 className="text-2xl font-bold">Menu</h1>
-        <div className="space-y-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="h-12 rounded-md bg-muted animate-pulse" />
+      <div className="space-y-6">
+        <div className="relative left-1/2 -mt-6 h-[200px] w-screen -translate-x-1/2 animate-pulse bg-muted sm:h-[260px]" />
+        <div className="flex gap-2">
+          <div className="h-8 w-28 animate-pulse rounded-full bg-muted" />
+          <div className="h-8 w-28 animate-pulse rounded-full bg-muted" />
+        </div>
+        <div className="grid grid-cols-2 gap-3.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {Array.from({ length: 10 }).map((_, i) => (
+            <div
+              key={i}
+              className="overflow-hidden rounded-2xl border border-stone-200/80 dark:border-stone-800/80"
+            >
+              <div className="aspect-[4/3] animate-pulse bg-muted" />
+              <div className="space-y-2 p-3">
+                <div className="h-3 w-3/4 animate-pulse rounded bg-muted" />
+                <div className="h-6 w-1/3 animate-pulse rounded bg-muted" />
+              </div>
+            </div>
           ))}
         </div>
       </div>
@@ -456,7 +472,7 @@ function ShopMenu() {
       {/* Full-width hero banner — content managed from Admin → Banner */}
       {banner?.enabled !== false && (
         <div
-          className="relative left-1/2 -mt-6 w-screen -translate-x-1/2 overflow-hidden bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-sm"
+          className="relative left-1/2 -mt-6 flex min-h-[200px] w-screen -translate-x-1/2 items-center overflow-hidden bg-gradient-to-r from-amber-400 to-orange-500 text-white shadow-sm sm:min-h-[260px]"
           style={
             banner?.imageUrl
               ? {
