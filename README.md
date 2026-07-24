@@ -2,7 +2,7 @@
 
 **A real-time ordering & instant-delivery app for a neighbourhood bakery** — the shops around Tamurfood order snacks and meals from a live menu, the bakery's own staff deliver in minutes, and a built-in ledger ("Khata") tracks exactly what every shop owes.
 
-Built and deployed as a production application handling real orders and payments.
+A full-stack application deployed for demo/testing, modelling a real bakery's ordering and payment workflows.
 
 > Full-stack TypeScript · React 19 · Hono · PostgreSQL · Real-time SSE · Role-based access
 
@@ -32,7 +32,7 @@ Built and deployed as a production application handling real orders and payments
 
 Tamurfood is a neighbourhood bakery with a physical shop. The shops around it want snacks and meals for themselves and their staff, but leaving the counter to come buy is a hassle — so they order from the app, and the bakery's own staff deliver it in minutes. Nearby shops log in, order from a live menu, and track delivery; bakery staff see orders arrive in real time, fulfil and deliver them, and manage stock, menu, and payments. Every order and payment flows into a per-shop ledger ("Khata") so the bakery always knows who owes what.
 
-It's a complete, production-grade system — not a demo — covering authentication, real-time updates, concurrency-safe inventory, a money model, and role-based workflows.
+It's a complete, production-grade codebase covering authentication, real-time updates, concurrency-safe inventory, a money model, and role-based workflows.
 
 ## Highlights
 
