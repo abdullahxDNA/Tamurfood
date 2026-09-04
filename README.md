@@ -6,7 +6,7 @@ A full-stack application deployed for demo/testing, modelling a real bakery's or
 
 > Full-stack TypeScript · React 19 · Hono · PostgreSQL · Real-time SSE · Docker · Render · Role-based access
 
-> 🚀 **Live Production Demo:** [https://tamurfood.onrender.com](https://tamurfood.onrender.com)  
+> 🚀 **Live Cloud Demo:** [https://tamurfood.onrender.com](https://tamurfood.onrender.com)  
 > 🔑 **Demo Access Credentials:**  
 > • **Shop User:** `01812345678` (pass: `asif123`)  
 > • **Moderator:** `01987654321` (pass: `mod123`)
